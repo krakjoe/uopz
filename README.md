@@ -240,6 +240,23 @@ void uopz_delete(string class, string method);
 void uopz_delete(string function);
 
 /**
+* Override $class::$method with $handler
+* @param string class
+* @param string function
+* @param Closure handler
+* Note: if the function does not exist it will be created
+**/
+void uopz_override(string class, string method, Closure handler);
+
+/**
+* Override $function with $handler
+* @param string function
+* @param Closure handler
+* Note: if the function does not exist it will be created
+**/
+void uopz_override(string function, Closure handler);
+
+/**
 * Redefine $class::$constant to $value
 * @param string class
 * @param string constant
