@@ -25,8 +25,6 @@ var_dump(method_exists($my, "second"),
 
 uopz_alias("strlen", "strlen_stub");
 var_dump(function_exists("strlen_stub"));
-uopz_delete("strlen");
-var_dump(function_exists("strlen"));
 var_dump(strlen_stub("hello"));
 ?>
 --EXPECTF--
@@ -35,5 +33,4 @@ bool(true)
 bool(true)
 bool(true)
 bool(true)
-bool(false)
 int(5)
