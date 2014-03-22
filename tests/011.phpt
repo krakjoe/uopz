@@ -1,5 +1,5 @@
 --TEST--
-Test undefine
+Test undefine/redefine
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
