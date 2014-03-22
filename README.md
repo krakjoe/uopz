@@ -199,6 +199,7 @@ void uopz_overload(int opcode, Callable overload);
 * @param string class
 * @param string method
 * @param string rename
+* Note: if both methods exist, this effectively swaps their names
 **/
 void uopz_rename(string class, string method, string rename);
 
@@ -206,6 +207,7 @@ void uopz_rename(string class, string method, string rename);
 * Rename $function to $rename
 * @param string function      the function to rename
 * @param string rename        the new name for function
+* Note: if both functions exist, this effectively swaps their names
 **/
 void uopz_rename(string function, string rename);
 
