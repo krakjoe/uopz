@@ -99,23 +99,23 @@ interface IDefault {
 }
 
 interface IOther extends IDefault {
-	public function iAmOther();
+    public function iAmOther();
 }
 
 uopz_overload(ZEND_ADD_INTERFACE, function($class, &$interface){
-	if (strncasecmp($class, "IDefault", strlen("IDefault")) !== false) {
-		$interface = "IOther";
-	}
+    if ($interface == "IDefault") {
+        $interface = "IOther";
+    }
 });
 
 class IClass implements IDefault {
 
-	public function iAmDefault() {}
-	public function iAmOther() {}
+    public function iAmDefault() {}
+    public function iAmOther() {}
 }
 
 var_dump(
-	class_implements("IClass"));
+    class_implements("IClass"));
 ?>
 ```
 

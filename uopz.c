@@ -140,7 +140,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					oce = EX_T(OPLINE->op2.var).class_entry; 
 
 					MAKE_STD_ZVAL(op2);
-					ZVAL_STRINGL(op2, oce->name, oce->name_length + 1, 1);
+					ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
 					fci.params[1] = &op2;
 				} break;
 				
@@ -149,7 +149,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					oce = EX_T(OPLINE->op1.var).class_entry;
 
 					MAKE_STD_ZVAL(op1);
-					ZVAL_STRINGL(op1, oce->name, oce->name_length + 1, 1);
+					ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
 					fci.params[0] = &op1;
 					
 					if (CACHED_PTR(OPLINE->op2.literal->cache_slot)) {
@@ -161,7 +161,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					}
 
 					MAKE_STD_ZVAL(op2);
-					ZVAL_STRINGL(op2, oce->name, oce->name_length + 1, 1);
+					ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
 					fci.params[1] = &op2;
 					fci.param_count = 2;
 				} break;
@@ -170,7 +170,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					oce = EX_T(OPLINE->op1.var).class_entry;
 
 					MAKE_STD_ZVAL(op1);
-					ZVAL_STRINGL(op1, oce->name, oce->name_length + 1, 1);
+					ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
 					fci.param_count = 1;
 					fci.params[0] = &op1;
 				} break;
