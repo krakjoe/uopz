@@ -653,44 +653,154 @@ PHP_FUNCTION(__uopz_exit_overload) {
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_redefine(string constant, mixed variable) */
-PHP_FUNCTION(uopz_redefine)
-{
-	zval *constant = NULL;
-	zval *variable = NULL;
+/* {{{ */
+static inline void uopz_redefine(HashTable *table, zval *constant, zval *variable TSRMLS_DC) {
 	zend_constant *zconstant;
+	zend_ulong     hash = zend_inline_hash_func(Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1);
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &constant, &variable) != SUCCESS) {
-		return;
+	switch (Z_TYPE_P(variable)) {
+		case IS_LONG:
+		case IS_DOUBLE:
+		case IS_STRING:
+		case IS_BOOL:
+		case IS_RESOURCE:
+		case IS_NULL:
+			break;
+			
+		default:
+			return;			
 	}
 	
-	if (Z_TYPE_P(constant) == IS_STRING && zend_hash_find(
-			EG(zend_constants), 
-			Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, (void**)&zconstant) == SUCCESS) {
-		if (zconstant->module_number == PHP_USER_CONSTANT) {
-			zval_dtor(&zconstant->value);
-			ZVAL_ZVAL(
-				&zconstant->value, variable, 1, 0);
+	if (Z_TYPE_P(constant) == IS_STRING) {
+		if (zend_hash_quick_find(
+			table, Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, 
+			hash, (void**)&zconstant) == SUCCESS) {
+			if ((table == EG(zend_constants))) {
+				if (zconstant->module_number == PHP_USER_CONSTANT) {
+					zval_dtor(&zconstant->value);
+					ZVAL_ZVAL(
+						&zconstant->value, variable, 1, 0);
+				}
+			} else {
+				zval *copy;
+			
+				MAKE_STD_ZVAL(copy);
+				ZVAL_ZVAL(copy, variable, 1, 0);
+				zend_hash_quick_update(
+					table, 
+					Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, 
+					hash, (void**)&copy,
+					sizeof(zval*), NULL);
+			}		
+		} else {
+			if (table == EG(zend_constants)) {
+				zend_constant create;
+				
+				ZVAL_ZVAL(&create.value, variable, 1, 0);
+				create.flags = CONST_CS;
+				create.name = zend_strndup(Z_STRVAL_P(constant), Z_STRLEN_P(constant));
+				create.name_len = Z_STRLEN_P(constant)+1;
+				create.module_number = PHP_USER_CONSTANT;
+				
+				zend_register_constant(&create TSRMLS_CC);
+			} else {
+				zval *create;
+				
+				MAKE_STD_ZVAL(create);
+				ZVAL_ZVAL(create, variable, 1, 0);
+				zend_hash_quick_update(
+					table, 
+					Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, 
+					hash, (void**)&create,
+					sizeof(zval*), NULL);
+			}
 		}
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_undefine(string constant) */
+/* {{{ proto void uopz_redefine(string constant, mixed variable)
+	   proto void uopz_redefine(string class, string constant, mixed variable) */
+PHP_FUNCTION(uopz_redefine)
+{
+	zval *constant = NULL;
+	zval *variable = NULL;
+	HashTable *table = EG(zend_constants);
+	zend_class_entry *clazz = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 3: {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czz", &clazz, &constant, &variable) != SUCCESS) {
+				return;
+			} else {
+				table = &clazz->constants_table;
+			}
+		} break;
+		
+		default: {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &constant, &variable) != SUCCESS) {
+				return;
+			}
+		}
+	}
+	
+	uopz_redefine(table, constant, variable TSRMLS_CC);
+	
+	if (table != EG(zend_constants)) {
+		while ((clazz = clazz->parent)) {
+			uopz_redefine(
+				&clazz->constants_table, constant, variable TSRMLS_CC);
+		}
+	}
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_undefine(HashTable *table, zval *constant TSRMLS_DC) {
+	zend_constant *zconstant;
+	zend_ulong     hash = zend_inline_hash_func(Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1);
+	
+	if (Z_TYPE_P(constant) == IS_STRING && zend_hash_quick_find(
+			table,
+			Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, hash, (void**)&zconstant) == SUCCESS) {
+		if (table == EG(zend_constants)) {
+			if (zconstant->module_number == PHP_USER_CONSTANT) {
+				zend_hash_quick_del
+					(table, Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, hash);
+			}
+		} else {
+			zend_hash_quick_del(table, Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, hash);
+		}
+	}
+} /* }}} */
+
+/* {{{ proto void uopz_undefine(string constant) 
+	   proto void uopz_undefine(string class, string constant) */
 PHP_FUNCTION(uopz_undefine)
 {
 	zval *constant = NULL;
-	zend_constant *zconstant;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &constant) != SUCCESS) {
-		return;
+	HashTable *table = EG(zend_constants);
+	zend_class_entry *clazz = NULL;
+
+	switch (ZEND_NUM_ARGS()) {
+		case 2: {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &constant) != SUCCESS) {
+				return;
+			} else {
+				table = &clazz->constants_table;
+			}
+		} break;
+		
+		default: {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &constant) != SUCCESS) {
+				return;
+			}
+		}
 	}
-	
-	if (Z_TYPE_P(constant) == IS_STRING && zend_hash_find(
-			EG(zend_constants), 
-			Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1, (void**)&zconstant) == SUCCESS) {
-		if (zconstant->module_number == PHP_USER_CONSTANT) {
-			zend_hash_del
-				(EG(zend_constants), Z_STRVAL_P(constant), Z_STRLEN_P(constant)+1);
+
+	uopz_undefine(table, constant TSRMLS_CC);
+
+	if (table != EG(zend_constants)) {
+		while ((clazz = clazz->parent)) {
+			uopz_undefine(&clazz->constants_table, constant TSRMLS_CC);
 		}
 	}
 } /* }}} */

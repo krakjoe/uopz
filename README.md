@@ -240,17 +240,36 @@ void uopz_delete(string class, string method);
 void uopz_delete(string function);
 
 /**
+* Redefine $class::$constant to $value
+* @param string class
+* @param string constant
+* @param mixed  value
+* Note: only user constants should be redefined
+* Note: if the constant does not exist it will be created
+**/
+void uopz_redefine(string class, string constant, mixed value);
+
+/**
 * Redefine $constant to $value
 * @param string constant
 * @param mixed  value
-* Note: only user constants can be redefined
+* Note: only user constants should be redefined
+* Note: if the constant does not exist it will be created
 **/
 void uopz_redefine(string constant, mixed value);
 
 /**
+* Delete $class::$constant
+* @param string class
+* @param string constant
+* Note: only user constants should be undefined
+**/
+void uopz_undefine(string class, string constant);
+
+/**
 * Delete $constant
 * @param string constant
-* Note: only user constants can be undefined
+* Note: only user constants should be undefined
 **/
 void uopz_undefine(string constant);
 
