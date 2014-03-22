@@ -286,7 +286,7 @@ Testing
 =======
 *Running the test suite*
 
-Running tests with the normal make tests wigs out because this is a ```zend_extension```, use the following command to run tests:
+Running tests with the normal ```make test``` wigs out because this is a ```zend_extension```; use the following command to run tests:
 
     TEST_PHP_EXECUTABLE=/usr/local/bin/php php run-tests.php
 
