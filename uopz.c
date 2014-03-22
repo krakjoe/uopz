@@ -343,6 +343,10 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	if (UOPZ(overload)._exit) {
 		zval_ptr_dtor(&UOPZ(overload)._exit);
 	}
+	
+	if (UOPZ(cache)._exit) {
+		efree(UOPZ(cache)._exit);
+	}
 
 	zend_hash_destroy(&UOPZ(overload).table);	
 	zend_hash_destroy(&UOPZ(replaced));
@@ -377,7 +381,7 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 				znode    *result = (znode*) emalloc(sizeof(znode));
 				zval      call;
 
-				ZVAL_STRINGL(&call, 
+				ZVAL_STRINGL(&call,
 					"__uopz_exit_overload", 
 					sizeof("__uopz_exit_overload")-1, 1);
 
@@ -642,11 +646,11 @@ PHP_FUNCTION(__uopz_exit_overload) {
 		}
 	}
 
+	zval_ptr_dtor(&return_value);
+
 	if (leave) {
 		zend_bailout();
 	}
-
-	RETURN_FALSE;
 } /* }}} */
 
 /* {{{ proto void uopz_redefine(string constant, mixed variable) */
