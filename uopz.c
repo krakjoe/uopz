@@ -390,7 +390,8 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 				GET_NODE(op_array, result, opline->result);		
 				CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
 				GET_CACHE_SLOT(op_array, opline->op1.constant);
-				zend_hash_next_index_insert(&UOPZ(replaced), (void**) &result, sizeof(void*), NULL);
+				zend_hash_next_index_insert(
+					&UOPZ(replaced), (void**) &result, sizeof(void*), NULL);
 			} break;
 		}
 
