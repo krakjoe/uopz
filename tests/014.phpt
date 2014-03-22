@@ -39,8 +39,8 @@ array(1) {
   string(7) "myTrait"
 }
 array(1) {
-  ["myTrait"]=>
-  string(7) "myTrait"
+  ["My"]=>
+  string(2) "My"
 }
 array(1) {
   ["IMy"]=>

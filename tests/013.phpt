@@ -8,19 +8,28 @@ class My {
 	
 }
 
-trait IMy {
+trait MyTrait {
 	public function is() {
 		
 	}
 }
 
-uopz_extend(My::class, IMy::class);
+uopz_extend(My::class, MyTrait::class);
 
 $my = new My();
 
-var_dump(method_exists($my, "is"));
+var_dump(method_exists($my, "is"), 
+		 class_parents($my), 
+		 class_uses($my));
 ?>
 --EXPECT--
 bool(true)
+array(0) {
+}
+array(1) {
+  ["MyTrait"]=>
+  string(7) "MyTrait"
+}
+
 
 

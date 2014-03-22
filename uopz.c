@@ -734,13 +734,15 @@ PHP_FUNCTION(uopz_extend)
 
 		if (!instanceof_function(clazz, parent TSRMLS_CC)) {
 			if (!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
-				zend_do_inheritance(clazz, parent TSRMLS_CC);
 				if (parent->ce_flags & ZEND_ACC_TRAIT) {
 					zend_do_implement_trait(clazz, parent TSRMLS_CC);
-				}
+				} else zend_do_inheritance(clazz, parent TSRMLS_CC);
 			}
 		}
-
+		
+		if (parent->ce_flags & ZEND_ACC_TRAIT)
+			zend_do_bind_traits(clazz TSRMLS_CC);
+		
 		if (is_final)
 			clazz->ce_flags |= ZEND_ACC_FINAL;
 	}
@@ -789,14 +791,14 @@ PHP_FUNCTION(uopz_compose)
 
 					if ((*parent)->ce_flags & ZEND_ACC_INTERFACE) {
 						zend_do_implement_interface(entry, *parent TSRMLS_CC);
-					} else zend_do_inheritance(entry, *parent TSRMLS_CC);
-
-					if ((*parent)->ce_flags & ZEND_ACC_TRAIT)
+					} else if ((*parent)->ce_flags & ZEND_ACC_TRAIT) {
 						zend_do_implement_trait(entry, *parent TSRMLS_CC);
+					} else zend_do_inheritance(entry, *parent TSRMLS_CC);
 				}
 			}
 		}
-
+		
+		zend_do_bind_traits(entry TSRMLS_CC);
 		efree(lc_class_name);
 	}
 } /* }}} */

@@ -169,18 +169,18 @@ if (class_exists("CreatedClass")) {
 
 Will produce the following:
 
-    array(1) {
-      ["myTrait"]=>
-      string(7) "myTrait"
-    }
-    array(1) {
-      ["myTrait"]=>
-      string(7) "myTrait"
-    }
-    array(1) {
-      ["IMy"]=>
-      string(3) "IMy"
-    }
+	array(1) {
+	  ["myTrait"]=>
+	  string(7) "myTrait"
+	}
+	array(1) {
+	  ["My"]=>
+	  string(2) "My"
+	}
+	array(1) {
+	  ["IMy"]=>
+	  string(3) "IMy"
+	}
 
 API
 ===
