@@ -1,0 +1,8 @@
+// $Id$
+// vim:ft=javascript
+
+ARG_ENABLE("uopz", "for uopz support", "no");
+
+if (PHP_UOPZ != "no") {
+	EXTENSION("uopz", "uopz.c");
+}
