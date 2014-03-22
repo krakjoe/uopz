@@ -819,7 +819,8 @@ static inline void uopz_override(HashTable *table, zval *function, zend_function
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_override(string function, Closure handler) */
+/* {{{ proto void uopz_override(string function, Closure handler)
+	   proto void uopz_override(string class, string method, Closure handler) */
 PHP_FUNCTION(uopz_override) {
 	zval *function = NULL;
 	zval *callable = NULL;
@@ -983,6 +984,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_undefine_arginfo, 2)
 	ZEND_ARG_INFO(0, constant)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_override_arginfo, 2)
+	ZEND_ARG_INFO(0, function)
+	ZEND_ARG_INFO(0, handler)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_implement_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, interface)
@@ -996,8 +1001,6 @@ ZEND_BEGIN_ARG_INFO(uopz_compose_arginfo, 2)
 	ZEND_ARG_INFO(0, classes)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(__uopz_exit_overload_arginfo, 0)
-ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO(uopz_override_arginfo, 0)
 ZEND_END_ARG_INFO()
 /* }}} */
 
