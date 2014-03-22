@@ -23,6 +23,7 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
+#include "Zend/zend_closures.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_extensions.h"
 #include "Zend/zend_vm_opcodes.h"
@@ -345,7 +346,7 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	}
 	
 	if (UOPZ(cache)._exit) {
-		efree(UOPZ(cache)._exit);
+		//efree(UOPZ(cache)._exit);
 	}
 
 	zend_hash_destroy(&UOPZ(overload).table);	
@@ -805,6 +806,45 @@ PHP_FUNCTION(uopz_undefine)
 	}
 } /* }}} */
 
+/* {{{ */
+static inline void uopz_override(HashTable *table, zval *function, zend_function *override TSRMLS_DC) {
+	if (Z_TYPE_P(function) == IS_STRING) {
+		zend_hash_update(
+			table, 
+			Z_STRVAL_P(function), Z_STRLEN_P(function)+1, 
+			(void**) override, sizeof(zend_function), 
+			NULL);
+		
+		function_add_ref(override);
+	}
+} /* }}} */
+
+/* {{{ proto void uopz_override(string function, Closure handler) */
+PHP_FUNCTION(uopz_override) {
+	zval *function = NULL;
+	zval *callable = NULL;
+	HashTable *table = CG(function_table);
+	zend_class_entry *clazz = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 3: {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czo", &clazz, &function, &callable, zend_ce_closure) != SUCCESS) {
+				return;
+			} else {
+				table = &clazz->function_table;
+			}
+		} break;
+		
+		default: {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zo", &function, &callable, zend_ce_closure) != SUCCESS) {
+				return;
+			}
+		}
+	}
+	
+	uopz_override(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC) TSRMLS_CC);
+} /* }}} */
+
 /* {{{ proto void uopz_implement(string class, string interface) */
 PHP_FUNCTION(uopz_implement)
 {
@@ -957,6 +997,8 @@ ZEND_BEGIN_ARG_INFO(uopz_compose_arginfo, 2)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(__uopz_exit_overload_arginfo, 0)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_override_arginfo, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ uopz_functions[]
@@ -968,6 +1010,7 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_delete, uopz_delete_arginfo)
 	PHP_FE(uopz_redefine, uopz_redefine_arginfo)
 	PHP_FE(uopz_undefine, uopz_undefine_arginfo)
+	PHP_FE(uopz_override, uopz_override_arginfo)
 	PHP_FE(uopz_implement, uopz_implement_arginfo)
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)
