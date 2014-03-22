@@ -82,6 +82,12 @@ static void php_uopz_handler_dtor(void *pData) {
 } /* }}} */
 
 /* {{{ */
+static void php_uopz_replaced_dtor(void *pData) {
+	void **ppData = (void**) pData;
+	efree(*ppData);
+} /* }}} */
+
+/* {{{ */
 static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 	uopz_handler_t *uhandler = NULL;
 	int dispatching = 0;
@@ -324,8 +330,9 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
  */
 static PHP_RINIT_FUNCTION(uopz)
 {
-	zend_hash_init(&UOPZ(overload).table, 8, NULL, (dtor_func_t) php_uopz_handler_dtor, 0);
-
+	zend_hash_init(&UOPZ(overload).table, 8, NULL, (dtor_func_t) php_uopz_handler_dtor, 0);	
+	zend_hash_init(&UOPZ(replaced), 8, NULL, (dtor_func_t) php_uopz_replaced_dtor, 0);
+	
 	return SUCCESS;
 } /* }}} */
 
@@ -338,7 +345,8 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	}
 
 	zend_hash_destroy(&UOPZ(overload).table);	
-
+	zend_hash_destroy(&UOPZ(replaced));
+	
 	return SUCCESS;
 }
 /* }}} */
@@ -382,6 +390,7 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 				GET_NODE(op_array, result, opline->result);		
 				CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
 				GET_CACHE_SLOT(op_array, opline->op1.constant);
+				zend_hash_next_index_insert(&UOPZ(replaced), (void**) &result, sizeof(void*), NULL);
 			} break;
 		}
 

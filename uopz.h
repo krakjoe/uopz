@@ -37,6 +37,7 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	} cache;
 	
 	zend_ulong			   copts;
+	HashTable              replaced;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS
