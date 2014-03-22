@@ -807,7 +807,7 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_override(HashTable *table, zval *function, zend_function *override TSRMLS_DC) {
+static inline void uopz_function(HashTable *table, zval *function, zend_function *override TSRMLS_DC) {
 	if (Z_TYPE_P(function) == IS_STRING) {
 		zend_hash_update(
 			table, 
@@ -819,9 +819,9 @@ static inline void uopz_override(HashTable *table, zval *function, zend_function
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_override(string function, Closure handler)
-	   proto void uopz_override(string class, string method, Closure handler) */
-PHP_FUNCTION(uopz_override) {
+/* {{{ proto void uopz_function(string function, Closure handler)
+	   proto void uopz_function(string class, string method, Closure handler) */
+PHP_FUNCTION(uopz_function) {
 	zval *function = NULL;
 	zval *callable = NULL;
 	HashTable *table = CG(function_table);
@@ -843,7 +843,7 @@ PHP_FUNCTION(uopz_override) {
 		}
 	}
 	
-	uopz_override(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC) TSRMLS_CC);
+	uopz_function(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC) TSRMLS_CC);
 } /* }}} */
 
 /* {{{ proto void uopz_implement(string class, string interface) */
@@ -984,7 +984,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_undefine_arginfo, 2)
 	ZEND_ARG_INFO(0, constant)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO(uopz_override_arginfo, 2)
+ZEND_BEGIN_ARG_INFO(uopz_function_arginfo, 2)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, handler)
 ZEND_END_ARG_INFO()
@@ -1013,7 +1013,7 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_delete, uopz_delete_arginfo)
 	PHP_FE(uopz_redefine, uopz_redefine_arginfo)
 	PHP_FE(uopz_undefine, uopz_undefine_arginfo)
-	PHP_FE(uopz_override, uopz_override_arginfo)
+	PHP_FE(uopz_function, uopz_function_arginfo)
 	PHP_FE(uopz_implement, uopz_implement_arginfo)
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)

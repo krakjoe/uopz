@@ -27,11 +27,11 @@ uopz_compose(
 	]
 );
 
-uopz_override("whatever", function(){
+uopz_function("whatever", function(){
 	return "whatever";
 });
 
-uopz_override(C::class, "foo", function(){
+uopz_function(C::class, "foo", function(){
 	return "overriden";
 });
 
