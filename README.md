@@ -43,7 +43,7 @@ Overloading Exit
 
 We have to treat ```ZEND_EXIT``` differently, opcache will, by default, optimize away the dead code after an unconditional ```ZEND_EXIT```, during test execution and hackery this is less than optimal. You don't want to disable CFG based optimization in opcache ! 
 
-So ```uopz``` changes ```ZEND_EXIT``` opcodes into opcodes that result in the invokation if the user overload function. These will not be optimized or changes by opcache, and so you can run tests using fully optimized code as you do in production.
+So ```uopz``` changed ```ZEND_EXIT``` opcodes into opcodes that result in the invokation if the user overload function. These will not be optimized or changes by opcache, and so you can run tests using fully optimized code as you do in production.
 
 Returning ```true``` from a ```ZEND_EXIT``` overload will result in exiting, doing anything else, or nothing, results in continuing with executing normally.
 
@@ -281,6 +281,14 @@ Installation
 
  - ```uopz``` is a Zend Extension, and so should be loaded with the ```zend_extension``` INI directive. - 
  - ```uopz``` should be loaded *before* opcache.
+ 
+Testing
+=======
+*Running the test suite*
+
+Running tests with the normal make tests wigs out because this is a ```zend_extension```, use the following command to run tests:
+
+    TEST_PHP_EXECUTABLE=/usr/local/bin/php php run-tests.php
 
 You are done reading
 ====================
