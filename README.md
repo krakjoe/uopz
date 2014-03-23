@@ -8,7 +8,6 @@ It supports the following activities:
 
  - Overloading some Zend opcodes including exit/new and composure opcodes
  - Renaming functions and methods
- - Aliasing functions and methods
  - Deletion of functions and methods
  - Redefinition of constants
  - Deletion of constants
@@ -210,21 +209,6 @@ void uopz_rename(string class, string method, string rename);
 * Note: if both functions exist, this effectively swaps their names
 **/
 void uopz_rename(string function, string rename);
-
-/**
-* Alias $class::$method as $class::$alias
-* @param string class
-* @param string method
-* @param string alias
-**/
-void uopz_alias(string class, string method, string alias);
-
-/**
-* Alias $function as $alias
-* @param string function
-* @param string alias
-**/
-void uopz_alias(string function, string alias);
 
 /**
 * Delete $class::$method
