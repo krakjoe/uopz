@@ -1059,8 +1059,14 @@ zend_module_entry uopz_module_entry = {
 /* }}} */
 
 static int uopz_zend_startup(zend_extension *extension) /* {{{ */
-{
+{	
+#if PHP_VERSION_ID >= 50700
+	TSRMLS_FETCH();
+	
+	return zend_startup_module(&uopz_module_entry TSRMLS_CC);
+#else
 	return zend_startup_module(&uopz_module_entry);
+#endif
 }
 /* }}} */
 
