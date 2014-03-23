@@ -11,7 +11,7 @@ class Upper {
 	const NUM = 10;
 }
 class Lower extends Upper {}
-uopz_undefine(Lower::class, "NUM");
+uopz_undefine("Lower", "NUM");
 var_dump(@constant("Lower::NUM"),
 		 @constant("Upper::NUM"));
 ?>

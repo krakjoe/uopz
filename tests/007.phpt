@@ -15,17 +15,12 @@ class MyClass {
 }
 
 uopz_rename("_my_strlen", "my_other_strlen");
-uopz_rename(myClass::class, "first", "second");
+uopz_rename("myClass", "first", "second");
 
 var_dump(my_other_strlen("hello world"));
 
 $my = new myClass();
 var_dump(method_exists($my, "second"));
-
-/* rename internals tests */
-function session_start_original() {
-	var_dump(__FUNCTION__);
-}
 
 class My {
 	public function search() {
@@ -37,8 +32,18 @@ class My {
 	}
 }
 
+if (!function_exists("session_start")) {
+	function session_start() {
+		var_dump(__FUNCTION__);
+	}
+}
+
+function session_start_original() {
+	var_dump(__FUNCTION__);
+}
+
 uopz_rename("session_start", "session_start_original");
-uopz_rename(My::class, "search", "replace");
+uopz_rename("My", "search", "replace");
 
 $my = new My();
 $my->search();
@@ -55,6 +60,3 @@ string(11) "My::replace"
 bool(true)
 bool(true)
 string(22) "session_start_original"
-
-
-

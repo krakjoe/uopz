@@ -12,12 +12,12 @@ class Test {
 	const CON = 1;
 }
 
-uopz_redefine(Test::class, "CON", 10);
+uopz_redefine("Test", "CON", 10);
 var_dump(Test::CON);
-uopz_redefine(Test::class, "CON", 40);
+uopz_redefine("Test", "CON", 40);
 var_dump(Test::CON);
-uopz_undefine(Test::class, "CON");
-uopz_redefine(Test::class, "CON", 60);
+uopz_undefine("Test", "CON");
+uopz_redefine("Test", "CON", 60);
 var_dump(Test::CON);
 ?>
 --EXPECT--

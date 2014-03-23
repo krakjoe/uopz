@@ -14,7 +14,7 @@ trait MyTrait {
 	}
 }
 
-uopz_extend(My::class, MyTrait::class);
+uopz_extend("My", "MyTrait");
 
 $my = new My();
 

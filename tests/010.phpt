@@ -15,7 +15,7 @@ class MyClass {
 }
 
 uopz_delete("_my_strlen");
-uopz_delete(myClass::class, "first");
+uopz_delete("myClass", "first");
 
 var_dump(function_exists("_my_strlen"));
 

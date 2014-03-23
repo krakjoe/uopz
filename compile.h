@@ -49,6 +49,48 @@
 		} \
 	} while (0)
 	
+#if PHP_VERSION_ID < 50500
+#define GET_OP1(as) do {\
+	if ((OPLINE->op1_type != IS_UNUSED) &&\
+		(op1 = zend_get_zval_ptr(\
+			OPLINE->op1_type, &OPLINE->op1, execute_data->Ts, &free_op1, as TSRMLS_CC))) {\
+		fci.params[0] = &op1;\
+	} else {\
+		fci.params[0] = &EG(uninitialized_zval_ptr);\
+	}\
+} while(0)
+
+#define GET_OP2(as) do {\
+	if ((OPLINE->op2_type != IS_UNUSED) &&\
+		(op2 = zend_get_zval_ptr(\
+			OPLINE->op2_type, &OPLINE->op2, execute_data->Ts, &free_op2, as TSRMLS_CC))) {\
+		fci.params[1] = &op2;\
+	} else {\
+		fci.params[1] = &EG(uninitialized_zval_ptr);\
+	}\
+} while(0)
+#else
+#define GET_OP1(as) do {\
+	if ((OPLINE->op1_type != IS_UNUSED) &&\
+		(op1 = zend_get_zval_ptr(\
+			OPLINE->op1_type, &OPLINE->op1, execute_data, &free_op1, as TSRMLS_CC))) {\
+		fci.params[0] = &op1;\
+	} else {\
+		fci.params[0] = &EG(uninitialized_zval_ptr);\
+	}\
+} while(0)
+
+#define GET_OP2(as) do {\
+	if ((OPLINE->op2_type != IS_UNUSED) &&\
+		(op2 = zend_get_zval_ptr(\
+			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
+		fci.params[1] = &op2;\
+	} else {\
+		fci.params[1] = &EG(uninitialized_zval_ptr);\
+	}\
+} while(0)
+#endif
+	
 /* Common part of zend_add_literal and zend_append_individual_literal */
 static inline void zend_insert_literal(zend_op_array *op_array, const zval *zv, int literal_position TSRMLS_DC) /* {{{ */
 {
@@ -109,10 +151,17 @@ static inline void php_uopz_init(zend_op *op TSRMLS_DC) {
 	SET_UNUSED(op->result);
 } /* }}} */
 
+#if PHP_VERSION_ID < 50500
+/* {{{ */
+static inline zend_uint php_uopz_temp_var(zend_op_array *op_array TSRMLS_DC) {
+	 return (op_array->T)++ * ZEND_MM_ALIGNED_SIZE(sizeof(temp_variable));
+} /* }}} */
+#else
 /* {{{ */
 static inline zend_uint php_uopz_temp_var(zend_op_array *op_array TSRMLS_DC) {
 	 return (zend_uint)(zend_uintptr_t)EX_TMP_VAR_NUM(0, (op_array->T)++);
 } /* }}} */
+#endif
 
 /* {{{ */
 static inline zend_op* php_uopz_next(zend_op_array *op_array TSRMLS_DC) {

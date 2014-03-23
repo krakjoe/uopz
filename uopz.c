@@ -71,8 +71,32 @@ uopz_opcode_t uoverrides[] = {
 /* {{{ */
 typedef struct _uopz_handler_t {
 	zval *handler;
-	zend_fcall_info_cache *cache;
 } uopz_handler_t; /* }}} */
+
+static inline void uopz_function_add_ref(zend_function *function, zend_bool copy TSRMLS_DC) {
+	if (function->type == ZEND_USER_FUNCTION) {
+		zend_op_array *op_array = &function->op_array;
+		
+		(*op_array->refcount)++;
+		
+		if (copy && op_array->static_variables) {
+			zval      *temp;
+			HashTable *statics = op_array->static_variables;
+			
+			ALLOC_HASHTABLE(statics);
+			zend_hash_init
+				(op_array->static_variables, 
+					zend_hash_num_elements(statics), 
+					NULL, ZVAL_PTR_DTOR, 0);
+			zend_hash_copy
+				(op_array->static_variables, 
+					statics, 
+					(copy_ctor_func_t) zval_add_ref, 
+					(void *) &temp, sizeof(zval *));
+			op_array->run_time_cache = NULL;
+		}
+	}
+}
 
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
@@ -85,10 +109,6 @@ static void php_uopz_handler_dtor(void *pData) {
 
 	if (uhandler->handler) {
 		zval_ptr_dtor(&uhandler->handler);
-	}
-
-	if (uhandler->cache) {
-		efree(uhandler->cache);
 	}
 } /* }}} */
 
@@ -105,6 +125,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 	if (zend_hash_index_find(&UOPZ(overload).table, OPCODE, (void**)&uhandler) == SUCCESS) {
 		zend_fcall_info fci;
+		zend_fcall_info_cache fcc;
 		char *cerror = NULL;
 		zval *retval = NULL;
 		zval *op1 = NULL,
@@ -116,140 +137,124 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 		memset(
 			&fci, 0, sizeof(zend_fcall_info));
 
-		if (zend_fcall_info_init(uhandler->handler, 
-				IS_CALLABLE_CHECK_SILENT, 
-				&fci, uhandler->cache, 
-				NULL, &cerror TSRMLS_CC) == SUCCESS) {
+	
+		if (zend_is_callable_ex(uhandler->handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
+			if (zend_fcall_info_init(uhandler->handler, 
+					IS_CALLABLE_CHECK_SILENT, 
+					&fci, &fcc, 
+					NULL, &cerror TSRMLS_CC) == SUCCESS) {
 
-			fci.params = (zval***) emalloc(2 * sizeof(zval **));
-			fci.param_count = 2;
+				fci.params = (zval***) emalloc(2 * sizeof(zval **));
+				fci.param_count = 2;
 
-#define GET_OP1(as) do {\
-	if ((OPLINE->op1_type != IS_UNUSED) &&\
-		(op1 = zend_get_zval_ptr(\
-			OPLINE->op1_type, &OPLINE->op1, execute_data, &free_op1, as TSRMLS_CC))) {\
-		fci.params[0] = &op1;\
-	} else {\
-		fci.params[0] = &EG(uninitialized_zval_ptr);\
-	}\
-} while(0)
+				switch (OPCODE) {
+					case ZEND_INSTANCEOF: {
+						GET_OP1(BP_VAR_R);
 
-#define GET_OP2(as) do {\
-	if ((OPLINE->op2_type != IS_UNUSED) &&\
-		(op2 = zend_get_zval_ptr(\
-			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
-		fci.params[1] = &op2;\
-	} else {\
-		fci.params[1] = &EG(uninitialized_zval_ptr);\
-	}\
-} while(0)
+						oce = EX_T(OPLINE->op2.var).class_entry; 
 
-			switch (OPCODE) {
-				case ZEND_INSTANCEOF: {
-					GET_OP1(BP_VAR_R);
-
-					oce = EX_T(OPLINE->op2.var).class_entry; 
-
-					MAKE_STD_ZVAL(op2);
-					ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
-					fci.params[1] = &op2;
-				} break;
+						MAKE_STD_ZVAL(op2);
+						ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
+						fci.params[1] = &op2;
+					} break;
 				
-				case ZEND_ADD_INTERFACE:
-				case ZEND_ADD_TRAIT: {
-					oce = EX_T(OPLINE->op1.var).class_entry;
+					case ZEND_ADD_INTERFACE:
+					case ZEND_ADD_TRAIT: {
+						oce = EX_T(OPLINE->op1.var).class_entry;
 
-					MAKE_STD_ZVAL(op1);
-					ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
-					fci.params[0] = &op1;
+						MAKE_STD_ZVAL(op1);
+						ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
+						fci.params[0] = &op1;
 					
-					if (CACHED_PTR(OPLINE->op2.literal->cache_slot)) {
-						oce = CACHED_PTR(OPLINE->op2.literal->cache_slot);
-					} else {
-						oce = zend_fetch_class_by_name(
-							Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 
-							OPLINE->op2.literal + 1, ZEND_FETCH_CLASS_NO_AUTOLOAD TSRMLS_CC);
+						if (CACHED_PTR(OPLINE->op2.literal->cache_slot)) {
+							oce = CACHED_PTR(OPLINE->op2.literal->cache_slot);
+						} else {
+							oce = zend_fetch_class_by_name(
+								Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 
+								OPLINE->op2.literal + 1, ZEND_FETCH_CLASS_NO_AUTOLOAD TSRMLS_CC);
+						}
+
+						MAKE_STD_ZVAL(op2);
+						ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
+						fci.params[1] = &op2;
+						fci.param_count = 2;
+					} break;
+
+					case ZEND_NEW: {
+						oce = EX_T(OPLINE->op1.var).class_entry;
+
+						MAKE_STD_ZVAL(op1);
+						ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
+						fci.param_count = 1;
+						fci.params[0] = &op1;
+					} break;
+
+					default: {
+						GET_OP1(BP_VAR_RW);
+						GET_OP2(BP_VAR_RW);
 					}
-
-					MAKE_STD_ZVAL(op2);
-					ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
-					fci.params[1] = &op2;
-					fci.param_count = 2;
-				} break;
-
-				case ZEND_NEW: {
-					oce = EX_T(OPLINE->op1.var).class_entry;
-
-					MAKE_STD_ZVAL(op1);
-					ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
-					fci.param_count = 1;
-					fci.params[0] = &op1;
-				} break;
-
-				default: {
-					GET_OP1(BP_VAR_RW);
-					GET_OP2(BP_VAR_RW);
 				}
-			}
 			
-			fci.retval_ptr_ptr = &retval;
+				fci.retval_ptr_ptr = &retval;
 
-			zend_try {
-				zend_call_function(&fci, uhandler->cache TSRMLS_CC);
-			} zend_end_try();
+				zend_try {
+					zend_call_function(&fci, &fcc TSRMLS_CC);
+				} zend_end_try();
 
-			if (fci.params)
-				efree(fci.params);
+				if (fci.params)
+					efree(fci.params);
 
-			if (retval) {
-				if (Z_TYPE_P(retval) != IS_NULL) {
-					convert_to_long(retval);
-					dispatching = 
-						Z_LVAL_P(retval);
+				if (retval) {
+					if (Z_TYPE_P(retval) != IS_NULL) {
+						convert_to_long(retval);
+						dispatching = 
+							Z_LVAL_P(retval);
+					}
+					zval_ptr_dtor(&retval);
 				}
-				zval_ptr_dtor(&retval);
-			}
 
-			switch (OPCODE) {
-				case ZEND_INSTANCEOF: {
-					convert_to_string(op2);
+				switch (OPCODE) {
+					case ZEND_INSTANCEOF: {
+						convert_to_string(op2);
 
-					if (zend_lookup_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), &nce TSRMLS_CC) == SUCCESS) {
-						if (*nce != oce) {
-							EX_T(OPLINE->op2.var).class_entry = *nce;
+						if (zend_lookup_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), &nce TSRMLS_CC) == SUCCESS) {
+							if (*nce != oce) {
+								EX_T(OPLINE->op2.var).class_entry = *nce;
+							}
 						}
-					}
 
-					zval_ptr_dtor(&op2);
-				} break;
+						zval_ptr_dtor(&op2);
+					} break;
 
-				case ZEND_ADD_INTERFACE:
-				case ZEND_ADD_TRAIT: {
-					convert_to_string(op2);
+					case ZEND_ADD_INTERFACE:
+					case ZEND_ADD_TRAIT: {
+						convert_to_string(op2);
 
-					if (zend_lookup_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), &nce TSRMLS_CC) == SUCCESS) {
-						if (*nce != oce) {
-							CACHE_PTR(OPLINE->op2.literal->cache_slot, *nce);
+						if (zend_lookup_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), &nce TSRMLS_CC) == SUCCESS) {
+							if (*nce != oce) {
+								CACHE_PTR(OPLINE->op2.literal->cache_slot, *nce);
+							}
 						}
-					}
 
-					zval_ptr_dtor(&op1);
-					zval_ptr_dtor(&op2);
-				} break;
+						zval_ptr_dtor(&op1);
+						zval_ptr_dtor(&op2);
+					} break;
 
-				case ZEND_NEW: {
-					convert_to_string(op1);
+					case ZEND_NEW: {
+						convert_to_string(op1);
 
-					if (zend_lookup_class(Z_STRVAL_P(op1), Z_STRLEN_P(op1), &nce TSRMLS_CC) == SUCCESS) {
-						if (*nce != oce) {
-							EX_T(OPLINE->op1.var).class_entry = *nce;
+						if (zend_lookup_class(Z_STRVAL_P(op1), Z_STRLEN_P(op1), &nce TSRMLS_CC) == SUCCESS) {
+							if (*nce != oce) {
+								EX_T(OPLINE->op1.var).class_entry = *nce;
+							}
 						}
-					}
 
-					zval_ptr_dtor(&op1);
-				} break;
+						zval_ptr_dtor(&op1);
+					} break;
+				}
 			}
 		}
+		
 	}
 
 	if (dispatching) switch(dispatching) {
@@ -342,10 +347,6 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	if (UOPZ(overload)._exit) {
 		zval_ptr_dtor(&UOPZ(overload)._exit);
 	}
-	
-	if (UOPZ(cache)._exit) {
-		//efree(UOPZ(cache)._exit);
-	}
 
 	zend_hash_destroy(&UOPZ(overload).table);	
 	zend_hash_destroy(&UOPZ(replaced));
@@ -387,12 +388,15 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 				opline->opcode = ZEND_DO_FCALL;
 				SET_NODE(op_array, opline->op1, call);
 				SET_UNUSED(opline->op2);
+#if PHP_VERSION_ID > 50500
 				opline->op2.num = CG(context).nested_calls;
+#endif
 				opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
 				opline->result_type = IS_TMP_VAR;
 				GET_NODE(op_array, result, opline->result);		
 				CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
 				GET_CACHE_SLOT(op_array, opline->op1.constant);
+				
 				zend_hash_next_index_insert(
 					&UOPZ(replaced), (void**) &result, sizeof(void*), NULL);
 			} break;
@@ -418,10 +422,8 @@ static PHP_FUNCTION(uopz_overload)
 		if (opcode == ZEND_EXIT) {
 			if (UOPZ(overload)._exit) {
 				zval_ptr_dtor(&UOPZ(overload)._exit);
-				efree(UOPZ(cache)._exit);
 			
 				UOPZ(overload)._exit = NULL;
-				UOPZ(cache)._exit   = NULL;
 			}
 		} else {
 			zend_hash_index_del(&UOPZ(overload).table, opcode);
@@ -434,22 +436,15 @@ static PHP_FUNCTION(uopz_overload)
 		if (opcode == ZEND_EXIT) {
 			if (UOPZ(overload)._exit) {
 				zval_ptr_dtor(&UOPZ(overload)._exit);
-				efree(UOPZ(cache)._exit);
 			}
 
 			MAKE_STD_ZVAL(UOPZ(overload)._exit);
 			ZVAL_ZVAL(UOPZ(overload)._exit, handler, 1, 0);
-			UOPZ(cache)._exit = (zend_fcall_info_cache*) 
-				emalloc(sizeof(zend_fcall_info_cache));
-			memcpy(UOPZ(cache)._exit, &fcc, sizeof(zend_fcall_info_cache));
 		} else {
 			uopz_handler_t uhandler;
 
 			MAKE_STD_ZVAL(uhandler.handler);
 			ZVAL_ZVAL(uhandler.handler, handler, 1, 0);
-			uhandler.cache = (zend_fcall_info_cache*) 
-				emalloc(sizeof(zend_fcall_info_cache));
-			memcpy(uhandler.cache, &fcc, sizeof(zend_fcall_info_cache));
 			zend_hash_index_update(
 				&UOPZ(overload).table, opcode, (void**) &uhandler, sizeof(uopz_handler_t), NULL);
 		}
@@ -476,34 +471,30 @@ static inline void uopz_rename(HashTable *table, zval *function, zval *overload 
 		zend_hash_quick_find(table, lcf, Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
 		zend_hash_quick_find(table, lco, Z_STRLEN_P(overload)+1, hashed[1], (void**) &tuple[1]);
 		
-		if (tuple[0]){
-			zend_function store[2];
+		if (tuple[0]) {
+			zend_function locals[2];
 			
-			store[0] = *tuple[0];
-			if (tuple[1]) {
-				store[1] = *tuple[1];
-			}
-			
-			if (tuple[0]->type == ZEND_USER_FUNCTION) {
-				function_add_ref(&store[0]);
-			}
+			locals[0] = *tuple[0];
 			
 			if (tuple[1]) {
-				if (tuple[1]->type == ZEND_USER_FUNCTION) {
-					function_add_ref(&store[1]);
-				}
-				zend_hash_quick_del(table, lco, Z_STRLEN_P(overload)+1, hashed[1]);
-			}
-			zend_hash_quick_del(table, lcf, Z_STRLEN_P(function)+1, hashed[0]);
-			
-			zend_hash_quick_update(table, 
-				lco, Z_STRLEN_P(overload)+1, hashed[1], 
-				(void**) &store[0], sizeof(zend_function), NULL);
-
-			if (tuple[1]) {
+				locals[1] = *tuple[1];
+							
+				uopz_function_add_ref(&locals[0], 1 TSRMLS_CC);
+				uopz_function_add_ref(&locals[1], 1 TSRMLS_CC);
+				
 				zend_hash_quick_update(table, 
 					lcf, Z_STRLEN_P(function)+1, hashed[0], 
-					(void**) &store[1], sizeof(zend_function), NULL);
+					(void**) &locals[1], sizeof(zend_function), NULL);
+				zend_hash_quick_update(table,
+					lco, Z_STRLEN_P(overload)+1, hashed[1], 
+					(void**) &locals[0], sizeof(zend_function), NULL);
+			} else {
+				zend_hash_quick_update(table,
+					lco, Z_STRLEN_P(overload)+1, hashed[1],
+					(void**) &locals[0], sizeof(zend_function), NULL);
+				uopz_function_add_ref(&locals[0], 1 TSRMLS_CC);
+				zend_hash_quick_del
+					(table, lcf, Z_STRLEN_P(function)+1, hashed[0]);
 			}
 		}
 		
@@ -533,63 +524,6 @@ PHP_FUNCTION(uopz_rename) {
 	}
 	
 	uopz_rename(table, function, overload TSRMLS_CC);
-} /* }}} */
-
-/* {{{ */
-static inline void uopz_alias(HashTable *table, zval *function, zval *alias TSRMLS_DC) {
-	zend_function *tuple[2] = {NULL, NULL};
-	zend_ulong hashed[2] = {0L, 0L};
-	
-	if ((function && (Z_TYPE_P(function) == IS_STRING)) &&
-		(alias && (Z_TYPE_P(alias) == IS_STRING))) {
-		
-		char *lcf = zend_str_tolower_dup(Z_STRVAL_P(function), Z_STRLEN_P(function)+1),
-			 *lca = zend_str_tolower_dup(Z_STRVAL_P(alias), Z_STRLEN_P(alias)+1);
-		
-		hashed[0] = zend_inline_hash_func(lcf, Z_STRLEN_P(function)+1);
-		hashed[1] = zend_inline_hash_func(lca, Z_STRLEN_P(alias)+1);
-		
-		zend_hash_quick_find(table, lcf, Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
-		zend_hash_quick_find(table, lca, Z_STRLEN_P(alias)+1, hashed[1], (void**) &tuple[1]);
-		
-		if (tuple[0] && !tuple[1]) {
-			zend_hash_quick_update(
-				table,
-				lca, Z_STRLEN_P(alias)+1, 
-				hashed[1], (void**) tuple[0], sizeof(zend_function), 
-				NULL);
-			
-			if (tuple[0]->type == ZEND_USER_FUNCTION) {
-				function_add_ref(tuple[0]);
-			}
-		}
-		
-		efree(lca);
-		efree(lcf);
-	}
-} /* }}} */
-
-/* {{{ proto void uopz_alias(mixed function, mixed alias)
-	   proto void uopz_alias(string class, mixed function, mixed alias) */
-PHP_FUNCTION(uopz_alias) {
-	zval *function = NULL;
-	zval *alias = NULL;
-	zend_class_entry *clazz = NULL;
-	HashTable *table = EG(function_table);
-	
-	switch (ZEND_NUM_ARGS()) {
-		case 3: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czz", &clazz, &function, &alias) != SUCCESS) {
-			return;
-		} else {
-			table = &clazz->function_table;
-		} break;
-		
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &function, &alias) != SUCCESS) {
-			return;
-		} break;
-	}
-	
-	uopz_alias(table, function, alias TSRMLS_CC);
 } /* }}} */
 
 /* {{{ */
@@ -632,30 +566,32 @@ PHP_FUNCTION(__uopz_exit_overload) {
 
 	if(UOPZ(overload)._exit) {
 		zend_fcall_info fci;
+		zend_fcall_info_cache fcc;
 		char *cerror = NULL;
 		zval *retval = NULL;
 
 		memset(
 			&fci, 0, sizeof(zend_fcall_info));
+		if (zend_is_callable_ex(UOPZ(overload)._exit, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
+			if (zend_fcall_info_init(UOPZ(overload)._exit, 
+					IS_CALLABLE_CHECK_SILENT, 
+					&fci, &fcc, 
+					NULL, &cerror TSRMLS_CC) == SUCCESS) {
 
-		if (zend_fcall_info_init(UOPZ(overload)._exit, 
-				IS_CALLABLE_CHECK_SILENT, 
-				&fci, UOPZ(cache)._exit, 
-				NULL, &cerror TSRMLS_CC) == SUCCESS) {
+				fci.retval_ptr_ptr = &retval;
 
-			fci.retval_ptr_ptr = &retval;
+				zend_try {
+					zend_call_function(&fci, &fcc TSRMLS_CC);
+				} zend_end_try();
 
-			zend_try {
-				zend_call_function(&fci, UOPZ(cache)._exit TSRMLS_CC);
-			} zend_end_try();
-
-			if (retval) {
+				if (retval) {
 #if PHP_VERSION_ID > 50600
-				leave = zend_is_true(retval TSRMLS_CC);
+					leave = zend_is_true(retval TSRMLS_CC);
 #else
-				leave = zend_is_true(retval);
+					leave = zend_is_true(retval);
 #endif
-				zval_ptr_dtor(&retval);
+					zval_ptr_dtor(&retval);
+				}
 			}
 		}
 	}
@@ -985,11 +921,6 @@ ZEND_BEGIN_ARG_INFO(uopz_rename_arginfo, 2)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, overload)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO(uopz_alias_arginfo, 2)
-	ZEND_ARG_INFO(0, class)
-	ZEND_ARG_INFO(0, function)
-	ZEND_ARG_INFO(0, alias)
-ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_delete_arginfo, 1)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
@@ -1029,7 +960,6 @@ ZEND_END_ARG_INFO()
 static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_overload, uopz_overload_arginfo)
 	PHP_FE(uopz_rename, uopz_rename_arginfo)
-	PHP_FE(uopz_alias, uopz_alias_arginfo)
 	PHP_FE(uopz_delete, uopz_delete_arginfo)
 	PHP_FE(uopz_redefine, uopz_redefine_arginfo)
 	PHP_FE(uopz_undefine, uopz_undefine_arginfo)

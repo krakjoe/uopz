@@ -21,25 +21,25 @@ class B {
 }
 
 uopz_compose(
-	C::class, [
-		A::class, 
-		B::class
-	]
+	"C", array(
+		"A",
+		"B"
+	)
 );
 
 uopz_function("whatever", function(){
 	return "whatever";
 });
 
-uopz_function(C::class, "foo", function(){
+uopz_function("C", "foo", function(){
 	return "overriden";
 });
 
-uopz_function(C::class, "FoF", function(){
+uopz_function("C", "FoF", function(){
 	return true;
 });
 
-uopz_function(C::class, "myClosure", function(){
+uopz_function("C", "myClosure", function(){
 	return __FUNCTION__;
 });
 

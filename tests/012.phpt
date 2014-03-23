@@ -12,7 +12,7 @@ interface IMy {
 	public function is();
 }
 
-uopz_implement(My::class, IMy::class);
+uopz_implement("My", "IMy");
 
 $my = new My();
 

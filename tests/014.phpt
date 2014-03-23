@@ -19,9 +19,9 @@ trait myTrait {
 }
 
 uopz_compose("CreatedClass", [
-	My::class, 
-	IMy::class, 
-	myTrait::class
+	"My", 
+	"IMy", 
+	"myTrait"
 ]);
 
 if (class_exists("CreatedClass")) {
