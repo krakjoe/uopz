@@ -822,11 +822,11 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_function(HashTable *table, zval *function, zend_function *override TSRMLS_DC) {
+static inline void uopz_function(HashTable *table, zval *function, zend_function *override, zend_bool is_static TSRMLS_DC) {
 	if (Z_TYPE_P(function) == IS_STRING) {
 		char *lcname = zend_str_tolower_dup
 			(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
-		
+
 		zend_hash_update(
 			table, 
 			lcname, Z_STRLEN_P(function)+1, 
@@ -835,21 +835,27 @@ static inline void uopz_function(HashTable *table, zval *function, zend_function
 		
 		function_add_ref(override);
 		
+		if (is_static) {
+			override->common.fn_flags |= ZEND_ACC_STATIC;
+		}
+		
 		efree(lcname);
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_function(string function, Closure handler)
-	   proto void uopz_function(string class, string method, Closure handler) */
+/* {{{ proto void uopz_function(string function, Closure handler [, bool static = false])
+	   proto void uopz_function(string class, string method, Closure handler [, bool static = false]) */
 PHP_FUNCTION(uopz_function) {
 	zval *function = NULL;
 	zval *callable = NULL;
 	HashTable *table = CG(function_table);
 	zend_class_entry *clazz = NULL;
+	zend_bool is_static = 0;
 	
 	switch (ZEND_NUM_ARGS()) {
+		case 4:
 		case 3: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czo", &clazz, &function, &callable, zend_ce_closure) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czo|b", &clazz, &function, &callable, zend_ce_closure, &is_static) != SUCCESS) {
 				return;
 			} else {
 				table = &clazz->function_table;
@@ -857,13 +863,13 @@ PHP_FUNCTION(uopz_function) {
 		} break;
 		
 		default: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zo", &function, &callable, zend_ce_closure) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zo|b", &function, &callable, zend_ce_closure, &is_static) != SUCCESS) {
 				return;
 			}
 		}
 	}
 	
-	uopz_function(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC) TSRMLS_CC);
+	uopz_function(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC), is_static TSRMLS_CC);
 } /* }}} */
 
 /* {{{ proto void uopz_implement(string class, string interface) */

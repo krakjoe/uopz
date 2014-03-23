@@ -39,11 +39,16 @@ uopz_function(C::class, "FoF", function(){
 	return true;
 });
 
+uopz_function(C::class, "myStatic", function(){
+	return __FUNCTION__;
+}, true);
+
 $c = new C();
-var_dump($c->foo(), whatever(), $c->fof());
+var_dump($c->foo(), whatever(), $c->fof(), C::myStatic());
 
 --EXPECT--
 string(9) "overriden"
 string(8) "whatever"
 bool(true)
+string(9) "{closure}"
 
