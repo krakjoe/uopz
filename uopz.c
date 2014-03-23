@@ -1076,7 +1076,7 @@ static int uopz_zend_startup(zend_extension *extension) /* {{{ */
 #endif
 ZEND_EXTENSION();
 
-zend_extension zend_extension_entry = {
+ZEND_EXT_API zend_extension zend_extension_entry = {
 	PHP_UOPZ_EXTNAME,
 	PHP_UOPZ_VERSION,
 	"Joe Watkins <joe.watkins@live.co.uk>",
