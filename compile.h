@@ -98,7 +98,7 @@ int zend_add_literal(zend_op_array *op_array, const zval *zv TSRMLS_DC) /* {{{ *
 /* }}} */
 
 /* {{{ */
-static inline zend_op* php_uopz_realloc(zend_op_array *op_array, zend_uint size) {
+static inline void php_uopz_realloc(zend_op_array *op_array, zend_uint size) {
 	op_array->opcodes = erealloc(op_array->opcodes, size * sizeof(zend_op));
 } /* }}} */
 

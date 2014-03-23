@@ -50,13 +50,22 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 user_opcode_handler_t ohandlers[MAX_OPCODE]; /* }}} */
 
 /* {{{ */
-zend_uchar uoverrides[] = {
-	ZEND_NEW,
-	ZEND_THROW,
-	ZEND_ADD_TRAIT,
-	ZEND_ADD_INTERFACE,
-	ZEND_INSTANCEOF,
-	ZEND_NOP
+typedef struct _uopz_opcode_t {
+	zend_uchar   code;
+	const char  *name;
+	size_t       length;
+} uopz_opcode_t;
+
+#define UOPZ_CODE(n)   {n, #n, sizeof(#n)-1}
+#define UOPZ_END	   {ZEND_NOP, NULL, 0L}
+
+uopz_opcode_t uoverrides[] = {
+	UOPZ_CODE(ZEND_NEW),
+	UOPZ_CODE(ZEND_THROW),
+	UOPZ_CODE(ZEND_ADD_TRAIT),
+	UOPZ_CODE(ZEND_ADD_INTERFACE),
+	UOPZ_CODE(ZEND_INSTANCEOF),
+	UOPZ_END
 }; /* }}} */
 
 /* {{{ */
@@ -277,33 +286,21 @@ static PHP_MINIT_FUNCTION(uopz)
 	zend_register_long_constant\
 		(name, len, op, CONST_CS|CONST_PERSISTENT, module_number TSRMLS_CC)
 
-		zend_uchar *opcode = uoverrides;
+		uopz_opcode_t *uop = uoverrides;
 
 		REGISTER_ZEND_OPCODE("ZEND_EXIT", sizeof("ZEND_EXIT"), ZEND_EXIT);
 
-		while (*opcode && *opcode != ZEND_NOP) {
-			const char *named = NULL;
-			size_t named_len = 0L;
+		while (uop->code != ZEND_NOP) {
 			zval constant;
 
-			ohandlers[*opcode] = 
-				zend_get_user_opcode_handler(*opcode);
-			zend_set_user_opcode_handler(*opcode, php_uopz_handler);
-
-			named = zend_get_opcode_name(*opcode);
-			if (named)
-				named_len = strlen(named);
-
-			if (named_len) {
-				if (!zend_get_constant(named, named_len+1, &constant TSRMLS_CC)) {
-					if (named != NULL) {
-						REGISTER_ZEND_OPCODE
-							(named, named_len+1, *opcode);
-					}
-				} else zval_dtor(&constant);
-			}
-
-			opcode++;
+			ohandlers[uop->code] = 
+				zend_get_user_opcode_handler(uop->code);
+			zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+			if (!zend_get_constant(uop->name, uop->length+1, &constant TSRMLS_CC)) {
+				REGISTER_ZEND_OPCODE(uop->name, uop->length+1, uop->code);
+			} else zval_dtor(&constant);
+			
+			uop++;
 		}
 
 #undef REGISTER_ZEND_OPCODE
@@ -1079,7 +1076,7 @@ static int uopz_zend_startup(zend_extension *extension) /* {{{ */
 #endif
 ZEND_EXTENSION();
 
-zend_extension zend_extension_entry = {
+ZEND_EXT_API zend_extension zend_extension_entry = {
 	PHP_UOPZ_EXTNAME,
 	PHP_UOPZ_VERSION,
 	"Joe Watkins <joe.watkins@live.co.uk>",
