@@ -4,12 +4,12 @@ Test rename
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-function _my_strlen($string) {
+function _My_strlen($string) {
 	return strlen($string) * 5;
 }
 
 class MyClass {
-	public function first() {
+	public function First() {
 		
 	}
 }

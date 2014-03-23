@@ -5,7 +5,7 @@ Test add trait
 --FILE--
 <?php
 uopz_overload(ZEND_ADD_TRAIT, function($class, &$trait){
-	if (strncasecmp($trait, "First", strlen("First")) !== false) {
+	if ($trait == "First") {
 		$trait = "Second";
 	}
 });

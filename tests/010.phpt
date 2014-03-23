@@ -4,12 +4,12 @@ Test delete
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-function _my_strlen($string) {
-	return strlen($string) * 5;
+function _MY_strlen($string) {
+	return Strlen($string) * 5;
 }
 
 class MyClass {
-	public function first() {
+	public function First() {
 		
 	}
 }

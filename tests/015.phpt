@@ -35,10 +35,15 @@ uopz_function(C::class, "foo", function(){
 	return "overriden";
 });
 
+uopz_function(C::class, "FoF", function(){
+	return true;
+});
+
 $c = new C();
-var_dump($c->foo(), whatever());
+var_dump($c->foo(), whatever(), $c->fof());
 
 --EXPECT--
 string(9) "overriden"
 string(8) "whatever"
+bool(true)
 

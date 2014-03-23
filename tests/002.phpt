@@ -5,7 +5,7 @@ Test new overload
 --FILE--
 <?php
 uopz_overload(ZEND_NEW, function(&$class){
-	if (strncasecmp($class, "stdClass", strlen("stdClass")) !== false) {
+	if ($class == "stdClass") {
 		$class = "myClass";
 	}
 });

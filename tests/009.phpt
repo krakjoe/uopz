@@ -4,12 +4,12 @@ Test alias
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-function _my_strlen($string) {
-	return strlen($string) * 5;
+function _my_Strlen($string) {
+	return Strlen($string) * 5;
 }
 
 class MyClass {
-	public function first() {
+	public function First() {
 		
 	}
 }

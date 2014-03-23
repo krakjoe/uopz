@@ -469,11 +469,14 @@ static inline void uopz_rename(HashTable *table, zval *function, zval *overload 
 	if ((function && (Z_TYPE_P(function) == IS_STRING)) &&
 		(overload && (Z_TYPE_P(overload) == IS_STRING))) {
 		
-		hashed[0] = zend_inline_hash_func(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
-		hashed[1] = zend_inline_hash_func(Z_STRVAL_P(overload), Z_STRLEN_P(overload)+1);
+		char *lcf = zend_str_tolower_dup(Z_STRVAL_P(function), Z_STRLEN_P(function)+1),
+			 *lco = zend_str_tolower_dup(Z_STRVAL_P(overload), Z_STRLEN_P(overload)+1);
 		
-		zend_hash_quick_find(table, Z_STRVAL_P(function), Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
-		zend_hash_quick_find(table, Z_STRVAL_P(overload), Z_STRLEN_P(overload)+1, hashed[1], (void**) &tuple[1]);
+		hashed[0] = zend_inline_hash_func(lcf, Z_STRLEN_P(function)+1);
+		hashed[1] = zend_inline_hash_func(lco, Z_STRLEN_P(overload)+1);
+		
+		zend_hash_quick_find(table, lcf, Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
+		zend_hash_quick_find(table, lco, Z_STRLEN_P(overload)+1, hashed[1], (void**) &tuple[1]);
 		
 		if (tuple[0]){
 			zend_function store[2];
@@ -491,20 +494,23 @@ static inline void uopz_rename(HashTable *table, zval *function, zval *overload 
 				if (tuple[1]->type == ZEND_USER_FUNCTION) {
 					function_add_ref(&store[1]);
 				}
-				zend_hash_quick_del(table, Z_STRVAL_P(overload), Z_STRLEN_P(overload)+1, hashed[1]);
+				zend_hash_quick_del(table, lco, Z_STRLEN_P(overload)+1, hashed[1]);
 			}
-			zend_hash_quick_del(table, Z_STRVAL_P(function), Z_STRLEN_P(function)+1, hashed[0]);
+			zend_hash_quick_del(table, lcf, Z_STRLEN_P(function)+1, hashed[0]);
 			
 			zend_hash_quick_update(table, 
-				Z_STRVAL_P(overload), Z_STRLEN_P(overload)+1, hashed[1], 
+				lco, Z_STRLEN_P(overload)+1, hashed[1], 
 				(void**) &store[0], sizeof(zend_function), NULL);
 
 			if (tuple[1]) {
 				zend_hash_quick_update(table, 
-					Z_STRVAL_P(function), Z_STRLEN_P(function)+1, hashed[0], 
+					lcf, Z_STRLEN_P(function)+1, hashed[0], 
 					(void**) &store[1], sizeof(zend_function), NULL);
 			}
 		}
+		
+		efree(lcf);
+		efree(lco);
 	}
 } /* }}} */
 
@@ -539,16 +545,19 @@ static inline void uopz_alias(HashTable *table, zval *function, zval *alias TSRM
 	if ((function && (Z_TYPE_P(function) == IS_STRING)) &&
 		(alias && (Z_TYPE_P(alias) == IS_STRING))) {
 		
-		hashed[0] = zend_inline_hash_func(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
-		hashed[1] = zend_inline_hash_func(Z_STRVAL_P(alias), Z_STRLEN_P(alias)+1);
+		char *lcf = zend_str_tolower_dup(Z_STRVAL_P(function), Z_STRLEN_P(function)+1),
+			 *lca = zend_str_tolower_dup(Z_STRVAL_P(alias), Z_STRLEN_P(alias)+1);
 		
-		zend_hash_quick_find(table, Z_STRVAL_P(function), Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
-		zend_hash_quick_find(table, Z_STRVAL_P(alias), Z_STRLEN_P(alias)+1, hashed[1], (void**) &tuple[1]);
+		hashed[0] = zend_inline_hash_func(lcf, Z_STRLEN_P(function)+1);
+		hashed[1] = zend_inline_hash_func(lca, Z_STRLEN_P(alias)+1);
+		
+		zend_hash_quick_find(table, lcf, Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
+		zend_hash_quick_find(table, lca, Z_STRLEN_P(alias)+1, hashed[1], (void**) &tuple[1]);
 		
 		if (tuple[0] && !tuple[1]) {
 			zend_hash_quick_update(
 				table,
-				Z_STRVAL_P(alias), Z_STRLEN_P(alias)+1, 
+				lca, Z_STRLEN_P(alias)+1, 
 				hashed[1], (void**) tuple[0], sizeof(zend_function), 
 				NULL);
 			
@@ -556,6 +565,9 @@ static inline void uopz_alias(HashTable *table, zval *function, zval *alias TSRM
 				function_add_ref(tuple[0]);
 			}
 		}
+		
+		efree(lca);
+		efree(lcf);
 	}
 } /* }}} */
 
@@ -585,9 +597,12 @@ PHP_FUNCTION(uopz_alias) {
 /* {{{ */
 static inline void uopz_delete(HashTable *table, zval *function TSRMLS_DC) {
 	if (function && (Z_TYPE_P(function) == IS_STRING)) {
+		char *lcf = zend_str_tolower_dup
+			(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
 		zend_hash_del(
 			table,
-			Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
+			lcf, Z_STRLEN_P(function)+1);
+		efree(lcf);
 	}
 } /* }}} */
 
@@ -809,13 +824,18 @@ PHP_FUNCTION(uopz_undefine)
 /* {{{ */
 static inline void uopz_function(HashTable *table, zval *function, zend_function *override TSRMLS_DC) {
 	if (Z_TYPE_P(function) == IS_STRING) {
+		char *lcname = zend_str_tolower_dup
+			(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
+		
 		zend_hash_update(
 			table, 
-			Z_STRVAL_P(function), Z_STRLEN_P(function)+1, 
+			lcname, Z_STRLEN_P(function)+1, 
 			(void**) override, sizeof(zend_function), 
 			NULL);
 		
 		function_add_ref(override);
+		
+		efree(lcname);
 	}
 } /* }}} */
 
