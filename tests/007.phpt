@@ -2,6 +2,7 @@
 Test rename
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
+<?php if (!extension_loaded('session')) die('skip session extension not loaded'); ?>
 --FILE--
 <?php
 function _My_strlen($string) {
