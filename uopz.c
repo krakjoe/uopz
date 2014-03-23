@@ -26,6 +26,7 @@
 #include "Zend/zend_closures.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_extensions.h"
+#include "Zend/zend_string.h"
 #include "Zend/zend_vm_opcodes.h"
 
 #include "uopz.h"
