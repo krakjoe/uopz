@@ -370,8 +370,8 @@ static PHP_MINFO_FUNCTION(uopz)
 static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 	TSRMLS_FETCH();
 
-	zend_uint it = 0,
-			  end = op_array->last;
+	zend_uint it = 0;
+	zend_uint end = op_array->last;
 	zend_op  *opline = NULL;
 
 	while (it < end) {
