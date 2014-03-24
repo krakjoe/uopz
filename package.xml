@@ -10,8 +10,8 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-23</date>
- <time>19:00:00</time>
+ <date>2014-03-24</date>
+ <time>10:00:00</time>
  <version>
   <release>1.0.2</release>
   <api>1.0.2</api>
@@ -22,7 +22,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix compatibility with 5.4
+  allow compose to take constructor
+  apply magic to methods created with uopz_function
+  capture class scope for created methods
  </notes>
  <contents>
   <dir name="/">

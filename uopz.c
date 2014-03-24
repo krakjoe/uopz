@@ -854,7 +854,7 @@ PHP_FUNCTION(uopz_function) {
 					case 10: clazz->serialize_func = override; break;
 					case 11: clazz->unserialize_func = override; break;
 #ifdef ZEND_DEBUGINFO_FUNC_NAME
-					case 12: clazz->debugInfo = override; break;
+					case 12: clazz->__debugInfo = override; break;
 #endif
 				}
 			}
@@ -979,7 +979,7 @@ PHP_FUNCTION(uopz_compose)
 			
 			if (zend_hash_update(
 					&entry->function_table,
-					"__construct", sizeof("__construct")-1, 
+					"__construct", sizeof("__construct")-1,
 					(void**)method, sizeof(zend_function),
 					(void**) &entry->constructor) == SUCCESS) {
 				uopz_function_add_ref
