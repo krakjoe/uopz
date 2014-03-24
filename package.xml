@@ -46,6 +46,10 @@
    <file name="tests/018.phpt" role="test" />
    <file name="tests/019.phpt" role="test" />
    <file name="tests/020.phpt" role="test" />
+   <file name="tests/021.phpt" role="test" />
+   <file name="tests/022.phpt" role="test" />
+   <file name="tests/023.phpt" role="test" />
+   <file name="tests/024.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
