@@ -159,16 +159,17 @@ static void php_uopz_replaced_dtor(void *pData) {
 
 /* {{{ */
 static void php_uopz_backup_dtor(void *pData) {
+	TSRMLS_FETCH();
 	uopz_backup_t *backup = (uopz_backup_t *) pData;
+	zend_function *restored = NULL;
 	
 	zend_hash_quick_update(
-		backup->table,
-		backup->name,
-		backup->length,
-		backup->hash,
-		(void**) &backup->internal,
-		sizeof(zend_function), NULL);
-	
+		backup->table, backup->name, backup->length,
+		backup->hash, (void**) &backup->internal,
+		sizeof(zend_function), (void**) &restored);
+	function_add_ref(restored);
+	destroy_zend_function
+		(&backup->internal TSRMLS_CC);
 	efree(backup->name);
 } /* }}} */
 
@@ -547,6 +548,8 @@ static inline void uopz_backup(HashTable *table, zval *name TSRMLS_DC) {
 		ubackup.length = lcl;
 		ubackup.hash = hash;
 		ubackup.internal = *function;
+		
+		function_add_ref(&ubackup.internal);
 		
 		zend_hash_quick_update(
 			backup, 
