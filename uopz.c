@@ -1241,7 +1241,7 @@ ZEND_EXT_API zend_extension zend_extension_entry = {
 	PHP_UOPZ_VERSION,
 	"Joe Watkins <krakjoe@php.net>",
 	"https://github.com/krakjoe/uopz",
-	"Copyright (c) 2014 Joe Watkins",
+	"Copyright (c) 2014",
 	uopz_zend_startup,
 	NULL,           	    /* shutdown_func_t */
 	NULL,           	    /* activate_func_t */
