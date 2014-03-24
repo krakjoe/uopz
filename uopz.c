@@ -57,7 +57,7 @@ typedef struct _uopz_opcode_t {
 } uopz_opcode_t;
 
 #define UOPZ_CODE(n)   {n, #n, sizeof(#n)-1}
-#define UOPZ_END	   {ZEND_NOP, NULL, 0L}
+#define UOPZ_CODE_END  {ZEND_NOP, NULL, 0L}
 
 uopz_opcode_t uoverrides[] = {
 	UOPZ_CODE(ZEND_NEW),
@@ -65,8 +65,38 @@ uopz_opcode_t uoverrides[] = {
 	UOPZ_CODE(ZEND_ADD_TRAIT),
 	UOPZ_CODE(ZEND_ADD_INTERFACE),
 	UOPZ_CODE(ZEND_INSTANCEOF),
-	UOPZ_END
+	UOPZ_CODE_END
 }; /* }}} */
+
+/* {{{ */
+typedef struct _uopz_magic_t {
+	const char *name;
+	size_t      length;
+	int         id;
+} uopz_magic_t;
+
+#define UOPZ_MAGIC(name, id) {name, sizeof(name)-1, id}
+#define UOPZ_MAGIC_END	     {NULL, 0, 0L}
+
+uopz_magic_t umagic[] = {
+	UOPZ_MAGIC(ZEND_CONSTRUCTOR_FUNC_NAME, 0),
+	UOPZ_MAGIC(ZEND_DESTRUCTOR_FUNC_NAME, 1),
+	UOPZ_MAGIC(ZEND_CLONE_FUNC_NAME, 2),
+	UOPZ_MAGIC(ZEND_GET_FUNC_NAME, 3),
+	UOPZ_MAGIC(ZEND_SET_FUNC_NAME, 4),
+	UOPZ_MAGIC(ZEND_UNSET_FUNC_NAME, 5),
+	UOPZ_MAGIC(ZEND_ISSET_FUNC_NAME, 6),
+	UOPZ_MAGIC(ZEND_CALL_FUNC_NAME, 7),
+	UOPZ_MAGIC(ZEND_CALLSTATIC_FUNC_NAME, 8),
+	UOPZ_MAGIC(ZEND_TOSTRING_FUNC_NAME, 9),
+	UOPZ_MAGIC("serialize", 10),
+	UOPZ_MAGIC("unserialize", 11),
+#ifdef ZEND_DEBUGINFO_FUNC_NAME
+	UOPZ_MAGIC(ZEND_DEBUGINFO_FUNC_NAME, 12),
+#endif
+	UOPZ_MAGIC_END
+};
+/* }}} */
 
 /* {{{ */
 typedef struct _uopz_handler_t {
@@ -780,6 +810,7 @@ PHP_FUNCTION(uopz_function) {
 	HashTable *table = CG(function_table);
 	zend_class_entry *clazz = NULL;
 	zend_function *override = NULL;
+	zend_function *method = NULL;
 	
 	switch (ZEND_NUM_ARGS()) {
 		case 3: {
@@ -796,10 +827,42 @@ PHP_FUNCTION(uopz_function) {
 			}
 		}
 	}
-	
-	uopz_function(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC), &override TSRMLS_CC);
-	
+
+	method = (zend_function*) 
+		zend_get_closure_method_def(callable TSRMLS_CC);
+
+	uopz_function(table, function, method, &override TSRMLS_CC);
+
 	if (table != CG(function_table)) {
+		uopz_magic_t *magic = umagic;
+	
+		while (magic && magic->name) {
+			if (Z_STRLEN_P(function) == magic->length &&
+				strncasecmp(Z_STRVAL_P(function), magic->name, magic->length) == SUCCESS) {
+			
+				switch (magic->id) {
+					case 0: clazz->constructor = override; break;
+					case 1: clazz->destructor = override; break;
+					case 2: clazz->clone = override; break;
+					case 3: clazz->__get = override; break;
+					case 4: clazz->__set = override; break;
+					case 5: clazz->__unset = override; break;
+					case 6: clazz->__isset = override; break;
+					case 7: clazz->__call = override; break;
+					case 8: clazz->__callstatic = override; break;
+					case 9: clazz->__tostring = override; break;
+					case 10: clazz->serialize_func = override; break;
+					case 11: clazz->unserialize_func = override; break;
+#ifdef ZEND_DEBUGINFO_FUNC_NAME
+					case 12: clazz->debugInfo = override; break;
+#endif
+				}
+			
+			}
+		
+			magic++;
+		}
+		
 		override->common.prototype = NULL;
 		override->common.scope = clazz;
 	}
@@ -917,7 +980,7 @@ PHP_FUNCTION(uopz_compose)
 			const zend_function *method = zend_get_closure_method_def(construct TSRMLS_CC);
 			
 			if (zend_hash_update(
-					&entry->function_table, 
+					&entry->function_table,
 					"__construct", sizeof("__construct")-1, 
 					(void**)method, sizeof(zend_function),
 					(void**) &entry->constructor) == SUCCESS) {
