@@ -83,7 +83,7 @@ static inline void uopz_function_add_ref(zend_function *function, zend_bool copy
 			zval      *temp;
 			HashTable *statics = op_array->static_variables;
 			
-			ALLOC_HASHTABLE(statics);
+			ALLOC_HASHTABLE(op_array->static_variables);
 			zend_hash_init
 				(op_array->static_variables, 
 					zend_hash_num_elements(statics), 
@@ -756,7 +756,7 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_function(HashTable *table, zval *function, zend_function *override TSRMLS_DC) {
+static inline void uopz_function(HashTable *table, zval *function, zend_function *override, zend_function **overridden TSRMLS_DC) {
 	if (Z_TYPE_P(function) == IS_STRING) {
 		char *lcname = zend_str_tolower_dup
 			(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
@@ -765,9 +765,9 @@ static inline void uopz_function(HashTable *table, zval *function, zend_function
 			table, 
 			lcname, Z_STRLEN_P(function)+1, 
 			(void**) override, sizeof(zend_function), 
-			NULL);
+			(void**) overridden);
 		
-		function_add_ref(override);
+		function_add_ref(*overridden);
 		efree(lcname);
 	}
 } /* }}} */
@@ -779,6 +779,7 @@ PHP_FUNCTION(uopz_function) {
 	zval *callable = NULL;
 	HashTable *table = CG(function_table);
 	zend_class_entry *clazz = NULL;
+	zend_function *override = NULL;
 	
 	switch (ZEND_NUM_ARGS()) {
 		case 3: {
@@ -796,7 +797,12 @@ PHP_FUNCTION(uopz_function) {
 		}
 	}
 	
-	uopz_function(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC) TSRMLS_CC);
+	uopz_function(table, function, (zend_function*) zend_get_closure_method_def(callable TSRMLS_CC), &override TSRMLS_CC);
+	
+	if (table != CG(function_table)) {
+		override->common.prototype = NULL;
+		override->common.scope = clazz;
+	}
 } /* }}} */
 
 /* {{{ proto void uopz_implement(string class, string interface) */
@@ -856,7 +862,7 @@ PHP_FUNCTION(uopz_extend)
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_compose(string name, array classes) */
+/* {{{ proto void uopz_compose(string name, array classes [, Closure __construct]) */
 PHP_FUNCTION(uopz_compose)
 {
 	char *class_name = NULL;
@@ -866,9 +872,10 @@ PHP_FUNCTION(uopz_compose)
 	zend_class_entry *entry = NULL;
 	HashTable *classes = NULL;
 	zval **clazz = NULL;
+	zval *construct = NULL;
 	HashPosition position;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sh", &class_name, &class_name_len, &classes) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sh|o", &class_name, &class_name_len, &classes, &construct, zend_ce_closure) != SUCCESS) {
 		return;
 	}
 
@@ -906,6 +913,21 @@ PHP_FUNCTION(uopz_compose)
 			}
 		}
 		
+		if (construct) {
+			const zend_function *method = zend_get_closure_method_def(construct TSRMLS_CC);
+			
+			if (zend_hash_update(
+					&entry->function_table, 
+					"__construct", sizeof("__construct")-1, 
+					(void**)method, sizeof(zend_function),
+					(void**) &entry->constructor) == SUCCESS) {
+				uopz_function_add_ref
+					(entry->constructor, 1 TSRMLS_CC);
+				entry->constructor->common.scope = entry;
+				entry->constructor->common.prototype = NULL;
+			}
+		}
+
 		zend_do_bind_traits(entry TSRMLS_CC);
 		efree(lc_class_name);
 	}

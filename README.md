@@ -292,8 +292,9 @@ void uopz_extend(string class, string parent);
 * Composes new class $name using the list of classes that follow
 * @param string name
 * @param array classes
+* @param Closure __construct
 **/
-void uoopz_compose(string name, array classes);
+void uoopz_compose(string name, array classes [, Closure __construct = null]);
 ```
 
 *Note: For a look at what is possible, see /tests.*
