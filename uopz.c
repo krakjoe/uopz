@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
+  | Author: Joe Watkins <krakjoe@php.net>                                |
   +----------------------------------------------------------------------+
  */
 
@@ -137,7 +137,7 @@ static void php_uopz_backup_dtor(void *pData) {
 	TSRMLS_FETCH();
 	uopz_backup_t *backup = (uopz_backup_t *) pData;
 	zend_function *restored = NULL;
-	
+
 	zend_hash_quick_update(
 		backup->table, backup->name, backup->length,
 		backup->hash, (void**) &backup->internal,
@@ -172,7 +172,6 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 		memset(
 			&fci, 0, sizeof(zend_fcall_info));
 
-	
 		if (zend_is_callable_ex(uhandler->handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
 			if (zend_fcall_info_init(uhandler->handler, 
 					IS_CALLABLE_CHECK_SILENT, 
@@ -1240,7 +1239,7 @@ ZEND_EXTENSION();
 ZEND_EXT_API zend_extension zend_extension_entry = {
 	PHP_UOPZ_EXTNAME,
 	PHP_UOPZ_VERSION,
-	"Joe Watkins <joe.watkins@live.co.uk>",
+	"Joe Watkins <krakjoe@php.net>",
 	"https://github.com/krakjoe/uopz",
 	"Copyright (c) 2014 Joe Watkins",
 	uopz_zend_startup,
