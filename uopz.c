@@ -835,11 +835,11 @@ PHP_FUNCTION(uopz_function) {
 
 	if (table != CG(function_table)) {
 		uopz_magic_t *magic = umagic;
-	
+
 		while (magic && magic->name) {
 			if (Z_STRLEN_P(function) == magic->length &&
 				strncasecmp(Z_STRVAL_P(function), magic->name, magic->length) == SUCCESS) {
-			
+
 				switch (magic->id) {
 					case 0: clazz->constructor = override; break;
 					case 1: clazz->destructor = override; break;
@@ -857,9 +857,7 @@ PHP_FUNCTION(uopz_function) {
 					case 12: clazz->debugInfo = override; break;
 #endif
 				}
-			
 			}
-		
 			magic++;
 		}
 		

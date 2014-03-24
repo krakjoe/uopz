@@ -13,8 +13,8 @@
  <date>2014-03-23</date>
  <time>19:00:00</time>
  <version>
-  <release>1.0.1</release>
-  <api>1.0.1</api>
+  <release>1.0.2</release>
+  <api>1.0.2</api>
  </version>
  <stability>
   <release>beta</release>
@@ -40,6 +40,7 @@
    <file name="tests/013.phpt" role="test" />
    <file name="tests/014.phpt" role="test" />
    <file name="tests/015.phpt" role="test" />
+   <file name="tests/016.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
