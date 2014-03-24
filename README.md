@@ -228,9 +228,10 @@ void uopz_delete(string function);
 * @param string class
 * @param string function
 * @param Closure handler
+* @param bool static
 * Note: if the method does not exist it will be created
 **/
-void uopz_function(string class, string method, Closure handler);
+void uopz_function(string class, string method, Closure handler [, bool static = false]);
 
 /**
 * Declare $function as $handler

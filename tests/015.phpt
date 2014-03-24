@@ -29,9 +29,9 @@ uopz_function("B", "FoF", function(){
 	return true;
 });
 
-uopz_function("B", "myClosure", static function(){
+uopz_function("B", "myClosure", function(){
 	return __FUNCTION__;
-});
+}, true);
 
 $b = new B();
 var_dump($b->foo(), whatever(), $b->fof(), B::myClosure());

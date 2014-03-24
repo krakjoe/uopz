@@ -803,7 +803,7 @@ static inline void uopz_function(HashTable *table, zval *function, zend_function
 } /* }}} */
 
 /* {{{ proto void uopz_function(string function, Closure handler)
-	   proto void uopz_function(string class, string method, Closure handler) */
+	   proto void uopz_function(string class, string method, Closure handler [, bool static = false]) */
 PHP_FUNCTION(uopz_function) {
 	zval *function = NULL;
 	zval *callable = NULL;
@@ -811,10 +811,12 @@ PHP_FUNCTION(uopz_function) {
 	zend_class_entry *clazz = NULL;
 	zend_function *override = NULL;
 	zend_function *method = NULL;
+	zend_bool is_static = 0;
 	
 	switch (ZEND_NUM_ARGS()) {
+		case 4:
 		case 3: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czo", &clazz, &function, &callable, zend_ce_closure) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &function, &callable, zend_ce_closure, &is_static) != SUCCESS) {
 				return;
 			} else {
 				table = &clazz->function_table;
@@ -822,12 +824,12 @@ PHP_FUNCTION(uopz_function) {
 		} break;
 		
 		default: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zo", &function, &callable, zend_ce_closure) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zO", &function, &callable, zend_ce_closure) != SUCCESS) {
 				return;
 			}
 		}
 	}
-
+	
 	method = (zend_function*) 
 		zend_get_closure_method_def(callable TSRMLS_CC);
 
@@ -860,9 +862,13 @@ PHP_FUNCTION(uopz_function) {
 			}
 			magic++;
 		}
-		
+	
 		override->common.prototype = NULL;
 		override->common.scope = clazz;
+		
+		if (is_static) {
+			override->common.fn_flags |= ZEND_ACC_STATIC;
+		} else override->common.fn_flags &= ~ ZEND_ACC_STATIC;
 	}
 } /* }}} */
 
@@ -936,7 +942,7 @@ PHP_FUNCTION(uopz_compose)
 	zval *construct = NULL;
 	HashPosition position;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sh|o", &class_name, &class_name_len, &classes, &construct, zend_ce_closure) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sh|O", &class_name, &class_name_len, &classes, &construct, zend_ce_closure) != SUCCESS) {
 		return;
 	}
 
@@ -1021,6 +1027,7 @@ ZEND_BEGIN_ARG_INFO(uopz_function_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, handler)
+	ZEND_ARG_INFO(0, static)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_implement_arginfo, 2)
 	ZEND_ARG_INFO(0, class)

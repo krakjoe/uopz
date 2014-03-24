@@ -13,8 +13,8 @@
  <date>2014-03-24</date>
  <time>10:00:00</time>
  <version>
-  <release>1.0.2</release>
-  <api>1.0.2</api>
+  <release>1.0.3</release>
+  <api>1.0.3</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,9 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  allow compose to take constructor
-  apply magic to methods created with uopz_function
-  capture class scope for created methods
+  allow overriding static scope on created methods
  </notes>
  <contents>
   <dir name="/">
