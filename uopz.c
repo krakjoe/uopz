@@ -488,6 +488,7 @@ static PHP_FUNCTION(uopz_overload)
 static inline void uopz_rename(HashTable *table, zval *function, zval *overload TSRMLS_DC) {
 	zend_function *tuple[2] = {NULL, NULL};
 	zend_ulong hashed[2] = {0L, 0L};
+	zend_function locals[2];
 	
 	if ((function && (Z_TYPE_P(function) == IS_STRING)) &&
 		(overload && (Z_TYPE_P(overload) == IS_STRING))) {
@@ -501,31 +502,44 @@ static inline void uopz_rename(HashTable *table, zval *function, zval *overload 
 		zend_hash_quick_find(table, lcf, Z_STRLEN_P(function)+1, hashed[0], (void**) &tuple[0]);
 		zend_hash_quick_find(table, lco, Z_STRLEN_P(overload)+1, hashed[1], (void**) &tuple[1]);
 		
-		if (tuple[0]) {
-			zend_function locals[2];
-			
+		if (tuple[0] && tuple[1]) {
 			locals[0] = *tuple[0];
+			locals[1] = *tuple[1];
 			
-			if (tuple[1]) {
-				locals[1] = *tuple[1];
-							
-				uopz_function_add_ref(&locals[0], 1 TSRMLS_CC);
-				uopz_function_add_ref(&locals[1], 1 TSRMLS_CC);
-				
-				zend_hash_quick_update(table, 
-					lcf, Z_STRLEN_P(function)+1, hashed[0], 
-					(void**) &locals[1], sizeof(zend_function), NULL);
-				zend_hash_quick_update(table,
-					lco, Z_STRLEN_P(overload)+1, hashed[1], 
-					(void**) &locals[0], sizeof(zend_function), NULL);
+			if (tuple[0]->type == ZEND_INTERNAL_FUNCTION && 
+				tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
+				/* both internal */
 			} else {
-				zend_hash_quick_update(table,
-					lco, Z_STRLEN_P(overload)+1, hashed[1],
-					(void**) &locals[0], sizeof(zend_function), NULL);
-				uopz_function_add_ref(&locals[0], 1 TSRMLS_CC);
-				zend_hash_quick_del
-					(table, lcf, Z_STRLEN_P(function)+1, hashed[0]);
+				if (tuple[0]->type == ZEND_INTERNAL_FUNCTION ||
+					tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
+					/* one internal */
+					if (tuple[0]->type == ZEND_INTERNAL_FUNCTION) {
+						function_add_ref(&locals[1]);
+					} else if (tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
+						function_add_ref(&locals[0]);
+					}
+				} else {
+					/* both user */
+					function_add_ref(&locals[0]);
+					function_add_ref(&locals[1]);
+				}
 			}
+			
+			zend_hash_quick_update(table, 
+				lcf, Z_STRLEN_P(function)+1, hashed[0], 
+				(void**) &locals[1], sizeof(zend_function), NULL);
+			zend_hash_quick_update(table,
+				lco, Z_STRLEN_P(overload)+1, hashed[1], 
+				(void**) &locals[0], sizeof(zend_function), NULL);
+		} else if (tuple[0] || tuple[1]) {
+			/* only one existing function */
+			locals[0] = tuple[0] ? *tuple[0] : *tuple[1];
+			
+			function_add_ref(&locals[0]);
+			
+			zend_hash_quick_update(table,
+				lco, Z_STRLEN_P(overload)+1, hashed[1], 
+				(void**) &locals[0], sizeof(zend_function), NULL);
 		}
 		
 		efree(lcf);
@@ -797,7 +811,6 @@ static inline void uopz_function(HashTable *table, zval *function, zend_function
 			(void**) override, sizeof(zend_function), 
 			(void**) overridden);
 		
-		function_add_ref(*overridden);
 		efree(lcname);
 	}
 } /* }}} */

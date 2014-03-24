@@ -31,11 +31,6 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 		HashTable         table;
 	} overload;
 	
-	struct {
-		zend_fcall_info_cache *_exit;
-		HashTable              table;
-	} cache;
-	
 	zend_ulong			   copts;
 	HashTable              replaced;
 ZEND_END_MODULE_GLOBALS(uopz)
