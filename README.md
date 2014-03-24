@@ -211,6 +211,34 @@ void uopz_rename(string class, string method, string rename);
 void uopz_rename(string function, string rename);
 
 /**
+* Makes a backup of $class::$method
+* @param string class
+* @param string method
+* Note: backups are automatically restored on shutdown
+**/
+void uopz_backup(string class, string method);
+
+/**
+* Makes a backup of $function
+* @param string function      the function to backup
+* Note: backups are automatically restored on shutdown
+**/
+void uopz_backup(string function);
+
+/**
+* Restores previously backed up $class::$method
+* @param string class
+* @param string method
+**/
+void uopz_restore(string class, string method);
+
+/**
+* Restores previously backed up $function
+* @param string function      the function to backup
+**/
+void uopz_restore(string function);
+
+/**
 * Delete $class::$method
 * @param string class
 * @param string method

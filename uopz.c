@@ -103,6 +103,15 @@ typedef struct _uopz_handler_t {
 	zval *handler;
 } uopz_handler_t; /* }}} */
 
+/* {{{ */
+typedef struct _uopz_backup_t {
+	HashTable    *table;
+	char         *name;
+	size_t        length;
+	zend_ulong    hash;
+	zend_function internal;
+} uopz_backup_t; /* }}} */
+
 static inline void uopz_function_add_ref(zend_function *function, zend_bool copy TSRMLS_DC) {
 	if (function->type == ZEND_USER_FUNCTION) {
 		zend_op_array *op_array = &function->op_array;
@@ -146,6 +155,26 @@ static void php_uopz_handler_dtor(void *pData) {
 static void php_uopz_replaced_dtor(void *pData) {
 	void **ppData = (void**) pData;
 	efree(*ppData);
+} /* }}} */
+
+/* {{{ */
+static void php_uopz_backup_dtor(void *pData) {
+	uopz_backup_t *backup = (uopz_backup_t *) pData;
+	
+	zend_hash_quick_update(
+		backup->table,
+		backup->name,
+		backup->length,
+		backup->hash,
+		(void**) &backup->internal,
+		sizeof(zend_function), NULL);
+	
+	efree(backup->name);
+} /* }}} */
+
+/* {{{ */
+static void php_uopz_backup_table_dtor(void *pData) {
+	zend_hash_destroy((HashTable*) pData);
 } /* }}} */
 
 /* {{{ */
@@ -366,6 +395,7 @@ static PHP_RINIT_FUNCTION(uopz)
 {
 	zend_hash_init(&UOPZ(overload).table, 8, NULL, (dtor_func_t) php_uopz_handler_dtor, 0);	
 	zend_hash_init(&UOPZ(replaced), 8, NULL, (dtor_func_t) php_uopz_replaced_dtor, 0);
+	zend_hash_init(&UOPZ(backup), 8, NULL, (dtor_func_t) php_uopz_backup_table_dtor, 0);
 	
 	return SUCCESS;
 } /* }}} */
@@ -380,6 +410,7 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 
 	zend_hash_destroy(&UOPZ(overload).table);	
 	zend_hash_destroy(&UOPZ(replaced));
+	zend_hash_destroy(&UOPZ(backup));
 	
 	return SUCCESS;
 }
@@ -485,6 +516,115 @@ static PHP_FUNCTION(uopz_overload)
 /* }}} */
 
 /* {{{ */
+static inline void uopz_backup(HashTable *table, zval *name TSRMLS_DC) {
+	zend_function *function = NULL;
+	HashTable     *backup = NULL;
+	size_t         lcl = Z_STRLEN_P(name)+1;
+	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
+	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
+	
+	if (zend_hash_quick_find(table, lcn, lcl, hash, (void**) &function) != SUCCESS) {
+		efree(lcn);
+		return;
+	}
+	
+	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
+		HashTable creating;
+		
+		zend_hash_init(&creating, 8, NULL, (dtor_func_t) php_uopz_backup_dtor, 0);
+		zend_hash_index_update(	
+			&UOPZ(backup),
+			(zend_ulong) table,
+			(void**) &creating, 
+			sizeof(HashTable), (void**) &backup);
+	}
+	
+	if (!zend_hash_quick_exists(backup, lcn, lcl, hash)) {
+		uopz_backup_t ubackup;
+		
+		ubackup.table = table;
+		ubackup.name = lcn;
+		ubackup.length = lcl;
+		ubackup.hash = hash;
+		ubackup.internal = *function;
+		
+		zend_hash_quick_update(
+			backup, 
+			lcn, lcl, hash, 
+			(void**) &ubackup, 
+			sizeof(uopz_backup_t), NULL);
+	}
+} /* }}} */
+
+/* {{{ proto void uopz_backup(string class, string function)
+       proto void uopz_backup(string function) */
+PHP_FUNCTION(uopz_backup) {
+	zval *function = NULL;
+	zval *overload = NULL;
+	zend_class_entry *clazz = NULL;
+	HashTable *table = EG(function_table);
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &function) != SUCCESS) {
+			return;
+		} else {
+			table = &clazz->function_table;
+		} break;
+		
+		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &function) != SUCCESS) {
+			return;
+		} break;
+	}
+	
+	uopz_backup(table, function TSRMLS_CC);
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
+	zend_function *function = NULL;
+	HashTable     *backup = NULL;
+	size_t         lcl = Z_STRLEN_P(name)+1;
+	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
+	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
+	
+	if (zend_hash_quick_find(table, lcn, lcl, hash, (void**) &function) != SUCCESS) {
+		efree(lcn);
+		return;
+	}
+	
+	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
+		efree(lcn);
+		return;
+	}
+	
+	zend_hash_quick_del(backup, lcn, lcl, hash);
+	efree(lcn);
+} /* }}} */
+
+/* {{{ proto void uopz_restore(string class, string function)
+	   proto void uopz_restore(string function) */
+PHP_FUNCTION(uopz_restore) {
+	zval *function = NULL;
+	zval *overload = NULL;
+	zend_class_entry *clazz = NULL;
+	HashTable *table = EG(function_table);
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &function) != SUCCESS) {
+			return;
+		} else {
+			table = &clazz->function_table;
+		} break;
+		
+		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &function) != SUCCESS) {
+			return;
+		} break;
+	}
+	
+	uopz_restore(table, function TSRMLS_CC);
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_rename(HashTable *table, zval *function, zval *overload TSRMLS_DC) {
 	zend_function *tuple[2] = {NULL, NULL};
 	zend_ulong hashed[2] = {0L, 0L};
@@ -529,7 +669,7 @@ static inline void uopz_rename(HashTable *table, zval *function, zval *overload 
 				lcf, Z_STRLEN_P(function)+1, hashed[0], 
 				(void**) &locals[1], sizeof(zend_function), NULL);
 			zend_hash_quick_update(table,
-				lco, Z_STRLEN_P(overload)+1, hashed[1], 
+				lco, Z_STRLEN_P(overload)+1, hashed[1],
 				(void**) &locals[0], sizeof(zend_function), NULL);
 		} else if (tuple[0] || tuple[1]) {
 			/* only one existing function */
@@ -1023,6 +1163,14 @@ ZEND_BEGIN_ARG_INFO(uopz_rename_arginfo, 2)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, overload)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_backup_arginfo, 1)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_restore_arginfo, 1)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_delete_arginfo, 1)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
@@ -1062,6 +1210,8 @@ ZEND_END_ARG_INFO()
  */
 static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_overload, uopz_overload_arginfo)
+	PHP_FE(uopz_backup, uopz_backup_arginfo)
+	PHP_FE(uopz_restore, uopz_restore_arginfo)
 	PHP_FE(uopz_rename, uopz_rename_arginfo)
 	PHP_FE(uopz_delete, uopz_delete_arginfo)
 	PHP_FE(uopz_redefine, uopz_redefine_arginfo)

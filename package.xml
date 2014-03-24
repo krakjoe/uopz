@@ -23,6 +23,7 @@
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
   allow overriding static scope on created methods
+  add backup/restore functions (auto restore internal functions)
  </notes>
  <contents>
   <dir name="/">
@@ -41,6 +42,7 @@
    <file name="tests/014.phpt" role="test" />
    <file name="tests/015.phpt" role="test" />
    <file name="tests/016.phpt" role="test" />
+   <file name="tests/017.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />

@@ -22,7 +22,7 @@
 extern zend_module_entry uopz_module_entry;
 #define phpext_uopz_ptr &uopz_module_entry
 
-#define PHP_UOPZ_VERSION "1.0.2"
+#define PHP_UOPZ_VERSION "1.0.3"
 #define PHP_UOPZ_EXTNAME "uopz"
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
@@ -33,6 +33,7 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	
 	zend_ulong			   copts;
 	HashTable              replaced;
+	HashTable              backup;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS
