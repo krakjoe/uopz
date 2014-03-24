@@ -927,7 +927,7 @@ PHP_FUNCTION(uopz_compose)
 				entry->constructor->common.prototype = NULL;
 			}
 		}
-
+		
 		zend_do_bind_traits(entry TSRMLS_CC);
 		efree(lc_class_name);
 	}
