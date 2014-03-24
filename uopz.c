@@ -112,31 +112,6 @@ typedef struct _uopz_backup_t {
 	zend_function internal;
 } uopz_backup_t; /* }}} */
 
-static inline void uopz_function_add_ref(zend_function *function, zend_bool copy TSRMLS_DC) {
-	if (function->type == ZEND_USER_FUNCTION) {
-		zend_op_array *op_array = &function->op_array;
-		
-		(*op_array->refcount)++;
-		
-		if (copy && op_array->static_variables) {
-			zval      *temp;
-			HashTable *statics = op_array->static_variables;
-			
-			ALLOC_HASHTABLE(op_array->static_variables);
-			zend_hash_init
-				(op_array->static_variables, 
-					zend_hash_num_elements(statics), 
-					NULL, ZVAL_PTR_DTOR, 0);
-			zend_hash_copy
-				(op_array->static_variables, 
-					statics, 
-					(copy_ctor_func_t) zval_add_ref, 
-					(void *) &temp, sizeof(zval *));
-			op_array->run_time_cache = NULL;
-		}
-	}
-}
-
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 	ng->overload._exit = NULL;
@@ -1144,8 +1119,8 @@ PHP_FUNCTION(uopz_compose)
 					"__construct", sizeof("__construct")-1,
 					(void**)method, sizeof(zend_function),
 					(void**) &entry->constructor) == SUCCESS) {
-				uopz_function_add_ref
-					(entry->constructor, 1 TSRMLS_CC);
+				function_add_ref
+					(entry->constructor);
 				entry->constructor->common.scope = entry;
 				entry->constructor->common.prototype = NULL;
 			}
