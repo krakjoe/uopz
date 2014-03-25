@@ -361,7 +361,9 @@ static inline void php_uopz_class_dtor(void *pData) {
 		return;
 	
 	if ((*clazz)->type == ZEND_INTERNAL_CLASS) {
-		uopz_original_class_dtor(pData);
+		if (uopz_original_class_dtor) {
+			uopz_original_class_dtor(pData);
+		}
 	}
 } /* }}} */
 
