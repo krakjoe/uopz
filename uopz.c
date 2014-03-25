@@ -155,10 +155,8 @@ static void php_uopz_backup_dtor(void *pData) {
 	function_add_ref(restored);
 	destroy_zend_function
 		(&backup->internal TSRMLS_CC);
-		
-	if (backup->scope) {
+	if (backup->scope)
 		destroy_zend_class(&backup->scope);
-	}
 	
 	efree(backup->name);
 } /* }}} */
@@ -414,13 +412,6 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	REGISTER_INI_ENTRIES();
 
-	uopz_original_class_dtor = CG(class_table)->pDestructor;
-	
-	CG(class_table)->pDestructor = php_uopz_class_dtor;
-
-	php_uopz_original_class_dtor = CG(class_table)->pDestructor;
-	CG(class_table)->pDestructor = php_uopz_class_dtor;
-
 	return SUCCESS;
 }
 /* }}} */
@@ -432,8 +423,6 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	
 	UNREGISTER_INI_ENTRIES();
 
-	CG(class_table)->pDestructor = uopz_original_class_dtor;
-	
 	return SUCCESS;
 } /* }}} */
 
