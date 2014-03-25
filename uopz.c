@@ -134,9 +134,9 @@ static void php_uopz_replaced_dtor(void *pData) {
 
 /* {{{ */
 static void php_uopz_backup_dtor(void *pData) {
-	TSRMLS_FETCH();
 	uopz_backup_t *backup = (uopz_backup_t *) pData;
 	zend_function *restored = NULL;
+	TSRMLS_FETCH();
 
 	zend_hash_quick_update(
 		backup->table, backup->name, backup->length,
