@@ -150,7 +150,10 @@ static void php_uopz_backup_dtor(void *pData) {
 		table, backup->name, backup->length,
 		backup->hash, (void**) &backup->internal,
 		sizeof(zend_function), (void**) &restored);
-	
+	function_add_ref(restored);
+	destroy_zend_function
+		(&backup->internal TSRMLS_CC);
+		
 	if (backup->scope) {
 		backup->scope->refcount--;
 	}
