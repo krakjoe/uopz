@@ -46,6 +46,8 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 # define EX_T(offset) (*(temp_variable *)((char*)execute_data->Ts + offset))
 #endif
 
+dtor_func_t uopz_original_class_dtor = NULL;
+
 static void uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC);
 
 PHP_INI_BEGIN()
@@ -351,6 +353,18 @@ static inline void php_uopz_backup(TSRMLS_D) {
 	}
 } /* }}} */
 
+/* {{{ */
+static inline void php_uopz_class_dtor(void *pData) {
+	zend_class_entry **clazz = (zend_class_entry**) pData;
+	
+	if (!(*clazz)->refcount--)
+		return;
+	
+	if ((*clazz)->type == ZEND_INTERNAL_CLASS) {
+		php_uopz_original_class_dtor(pData);
+	}
+} /* }}} */
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
@@ -398,6 +412,10 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	REGISTER_INI_ENTRIES();
 
+	uopz_original_class_dtor = CG(class_table)->pDestructor;
+	
+	CG(class_table)->pDestructor = php_uopz_class_dtor;
+
 	return SUCCESS;
 }
 /* }}} */
@@ -409,19 +427,9 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	
 	UNREGISTER_INI_ENTRIES();
 
+	CG(class_table)->pDestructor = uopz_original_class_dtor;
+	
 	return SUCCESS;
-} /* }}} */
-
-/* {{{ */
-static inline void php_uopz_class_dtor(void *pData) {
-	zend_class_entry **clazz = (zend_class_entry**) pData;
-	
-	if (!(*clazz)->refcount--)
-		return;
-	
-	if ((*clazz)->type == ZEND_INTERNAL_CLASS) {
-		destroy_zend_class(clazz TSRMLS_CC);
-	}
 } /* }}} */
 
 /* {{{ PHP_RINIT_FUNCTION
@@ -438,8 +446,6 @@ static PHP_RINIT_FUNCTION(uopz)
 	if (UOPZ(ini).backup) {
 		php_uopz_backup(TSRMLS_C);
 	}
-	
-	CG(class_table)->pDestructor = php_uopz_class_dtor;
 	
 	return SUCCESS;
 } /* }}} */
