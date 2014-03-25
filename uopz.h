@@ -36,7 +36,6 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	} ini;
 	
 	zend_ulong			   copts;
-	HashTable              replaced;
 	HashTable              backup;
 ZEND_END_MODULE_GLOBALS(uopz)
 

@@ -460,8 +460,7 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 		zval_ptr_dtor(&UOPZ(overload)._exit);
 	}
 
-	zend_hash_destroy(&UOPZ(overload).table);	
-	zend_hash_destroy(&UOPZ(replaced));
+	zend_hash_destroy(&UOPZ(overload).table);
 	zend_hash_destroy(&UOPZ(backup));
 	
 	return SUCCESS;
