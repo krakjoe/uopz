@@ -46,6 +46,12 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 # define EX_T(offset) (*(temp_variable *)((char*)execute_data->Ts + offset))
 #endif
 
+static void uopz_backup(HashTable *table, zval *name TSRMLS_DC);
+
+PHP_INI_BEGIN()
+	 STD_PHP_INI_ENTRY("uopz.backup",     "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.backup,             zend_uopz_globals,        uopz_globals)
+PHP_INI_END()
+
 /* {{{ */
 user_opcode_handler_t ohandlers[MAX_OPCODE]; /* }}} */
 
@@ -115,6 +121,7 @@ typedef struct _uopz_backup_t {
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 	ng->overload._exit = NULL;
+	ng->ini.backup = 1;
 } /* }}} */
 
 /* {{{ */
@@ -307,6 +314,39 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 	return ZEND_USER_OPCODE_DISPATCH_TO | OPCODE;
 } /* }}} */
 
+/* {{{ */
+static inline void php_uopz_backup(TSRMLS_D) {
+	HashTable *table = CG(function_table);
+	HashPosition position[2];
+	zval name;
+	
+	for (zend_hash_internal_pointer_reset_ex(table, &position[0]);
+		 zend_hash_get_current_key_ex(table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[0]) == HASH_KEY_IS_STRING;
+		 zend_hash_move_forward_ex(table, &position[0])) {
+		 if (--Z_STRLEN(name))
+			uopz_backup(table, &name TSRMLS_CC);	 
+	}
+	
+	table = CG(class_table);
+	
+	{
+		zend_class_entry **clazz = NULL;
+		
+		for (zend_hash_internal_pointer_reset_ex(table, &position[0]);
+			 zend_hash_get_current_data_ex(table, (void**) &clazz, &position[0]) == SUCCESS;
+			 zend_hash_move_forward_ex(table, &position[0])) {
+			 if (!(*clazz)->ce_flags & ZEND_ACC_INTERFACE) {
+			 	for (zend_hash_internal_pointer_reset_ex(&(*clazz)->function_table, &position[1]);
+			 		 zend_hash_get_current_key_ex(&(*clazz)->function_table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[1]) == HASH_KEY_IS_STRING;
+			 		 zend_hash_move_forward_ex(&(*clazz)->function_table, &position[1])) {
+			 		 if (--Z_STRLEN(name))
+			 		 	uopz_backup(&(*clazz)->function_table, &name TSRMLS_CC);
+			 	}
+			 }
+		}	
+	}
+} /* }}} */
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
@@ -352,6 +392,8 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_DISPATCH_TO", ZEND_USER_OPCODE_DISPATCH_TO, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_RETURN", ZEND_USER_OPCODE_RETURN, CONST_CS|CONST_PERSISTENT);
 
+	REGISTER_INI_ENTRIES();
+
 	return SUCCESS;
 }
 /* }}} */
@@ -360,6 +402,8 @@ static PHP_MINIT_FUNCTION(uopz)
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {	
 	CG(compiler_options) = UOPZ(copts);
+	
+	UNREGISTER_INI_ENTRIES();
 
 	return SUCCESS;
 } /* }}} */
@@ -371,6 +415,10 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_hash_init(&UOPZ(overload).table, 8, NULL, (dtor_func_t) php_uopz_handler_dtor, 0);	
 	zend_hash_init(&UOPZ(replaced), 8, NULL, (dtor_func_t) php_uopz_replaced_dtor, 0);
 	zend_hash_init(&UOPZ(backup), 8, NULL, (dtor_func_t) php_uopz_backup_table_dtor, 0);
+	
+	if (UOPZ(ini).backup) {
+		php_uopz_backup(TSRMLS_C);
+	}
 	
 	return SUCCESS;
 } /* }}} */
@@ -491,7 +539,7 @@ static PHP_FUNCTION(uopz_overload)
 /* }}} */
 
 /* {{{ */
-static inline void uopz_backup(HashTable *table, zval *name TSRMLS_DC) {
+static void uopz_backup(HashTable *table, zval *name TSRMLS_DC) {
 	zend_function *function = NULL;
 	HashTable     *backup = NULL;
 	size_t         lcl = Z_STRLEN_P(name)+1;

@@ -31,6 +31,10 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 		HashTable         table;
 	} overload;
 	
+	struct {
+		zend_bool          backup;
+	} ini;
+	
 	zend_ulong			   copts;
 	HashTable              replaced;
 	HashTable              backup;
