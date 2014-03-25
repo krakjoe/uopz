@@ -147,16 +147,23 @@ static void php_uopz_backup_dtor(void *pData) {
 	table = backup->scope ? 
 		&backup->scope->function_table :
 		CG(function_table);
-
-	zend_hash_quick_update(
-		table, backup->name, backup->length,
-		backup->hash, (void**) &backup->internal,
-		sizeof(zend_function), (void**) &restored);
-	function_add_ref(restored);
-	destroy_zend_function
-		(&backup->internal TSRMLS_CC);
+	
 	if (backup->scope)
-		destroy_zend_class(&backup->scope);
+		backup->scope->refcount--;
+	
+	if (backup->internal.type == ZEND_USER_FUNCTION) {
+		destroy_zend_function(&backup->internal TSRMLS_CC);
+	} else {
+		if ((zend_hash_quick_find(table, 
+				backup->name, backup->length, 
+				backup->hash, (void**)&restored) == SUCCESS) && 
+			(restored->type == ZEND_USER_FUNCTION)) {
+			zend_hash_quick_update(
+				table, backup->name, backup->length,
+				backup->hash, (void**) &backup->internal,
+				sizeof(zend_function), (void**) &restored);
+		}
+	}
 	
 	efree(backup->name);
 } /* }}} */
@@ -589,20 +596,17 @@ static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC) {
 		ubackup.hash = hash;
 		ubackup.internal = *function;
 		
-		if (scope) {
-			scope->refcount++;
-		}
-
+		function_add_ref(&ubackup.internal);
+		
 		if (zend_hash_quick_update(
 			backup,
 			lcn, lcl, hash,
 			(void**) &ubackup,
-			sizeof(uopz_backup_t), NULL) != SUCCESS) {
-			if (scope) {
-				scope->refcount--;
-			}
-			efree(lcn);
-		} else function_add_ref(&ubackup.internal);
+			sizeof(uopz_backup_t), NULL) == SUCCESS) {
+			if (scope)
+				scope->refcount++;
+		}
+		
 		return 1;
 	} else {
 		efree(lcn);
@@ -641,18 +645,31 @@ static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
 	size_t         lcl = Z_STRLEN_P(name)+1;
 	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
 	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
-	
-	if (zend_hash_quick_find(table, lcn, lcl, hash, (void**) &function) != SUCCESS) {
-		efree(lcn);
-		return 0;
-	}
+	uopz_backup_t *ubackup = NULL;
 	
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
 		efree(lcn);
 		return 0;
 	}
 	
-	zend_hash_quick_del(backup, lcn, lcl, hash);
+	if (zend_hash_quick_find(backup, lcn, lcl, hash, (void**)&ubackup) != SUCCESS) {
+		efree(lcn);
+		return 0;
+	}
+	
+	backup = ubackup->scope ?
+		&ubackup->scope->function_table :
+		CG(function_table);
+	
+	if (zend_hash_quick_find(backup, ubackup->name, ubackup->length, ubackup->hash, (void**)&function) == SUCCESS) {
+		memcpy(function, &ubackup->internal, sizeof(zend_function));
+	} else {
+		zend_hash_quick_update(
+			backup, 
+			ubackup->name, ubackup->length, ubackup->hash, 
+			(void**)&ubackup->internal, sizeof(zend_function), NULL);
+	}
+	
 	efree(lcn);
 	
 	return 1;
