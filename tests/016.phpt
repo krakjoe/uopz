@@ -12,7 +12,7 @@ class A {
 	}
 }
 
-uopz_compose("C", [A::class], function(){
+uopz_compose("C", ["A"], function(){
 	echo "do not execute\n";
 });
 
