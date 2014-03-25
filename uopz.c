@@ -157,7 +157,7 @@ static void php_uopz_backup_dtor(void *pData) {
 		(&backup->internal TSRMLS_CC);
 		
 	if (backup->scope) {
-		backup->scope->refcount--;
+		destroy_zend_class(&backup->scope);
 	}
 	
 	efree(backup->name);
