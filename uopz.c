@@ -154,6 +154,30 @@ static zend_compiled_variable* uopz_copy_variables(zend_compiled_variable *old, 
 } /* }}} */
 
 /* {{{ */
+static zend_try_catch_element* uopz_copy_try(zend_try_catch_element *old, int end TSRMLS_DC) {	
+	zend_try_catch_element *try_catch = safe_emalloc(end, sizeof(zend_try_catch_element), 0);
+	
+	memcpy(
+		try_catch, 
+		old,
+		sizeof(zend_try_catch_element) * end);
+	
+	return try_catch;
+} /* }}} */
+
+/* {{{ */
+static zend_brk_cont_element* uopz_copy_brk(zend_brk_cont_element *old, int end TSRMLS_DC) {
+	zend_brk_cont_element *brk_cont = safe_emalloc(end, sizeof(zend_brk_cont_element), 0);
+	
+	memcpy(
+		brk_cont,
+		old, 
+		sizeof(zend_brk_cont_element) * end);
+	
+	return brk_cont;
+} /* }}} */
+
+/* {{{ */
 static zend_literal* uopz_copy_literals(zend_literal *old, int end TSRMLS_DC) {
 	zend_literal *literals = safe_emalloc(end, sizeof(zend_literal), 0);
 	int it = 0;
@@ -237,9 +261,11 @@ static zend_arg_info* uopz_copy_arginfo(zend_arg_info *old, zend_uint end TSRMLS
 } /* }}} */
 
 /* {{{ */
-static void uopz_copy_function(zend_function *function TSRMLS_DC) {
-	if (function->type == ZEND_USER_FUNCTION) {
-		zend_op_array *op_array = &function->op_array;
+static zend_function uopz_copy_function(zend_function *function TSRMLS_DC) {
+	zend_function copy = *function;
+	
+	if (copy.type == ZEND_USER_FUNCTION) {
+		zend_op_array *op_array = &copy.op_array;
 		zend_compiled_variable *variables = op_array->vars;
 		zend_literal  *literals = op_array->literals;
 		zend_arg_info *arg_info = op_array->arg_info;
@@ -266,33 +292,22 @@ static void uopz_copy_function(zend_function *function TSRMLS_DC) {
 		op_array->refcount = emalloc(sizeof(zend_uint));
 		(*op_array->refcount) = 1;
 		op_array->prototype = function;
+		op_array->run_time_cache = NULL;
 		
 		op_array->vars = uopz_copy_variables(variables, op_array->last_var TSRMLS_CC);
 		op_array->literals = uopz_copy_literals (literals, op_array->last_literal TSRMLS_CC);
 		op_array->arg_info = uopz_copy_arginfo(arg_info, op_array->num_args TSRMLS_CC);
 		op_array->opcodes = uopz_copy_opcodes(op_array, literals TSRMLS_CC);
-				
+		op_array->try_catch_array = uopz_copy_try(try_catch_array, op_array->last_try_catch TSRMLS_CC);
+		op_array->brk_cont_array = uopz_copy_brk(brk_cont_array, op_array->last_brk_cont TSRMLS_CC);
+		
 		if (op_array->doc_comment) {
 			op_array->doc_comment = estrndup
 				(op_array->doc_comment, op_array->doc_comment_len);
 		}
-		
-		if (op_array->try_catch_array) {
-			op_array->try_catch_array = ecalloc(op_array->last_try_catch, sizeof(zend_try_catch_element));
-			memcpy(
-				op_array->try_catch_array, 
-				try_catch_array, 
-				sizeof(zend_try_catch_element) * op_array->last_try_catch);
-		}
-		
-		if (op_array->brk_cont_array) {
-			op_array->brk_cont_array = ecalloc(op_array->last_brk_cont, sizeof(zend_brk_cont_element));
-			memcpy(
-				op_array->brk_cont_array,
-				brk_cont_array, 
-				sizeof(zend_brk_cont_element) * op_array->last_brk_cont);
-		}
 	}
+	
+	return copy;
 } /* }}} */
 
 /* {{{ */
@@ -752,9 +767,7 @@ static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC) {
 		ubackup.name = lcn;
 		ubackup.length = lcl;
 		ubackup.hash = hash;
-		ubackup.internal = *function;
-		
-		uopz_copy_function(&ubackup.internal TSRMLS_CC);
+		ubackup.internal = uopz_copy_function(function TSRMLS_CC);
 		
 		if (zend_hash_quick_update(
 			backup,
