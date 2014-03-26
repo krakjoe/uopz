@@ -817,6 +817,7 @@ static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
 	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
 	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
 	uopz_backup_t *ubackup = NULL;
+	zend_function restored;
 	
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
 		efree(lcn);
@@ -831,12 +832,14 @@ static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
 	backup = ubackup->scope ?
 		&ubackup->scope->function_table :
 		CG(function_table);
+		
+	restored = uopz_copy_function(&ubackup->internal TSRMLS_CC);
 	
 	if (zend_hash_quick_update(
 		backup, 
-		ubackup->name, ubackup->length, ubackup->hash, 
-		(void**)&ubackup->internal, sizeof(zend_function), (void**)&function) == SUCCESS) {
-		function_add_ref(function);
+		ubackup->name, ubackup->length, ubackup->hash,
+		(void**)&restored, sizeof(zend_function), NULL) != SUCCESS) {
+		destroy_zend_function(&restored TSRMLS_CC);
 	}
 	
 	efree(lcn);
