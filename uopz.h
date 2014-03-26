@@ -33,6 +33,8 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	
 	struct {
 		zend_bool          backup;
+		/* this is horrible */
+		zend_bool          fixup;
 	} ini;
 	
 	zend_ulong			   copts;
