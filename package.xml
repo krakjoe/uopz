@@ -54,6 +54,7 @@
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
    <file name="compile.h" role="src" />
+   <file name="copy.h" role="src" />
    <file name="config.m4" role="src" />
    <file name="config.w32" role="src" />
    <file name="LICENSE" role="doc" />
