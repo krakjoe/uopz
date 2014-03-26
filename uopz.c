@@ -383,6 +383,9 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	CG(compiler_options) |= 
 		(ZEND_COMPILE_HANDLE_OP_ARRAY);
+		
+	php_uopz_original_class_dtor = CG(class_table)->pDestructor;
+	CG(class_table)->pDestructor = php_uopz_class_dtor;
 
 	memset(ohandlers, 0, sizeof(user_opcode_handler_t) * MAX_OPCODE);
 
@@ -430,6 +433,8 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	CG(compiler_options) = UOPZ(copts);
 	
 	UNREGISTER_INI_ENTRIES();
+
+	CG(class_table)->pDestructor = php_uopz_original_class_dtor;
 
 	return SUCCESS;
 } /* }}} */
