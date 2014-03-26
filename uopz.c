@@ -407,6 +407,7 @@ static PHP_MINIT_FUNCTION(uopz)
 	
 	if (UOPZ(ini).fixup) {
 		CG(class_table)->pDestructor = NULL;
+		CG(function_table)->pDestructor = NULL;
 	}
 
 	return SUCCESS;
