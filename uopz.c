@@ -144,7 +144,7 @@ static void php_uopz_backup_dtor(void *pData) {
 	HashTable *table = NULL;
 	TSRMLS_FETCH();
 	
-	table = backup->scope ? 
+	table = backup->scope ?
 		&backup->scope->function_table :
 		CG(function_table);
 	
@@ -662,7 +662,8 @@ static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
 		CG(function_table);
 	
 	if (zend_hash_quick_find(backup, ubackup->name, ubackup->length, ubackup->hash, (void**)&function) == SUCCESS) {
-		memcpy(function, &ubackup->internal, sizeof(zend_function));
+		*function = ubackup->internal;
+		function_add_ref(function);
 	} else {
 		zend_hash_quick_update(
 			backup, 
