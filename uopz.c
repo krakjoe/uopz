@@ -138,6 +138,26 @@ static void php_uopz_handler_dtor(void *pData) {
 } /* }}} */
 
 /* {{{ */
+static HashTable* uopz_copy_statics(HashTable *old TSRMLS_DC) {
+	HashTable *statics = NULL;
+	
+	if (old) {
+		zval *tmp;
+	
+		ALLOC_HASHTABLE(statics);
+		zend_hash_init(statics,
+			zend_hash_num_elements(old), 
+			NULL, ZVAL_PTR_DTOR, 0);
+		zend_hash_copy(
+			statics, 
+			old, (copy_ctor_func_t) zval_add_ref, 
+			(void*)&tmp, sizeof(zval*));
+	}
+	
+	return statics;
+} /* }}} */
+
+/* {{{ */
 static zend_compiled_variable* uopz_copy_variables(zend_compiled_variable *old, int end TSRMLS_DC) {
 	zend_compiled_variable *variables = safe_emalloc(end, sizeof(zend_compiled_variable), 0);
 	int it = 0;
@@ -269,42 +289,25 @@ static zend_function uopz_copy_function(zend_function *function TSRMLS_DC) {
 		zend_compiled_variable *variables = op_array->vars;
 		zend_literal  *literals = op_array->literals;
 		zend_arg_info *arg_info = op_array->arg_info;
-		zend_op *opcodes = op_array->opcodes;
-		zend_try_catch_element *try_catch_array = op_array->try_catch_array;
-		zend_brk_cont_element *brk_cont_array = op_array->brk_cont_array;
-		
+
 		op_array->function_name = estrdup(op_array->function_name);
-		
-		if (op_array->static_variables) {
-			zval *tmp;
-			HashTable *statics = op_array->static_variables;
-			
-			ALLOC_HASHTABLE(op_array->static_variables);
-			zend_hash_init(op_array->static_variables,
-				zend_hash_num_elements(statics), 
-				NULL, ZVAL_PTR_DTOR, 0);
-			zend_hash_copy(
-				op_array->static_variables, 
-				statics, (copy_ctor_func_t) zval_add_ref, 
-				(void*)&tmp, sizeof(zval*));
-		}
-		
 		op_array->refcount = emalloc(sizeof(zend_uint));
 		(*op_array->refcount) = 1;
 		op_array->prototype = function;
 		op_array->run_time_cache = NULL;
 		
-		op_array->vars = uopz_copy_variables(variables, op_array->last_var TSRMLS_CC);
-		op_array->literals = uopz_copy_literals (literals, op_array->last_literal TSRMLS_CC);
-		op_array->arg_info = uopz_copy_arginfo(arg_info, op_array->num_args TSRMLS_CC);
-		op_array->opcodes = uopz_copy_opcodes(op_array, literals TSRMLS_CC);
-		op_array->try_catch_array = uopz_copy_try(try_catch_array, op_array->last_try_catch TSRMLS_CC);
-		op_array->brk_cont_array = uopz_copy_brk(brk_cont_array, op_array->last_brk_cont TSRMLS_CC);
-		
 		if (op_array->doc_comment) {
 			op_array->doc_comment = estrndup
 				(op_array->doc_comment, op_array->doc_comment_len);
 		}
+		
+		op_array->static_variables = uopz_copy_statics(op_array->static_variables TSRMLS_CC);
+		op_array->vars = uopz_copy_variables(variables, op_array->last_var TSRMLS_CC);
+		op_array->literals = uopz_copy_literals (literals, op_array->last_literal TSRMLS_CC);
+		op_array->arg_info = uopz_copy_arginfo(arg_info, op_array->num_args TSRMLS_CC);
+		op_array->opcodes = uopz_copy_opcodes(op_array, literals TSRMLS_CC);
+		op_array->try_catch_array = uopz_copy_try(op_array->try_catch_array, op_array->last_try_catch TSRMLS_CC);
+		op_array->brk_cont_array = uopz_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont TSRMLS_CC);
 	}
 	
 	return copy;
