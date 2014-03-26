@@ -170,36 +170,44 @@ static zend_literal* uopz_copy_literals(zend_literal *old, int end TSRMLS_DC) {
 /* {{{ */
 static zend_op* uopz_copy_opcodes(zend_op_array *op_array, zend_literal *literals TSRMLS_DC) {
 	zend_literal *literal;
-	zend_op *opcodes = op_array->opcodes;
 	zend_uint it = 0;
 	zend_op *copy = safe_emalloc(op_array->last, sizeof(zend_op), 0);
 	
 	while (it < op_array->last) {
-		copy[it] = opcodes[it];
+		copy[it] = op_array->opcodes[it];
 		
 		if (copy[it].op1_type == IS_CONST) {
 			literal = 
-				(zend_literal*)(opcodes[it].op1.zv);
+				(zend_literal*)(op_array->opcodes[it].op1.zv);
 			copy[it].op1.zv = 
 				&op_array->literals[literal - literals].constant;
 		} else {
-			if (copy[it].op1.jmp_addr >= opcodes &&
-				copy[it].op1.jmp_addr < opcodes + op_array->last) {
-				copy[it].op1.jmp_addr = copy + 
-					(opcodes[it].op1.jmp_addr - opcodes);
+			switch (copy[it].opcode) {
+				case ZEND_GOTO:
+				case ZEND_JMP:
+				case ZEND_FAST_CALL:
+					copy[it].op1.jmp_addr = copy + 
+						(op_array->opcodes[it].op1.jmp_addr - op_array->opcodes);
+				break;
 			}
 		}
 		
 		if (copy[it].op2_type == IS_CONST) {
 			literal = 
-				(zend_literal*)(opcodes[it].op2.zv);
+				(zend_literal*)(op_array->opcodes[it].op2.zv);
 			copy[it].op2.zv = 
 				&op_array->literals[literal - literals].constant;
 		} else {
-			if (copy[it].op2.jmp_addr >= opcodes &&
-				copy[it].op2.jmp_addr < opcodes + op_array->last) {
-				copy[it].op2.jmp_addr = copy + 
-					(opcodes[it].op2.jmp_addr - opcodes);
+			switch (copy[it].opcode) {
+				case ZEND_JMPZ:
+				case ZEND_JMPNZ:
+				case ZEND_JMPZ_EX:
+				case ZEND_JMPNZ_EX:
+				case ZEND_JMP_SET:
+				case ZEND_JMP_SET_VAR:
+					copy[it].op2.jmp_addr = copy + 
+						(op_array->opcodes[it].op2.jmp_addr - op_array->opcodes);
+				break;
 			}
 		}
 
@@ -258,8 +266,6 @@ static void uopz_copy_function(zend_function *function TSRMLS_DC) {
 		op_array->refcount = emalloc(sizeof(zend_uint));
 		(*op_array->refcount) = 1;
 		op_array->prototype = function;
-		op_array->run_time_cache = NULL;
-		op_array->last_cache_slot = 0;
 		
 		op_array->vars = uopz_copy_variables(variables, op_array->last_var TSRMLS_CC);
 		op_array->literals = uopz_copy_literals (literals, op_array->last_literal TSRMLS_CC);
