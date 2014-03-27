@@ -31,7 +31,7 @@ uopz_function("B", "FoF", function(){
 
 uopz_function("B", "myClosure", function(){
 	return __FUNCTION__;
-}, true);
+}, ZEND_ACC_STATIC);
 
 $b = new B();
 var_dump($b->foo(), whatever(), $b->fof(), B::myClosure());

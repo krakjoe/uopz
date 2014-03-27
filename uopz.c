@@ -805,6 +805,7 @@ PHP_FUNCTION(uopz_restore) {
 		default:
 			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
 				"unexpected parameter combination, (class, function) or (function) expected");
+			return;
 	}
 	
 	if (uopz_make_key(name, &uname)) {
