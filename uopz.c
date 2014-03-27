@@ -191,7 +191,7 @@ static void uopz_free_key(uopz_key_t *key) {
 	}
 } /* }}} */
 
-/* {{{ this is slow, but finds private functions ... so don't "fix" it ... */
+/* {{{ this is awkward, but finds private functions ... so don't "fix" it ... */
 static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function **function TSRMLS_DC) {
 	HashPosition position;
 	zend_function *entry;
