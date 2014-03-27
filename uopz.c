@@ -175,6 +175,23 @@ static void uopz_free_key(uopz_key_t *key) {
 	}
 } /* }}} */
 
+/* {{{ this is slow, but finds private functions ... so don't "fix" it ... */
+static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function **function TSRMLS_DC) {
+	HashPosition position;
+	zend_function *entry;
+	for (zend_hash_internal_pointer_reset_ex(table, &position);
+	     zend_hash_get_current_data_ex(table, (void**)&entry, &position) == SUCCESS;
+	     zend_hash_move_forward_ex(table, &position)) {    
+	     if (zend_binary_strcasecmp(
+	     	name->string, name->length-1, 
+	     	entry->common.function_name, strlen(entry->common.function_name)) == SUCCESS) { 
+	     	*function = entry;
+	     	return SUCCESS;
+		 }
+	}
+	return FAILURE;
+} /* }}} */
+
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 	ng->overload._exit = NULL;
@@ -821,24 +838,7 @@ static inline zend_bool uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zva
 	zend_bool result = 0;
 	zend_class_entry *scope = EG(scope);
 	if (name->string) {
-		HashPosition position;
-		zend_function *entry;
-		for (zend_hash_internal_pointer_reset_ex(table, &position);
-		     zend_hash_get_current_data_ex(table, (void**)&entry, &position) == SUCCESS;
-		     zend_hash_move_forward_ex(table, &position)) {
-		     if (zend_binary_strcasecmp(name->string, name->length-1, entry->common.function_name, strlen(entry->common.function_name)) == SUCCESS) {
-			EG(scope)=entry->common.scope; 
-			zend_create_closure(
-                                *return_value,
-                                entry, entry->common.scope,
-                                this_ptr TSRMLS_CC);
-			EG(scope)=scope;
-			result = 1;
-			break;
-		     }
-		}
-
-		if (!result) {
+		if (uopz_find_function(table, name, &function TSRMLS_CC) != SUCCESS) {
 			if (clazz) {
 				zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
 					"could not find the requested function (%s::%s)", 
@@ -847,7 +847,16 @@ static inline zend_bool uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zva
 				zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
 					"could not find the requested function (%s)", name->string);
 			}
+			return 0;
 		}
+		
+		EG(scope)=function->common.scope; 
+		zend_create_closure(
+		    *return_value,
+		    function, function->common.scope,
+		    this_ptr TSRMLS_CC);
+		EG(scope)=scope;
+		return 1;
 	} else {
 		zend_throw_exception_ex(
 			NULL, 0 TSRMLS_CC, "could not find the requested function (null)");
@@ -896,9 +905,8 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	
 	if (name->string && rename->string) {
-		
-		zend_hash_quick_find(table, name->string, name->length, name->hash, (void**) &tuple[0]);
-		zend_hash_quick_find(table, rename->string, rename->length, rename->hash, (void**) &tuple[1]);
+		uopz_find_function(table, name, &tuple[0] TSRMLS_CC);
+		uopz_find_function(table, rename, &tuple[1] TSRMLS_CC);
 		
 		if (tuple[0] && tuple[1]) {
 			locals[0] = *tuple[0];
