@@ -1135,7 +1135,6 @@ PHP_FUNCTION(__uopz_exit_overload) {
 /* {{{ */
 static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name, zval *variable TSRMLS_DC) {
 	zend_constant *zconstant;
-	zend_bool result = 0;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
 	
 	switch (Z_TYPE_P(variable)) {
@@ -1155,69 +1154,77 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
 					"failed to redefine the constant %s, type not allowed", name->length);
 			}
-			return result;			
+			return 0;			
 	}
 	
-	if (name->string) {
-		if (zend_hash_quick_find(
-			table, name->string, name->length, name->hash, (void**)&zconstant) == SUCCESS) {
-			if (!clazz) {
-				if (zconstant->module_number == PHP_USER_CONSTANT) {
-					zval_dtor(&zconstant->value);
-					ZVAL_ZVAL(
-						&zconstant->value, variable, 1, 0);
-					result = 1;
-				} else {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to redefine the internal %s, not allowed", name->length);
-				}
-			} else {
-				zval *copy;
-
-				MAKE_STD_ZVAL(copy);
-				ZVAL_ZVAL(copy, variable, 1, 0);
-				if (zend_hash_quick_update(
-					table, 
-					name->string, name->length, name->hash,
-					(void**)&copy, sizeof(zval*), NULL) != SUCCESS) {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to redefine the constant %s::%s, update failed", clazz->name, name->length);
-					zval_ptr_dtor(&copy);
-				} else result = 1;
+	if (!name->string) {
+		return 0;
+	}
+	
+	if (zend_hash_quick_find(
+		table, name->string, name->length, name->hash, (void**)&zconstant) != SUCCESS) {
+		
+		if (!clazz) {
+			zend_constant create;
+			
+			ZVAL_ZVAL(&create.value, variable, 1, 0);
+			create.flags = CONST_CS;
+			create.name = zend_strndup(name->string, name->length);
+			create.name_len = name->length;
+			create.module_number = PHP_USER_CONSTANT;
+			
+			if (zend_register_constant(&create TSRMLS_CC) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+					"failed to redefine the constant %s, operation failed", name->length);
+				zval_dtor(&create.value);
+				return 0;
 			}
 		} else {
-			if (!clazz) {
-				zend_constant create;
-				
-				ZVAL_ZVAL(&create.value, variable, 1, 0);
-				create.flags = CONST_CS;
-				create.name = zend_strndup(name->string, name->length);
-				create.name_len = name->length;
-				create.module_number = PHP_USER_CONSTANT;
-				
-				if (zend_register_constant(&create TSRMLS_CC) != SUCCESS) {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to redefine the constant %s, operation failed", name->length);
-					zval_dtor(&create.value);
-				} else result = 1;
-			} else {
-				zval *create;
-				
-				MAKE_STD_ZVAL(create);
-				ZVAL_ZVAL(create, variable, 1, 0);
-				if (zend_hash_quick_update(
-					table, 
-					name->string, name->length, name->hash, 
-					(void**)&create, sizeof(zval*), NULL) != SUCCESS) {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to redefine the constant %s::%s, update failed", clazz->name, name->length);
-					zval_ptr_dtor(&create);	
-				} else result = 1;
+			zval *create;
+			
+			MAKE_STD_ZVAL(create);
+			ZVAL_ZVAL(create, variable, 1, 0);
+			if (zend_hash_quick_update(
+				table, 
+				name->string, name->length, name->hash, 
+				(void**)&create, sizeof(zval*), NULL) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+					"failed to redefine the constant %s::%s, update failed", clazz->name, name->length);
+				zval_ptr_dtor(&create);	
+				return 0;
 			}
+		}
+		
+		return 1;
+	}
+	
+	if (!clazz) {
+		if (zconstant->module_number == PHP_USER_CONSTANT) {
+			zval_dtor(&zconstant->value);
+			ZVAL_ZVAL(
+				&zconstant->value, variable, 1, 0);
+		} else {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"failed to redefine the internal %s, not allowed", name->length);
+			return 0;
+		}
+	} else {
+		zval *copy;
+
+		MAKE_STD_ZVAL(copy);
+		ZVAL_ZVAL(copy, variable, 1, 0);
+		if (zend_hash_quick_update(
+			table, 
+			name->string, name->length, name->hash,
+			(void**)&copy, sizeof(zval*), NULL) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"failed to redefine the constant %s::%s, update failed", clazz->name, name->length);
+			zval_ptr_dtor(&copy);
+			return 0;
 		}
 	}
 	
-	return result;
+	return 1;
 } /* }}} */
 
 /* {{{ proto bool uopz_redefine(string constant, mixed variable)
@@ -1270,38 +1277,46 @@ PHP_FUNCTION(uopz_redefine)
 
 /* {{{ */
 static inline zend_bool uopz_undefine(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC) {
-	zend_bool result = 0;
 	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
 	
-	if (name->string) {
-		if (zend_hash_quick_find(
-			table, name->string, name->length, name->hash, (void**)&zconstant) == SUCCESS) {
-			if (!clazz) {
-				if (zconstant->module_number == PHP_USER_CONSTANT) {
-					if (zend_hash_quick_del
-						(table, name->string, name->length, name->hash) == SUCCESS) {
-						result = 1;	
-					} else {
-						zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
-							"failed to undefine the constant %s", name->string);
-					}
-				} else {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
-						"failed to undefine the internal constant %s", name->string);	
-				}
-			} else {
-				if (zend_hash_quick_del(table, name->string, name->length, name->hash) == SUCCESS) {
-					result = 1;
-				} else {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to undefine the constant %s::%s", clazz->name, name->length);
-				}
-			}
-		}
+	if (!name->string) {
+		return 0;
 	}
 	
-	return result;
+	if (zend_hash_quick_find(
+			table, name->string, name->length, name->hash, (void**)&zconstant) != SUCCESS) {
+		return 0;
+	}
+	
+	if (!clazz) {
+		if (zconstant->module_number == PHP_USER_CONSTANT) {
+			if (zend_hash_quick_del
+				(table, name->string, name->length, name->hash) != SUCCESS) {
+				if (clazz) {
+					zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
+						"failed to undefine the constant %s, delete failed", clazz->name, name->string);
+				} else {
+					zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
+						"failed to undefine the constant %s, delete failed", name->string);
+				}
+				return 0;
+			}
+		} else {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
+				"failed to undefine the internal constant %s", name->string);	
+			return 0;
+		}
+		return 1;
+	}
+	
+	if (zend_hash_quick_del(table, name->string, name->length, name->hash) != SUCCESS) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"failed to undefine the constant %s::%s", clazz->name, name->length);
+		return 0;
+	}
+	
+	return 1;
 } /* }}} */
 
 /* {{{ proto bool uopz_undefine(string constant) 
@@ -1353,58 +1368,58 @@ PHP_FUNCTION(uopz_undefine)
 
 /* {{{ */
 static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zend_function *function, long flags TSRMLS_DC) {
-	zend_bool result = 0;
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
 	
-	if (name->string) {
-		uopz_backup(clazz, name TSRMLS_CC);
-
-		if (zend_hash_quick_update(
-			table, 
-			name->string, name->length, name->hash, 
-			(void**) function, sizeof(zend_function), 
-			(void**) &destination) == SUCCESS) {
-			
-			result = 1;
-			
-			destination->common.fn_flags = flags;
-			destination->common.prototype = destination;
-			function_add_ref(destination);
-			
-			if (clazz) {
-				uopz_magic_t *magic = umagic;
-
-				while (magic && magic->name) {
-					if ((name->length-1) == magic->length &&
-						strncasecmp(name->string, magic->name, magic->length) == SUCCESS) {
-
-						switch (magic->id) {
-							case 0: clazz->constructor = destination; break;
-							case 1: clazz->destructor = destination; break;
-							case 2: clazz->clone = destination; break;
-							case 3: clazz->__get = destination; break;
-							case 4: clazz->__set = destination; break;
-							case 5: clazz->__unset = destination; break;
-							case 6: clazz->__isset = destination; break;
-							case 7: clazz->__call = destination; break;
-							case 8: clazz->__callstatic = destination; break;
-							case 9: clazz->__tostring = destination; break;
-							case 10: clazz->serialize_func = destination; break;
-							case 11: clazz->unserialize_func = destination; break;
-#ifdef ZEND_DEBUGINFO_FUNC_NAME
-							case 12: clazz->__debugInfo = destination; break;
-#endif
-						}
-					}
-					magic++;
-				}
-				destination->common.scope = clazz;
-			}
-		}
+	if (!name->string) {
+		return 0;	
 	}
 	
-	return result;
+	uopz_backup(clazz, name TSRMLS_CC);
+
+	if (zend_hash_quick_update(
+		table, 
+		name->string, name->length, name->hash, 
+		(void**) function, sizeof(zend_function), 
+		(void**) &destination) != SUCCESS) {
+		return 0;		
+	}
+	
+	destination->common.fn_flags = flags;
+	destination->common.prototype = destination;
+	function_add_ref(destination);
+
+	if (clazz) {
+		uopz_magic_t *magic = umagic;
+
+		while (magic && magic->name) {
+			if ((name->length-1) == magic->length &&
+				strncasecmp(name->string, magic->name, magic->length) == SUCCESS) {
+
+				switch (magic->id) {
+					case 0: clazz->constructor = destination; break;
+					case 1: clazz->destructor = destination; break;
+					case 2: clazz->clone = destination; break;
+					case 3: clazz->__get = destination; break;
+					case 4: clazz->__set = destination; break;
+					case 5: clazz->__unset = destination; break;
+					case 6: clazz->__isset = destination; break;
+					case 7: clazz->__call = destination; break;
+					case 8: clazz->__callstatic = destination; break;
+					case 9: clazz->__tostring = destination; break;
+					case 10: clazz->serialize_func = destination; break;
+					case 11: clazz->unserialize_func = destination; break;
+#ifdef ZEND_DEBUGINFO_FUNC_NAME
+					case 12: clazz->__debugInfo = destination; break;
+#endif
+				}
+			}
+			magic++;
+		}
+		destination->common.scope = clazz;
+	}
+	
+	return 1;
 } /* }}} */
 
 /* {{{ proto bool uopz_function(string function, Closure handler)
