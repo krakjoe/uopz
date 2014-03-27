@@ -21,14 +21,14 @@ class A
 
 	public function testOne ()
 	{
-		$foo = uopz_copy(A::class, 'foo');
+		$foo = uopz_copy('A', 'foo');
 		
 		return $foo();
 	}
 
 	public function testTwo ()
 	{
-		$foo = uopz_copy(A::class, 'foo');
+		$foo = uopz_copy('A', 'foo');
 		
 		return $foo();
 	}
