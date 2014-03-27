@@ -565,7 +565,7 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 	}
 } /* }}} */
 
-/* {{{ proto void uopz_overload(int opcode, Callable handler) */
+/* {{{ proto bool uopz_overload(int opcode, Callable handler) */
 static PHP_FUNCTION(uopz_overload)
 {
 	zval *handler = NULL;
@@ -573,7 +573,9 @@ static PHP_FUNCTION(uopz_overload)
 	zend_fcall_info_cache fcc;
 	char *cerror = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|z", &opcode, &handler) != SUCCESS) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "l|z", &opcode, &handler) != SUCCESS) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (int [, Callable])");
 		return;
 	}
 
@@ -664,13 +666,22 @@ PHP_FUNCTION(uopz_backup) {
 	zend_class_entry *clazz = NULL;
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+		case 2: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (class, function)");
 			return;
 		} break;
 		
-		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+		case 1: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (function)");
 			return;
 		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (class, function) or (function)");
+			return;
 	}
 	
 	uopz_make_key(name, &uname);
@@ -716,13 +727,21 @@ PHP_FUNCTION(uopz_restore) {
 	uopz_key_t uname;
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+		case 2: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (class, function)");
 			return;
 		} break;
 		
 		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (function)");
 			return;
 		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, (class, function) or (function) expected");
 	}
 	
 	uopz_make_key(name, &uname);
@@ -759,13 +778,22 @@ PHP_FUNCTION(uopz_copy) {
 	uopz_key_t uname;
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+		case 2: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, function)");
 			return;
 		} break;
 		
-		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+		case 1: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (function)");
 			return;
 		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
 	}
 	
 	uopz_make_key_ex(name, &uname, 0);
@@ -839,13 +867,22 @@ PHP_FUNCTION(uopz_rename) {
 	uopz_key_t uname, urename;
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 3: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czz", &clazz, &name, &rename) != SUCCESS) {
+		case 3: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Czz", &clazz, &name, &rename) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, name, rename)");
 			return;
 		} break;
 		
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &name, &rename) != SUCCESS) {
+		case 2: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "zz", &name, &rename) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (name, rename)");
 			return;
 		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, name, rename) or (name, rename)");
+			return;
 	}
 	
 	uopz_make_key(name, &uname);
@@ -875,13 +912,22 @@ PHP_FUNCTION(uopz_delete) {
 	zend_class_entry *clazz = NULL;
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+		case 2: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, function)");
 			return;
 		} break;
 		
-		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+		case 1: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (function)");
 			return;
 		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
 	}
 	
 	uopz_make_key(name, &uname);
@@ -1015,15 +1061,23 @@ PHP_FUNCTION(uopz_redefine)
 	
 	switch (ZEND_NUM_ARGS()) {
 		case 3: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Czz", &clazz, &name, &variable) != SUCCESS) {
+			if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Czz", &clazz, &name, &variable) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, constant, variable)");
 				return;
 			}
 		} break;
 		
+		case 2: if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "zz", &name, &variable) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (constant, variable)");
+			return;
+		} break;
+		
 		default: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &name, &variable) != SUCCESS) {
-				return;
-			}
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, constant, variable) or (constant, variable)");
+			return;
 		}
 	}
 	
@@ -1078,17 +1132,27 @@ PHP_FUNCTION(uopz_undefine)
 
 	switch (ZEND_NUM_ARGS()) {
 		case 2: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+			if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+					"unexpected parameter combination, expected (class, constant)");
 				return;
 			}
 		} break;
 		
-		default: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+		case 1: {
+			if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+					"unexpected parameter combination, expected (constant)");
 				return;
 			}
-		}
+		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, constant) or (constant)");
+			return;
 	}
+	
 	uopz_make_key_ex(name, &uname, 0);
 	
 	if (uopz_undefine(clazz, &uname TSRMLS_CC)) {
@@ -1171,20 +1235,29 @@ PHP_FUNCTION(uopz_function) {
 	switch (ZEND_NUM_ARGS()) {
 		case 4:
 		case 3: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
+			if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+					"unexpected parameter combination, expected (class, name, closure [, flags])");
 				return;
 			}
 		} break;
 		
-		default: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zO", &name, &closure, zend_ce_closure) != SUCCESS) {
+		case 2: {
+			if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "zO", &name, &closure, zend_ce_closure) != SUCCESS) {
+				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+					"unexpected parameter combination, expected (name, closure)");
 				return;
 			}
 			
 			if (EG(scope)) {
 				flags |= ZEND_ACC_STATIC;
 			}
-		}
+		} break;
+		
+		default:
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				"unexpected parameter combination, expected (class, name, closure [, flags]) or (name, closure)");
+			return;
 	}
 	
 	uopz_make_key(name, &uname);
@@ -1220,7 +1293,9 @@ PHP_FUNCTION(uopz_implement)
 	zend_class_entry *clazz = NULL;
 	zend_class_entry *interface = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CC", &clazz, &interface) != SUCCESS) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "CC", &clazz, &interface) != SUCCESS) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"unexpected parameter combination, expected (class, interface)");
 		return;
 	}
 	
@@ -1257,7 +1332,9 @@ PHP_FUNCTION(uopz_extend)
 	zend_class_entry *clazz = NULL;
 	zend_class_entry *parent = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CC", &clazz, &parent) != SUCCESS) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "CC", &clazz, &parent) != SUCCESS) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"unexpected parameter combination, expected (class, parent)");
 		return;
 	}
 	
@@ -1340,7 +1417,9 @@ PHP_FUNCTION(uopz_compose)
 	HashTable *classes = NULL;
 	zval *construct = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zh|O", &name, &classes, &construct, zend_ce_closure) != SUCCESS) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "zh|O", &name, &classes, &construct, zend_ce_closure) != SUCCESS) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"unexpected parameter combination, expected (name, classes [, __construct])");
 		return;
 	}
 
