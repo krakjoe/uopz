@@ -1451,24 +1451,30 @@ PHP_FUNCTION(uopz_function) {
 } /* }}} */
 
 static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface TSRMLS_DC) {
-	zend_bool result = 0;
-	zend_bool is_final = clazz->ce_flags;
+	zend_bool is_final = 
+		(clazz->ce_flags & ZEND_ACC_FINAL);
+	
+	if (!interface->ce_flags & ZEND_ACC_INTERFACE) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"the class provided (%s) is not an interface", interface->name);
+		return 0;
+	}
+	
+	if (instanceof_function(clazz, interface TSRMLS_CC)) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"the class provided (%s) already has the interface interface", clazz->name);
+		return 0;
+	}
 	
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
 
-	if (!instanceof_function(clazz, interface TSRMLS_CC)) {
-		if (interface->ce_flags & ZEND_ACC_INTERFACE) {
-			zend_do_implement_interface(clazz, interface TSRMLS_CC);
-			
-			result = instanceof_function
-				(clazz, interface TSRMLS_CC);
-		}
-	}
-		
+	zend_do_implement_interface
+		(clazz, interface TSRMLS_CC);
+
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
 		
-	return result;
+	return instanceof_function(clazz, interface TSRMLS_CC);
 }
 
 /* {{{ proto bool uopz_implement(string class, string interface) */
@@ -1487,19 +1493,25 @@ PHP_FUNCTION(uopz_implement)
 } /* }}} */
 
 static inline zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent TSRMLS_DC) {
-	zend_bool result = 0;
-	zend_bool is_final = clazz->ce_flags;
-
+	zend_bool is_final = clazz->ce_flags & ZEND_ACC_FINAL;
+	
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
 
-	if (!instanceof_function(clazz, parent TSRMLS_CC)) {
-		if (!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
-			if (parent->ce_flags & ZEND_ACC_TRAIT) {
-				zend_do_implement_trait(clazz, parent TSRMLS_CC);
-			} else zend_do_inheritance(clazz, parent TSRMLS_CC);
-			result = instanceof_function(clazz, parent TSRMLS_CC);
-		}
+	if (parent->ce_flags & ZEND_ACC_INTERFACE) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"unexpected class provided (%s) is an interface", parent->name);
+		return 0;
 	}
+
+	if (instanceof_function(clazz, parent TSRMLS_CC)) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"unexpected parameter combination, expected (class, interface)");
+		return 0;
+	}
+
+	if (parent->ce_flags & ZEND_ACC_TRAIT) {
+		zend_do_implement_trait(clazz, parent TSRMLS_CC);
+	} else zend_do_inheritance(clazz, parent TSRMLS_CC);
 	
 	if (parent->ce_flags & ZEND_ACC_TRAIT)
 		zend_do_bind_traits(clazz TSRMLS_CC);
@@ -1507,7 +1519,7 @@ static inline zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *p
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
 	
-	return result;
+	return instanceof_function(clazz, parent TSRMLS_CC);
 }
 
 /* {{{ proto bool uopz_extend(string class, string parent) */
@@ -1586,6 +1598,9 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 			
 			result = 1;	
 		}
+	} else {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+			"cannot compose existing class (%s)", name->string);
 	}
 	
 	uopz_free_key(&uname);
