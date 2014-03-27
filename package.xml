@@ -13,8 +13,8 @@
  <date>2014-03-24</date>
  <time>10:00:00</time>
  <version>
-  <release>1.0.3</release>
-  <api>1.0.3</api>
+  <release>1.0.4</release>
+  <api>1.0.4</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,8 +22,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  allow overriding static scope on created methods
-  add backup/restore functions (auto restore internal functions)
+  add copy
+  fix various scope issues
  </notes>
  <contents>
   <dir name="/">
@@ -50,6 +50,7 @@
    <file name="tests/022.phpt" role="test" />
    <file name="tests/023.phpt" role="test" />
    <file name="tests/024.phpt" role="test" />
+   <file name="tests/025.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />

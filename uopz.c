@@ -689,6 +689,56 @@ PHP_FUNCTION(uopz_restore) {
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_copy(zend_class_entry *clazz, zval *name, zval **return_value, zval *this_ptr TSRMLS_DC) {
+	HashTable *table = (clazz) ? &clazz->function_table : CG(function_table);
+	size_t         lcl = Z_STRLEN_P(name)+1;
+	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
+	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
+	zend_function *function = NULL;
+	
+	if (name && Z_TYPE_P(name) == IS_STRING) {
+		if (zend_hash_quick_find(table, lcn, lcl, hash, (void**)&function) == SUCCESS) {
+			if (function->type == ZEND_USER_FUNCTION) {
+				zend_create_closure(
+					*return_value,
+					function, function->common.scope,
+					this_ptr TSRMLS_CC);
+			} else {
+				zend_throw_exception_ex(
+					NULL, 0 TSRMLS_CC, "cannot make closure from internal function (%s)", Z_STRVAL_P(name));
+			}
+		} else {
+			zend_throw_exception_ex(
+			NULL, 0 TSRMLS_CC, "could not find the requested function (%s)", Z_STRVAL_P(name));
+		}
+	} else {
+		zend_throw_exception_ex(
+			NULL, 0 TSRMLS_CC, "could not find the requested function (null)");
+	}
+	
+	efree(lcn);
+} /* }}} */
+
+/* {{{ proto Closure uopz_copy(string class, string function)
+	   proto Closure uopz_copy(string function) */
+PHP_FUNCTION(uopz_copy) {
+	zval *name = NULL;
+	zend_class_entry *clazz = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
+			return;
+		} break;
+		
+		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
+			return;
+		} break;
+	}
+	
+	uopz_copy(clazz, name, &return_value, EG(This) TSRMLS_CC);
+} /* }}} */
+
+/* {{{ */
 static inline zend_bool uopz_rename(HashTable *table, zval *function, zval *overload TSRMLS_DC) {
 	zend_function *tuple[2] = {NULL, NULL};
 	zend_ulong hashed[2] = {0L, 0L};
@@ -1309,6 +1359,10 @@ ZEND_BEGIN_ARG_INFO(uopz_restore_arginfo, 1)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_copy__arginfo, 1)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_delete_arginfo, 1)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
@@ -1350,6 +1404,7 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_overload, uopz_overload_arginfo)
 	PHP_FE(uopz_backup, uopz_backup_arginfo)
 	PHP_FE(uopz_restore, uopz_restore_arginfo)
+	PHP_FE(uopz_copy, uopz_copy__arginfo)
 	PHP_FE(uopz_rename, uopz_rename_arginfo)
 	PHP_FE(uopz_delete, uopz_delete_arginfo)
 	PHP_FE(uopz_redefine, uopz_redefine_arginfo)
