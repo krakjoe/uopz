@@ -1290,23 +1290,19 @@ static inline zend_bool uopz_undefine(zend_class_entry *clazz, uopz_key_t *name 
 	}
 	
 	if (!clazz) {
-		if (zconstant->module_number == PHP_USER_CONSTANT) {
-			if (zend_hash_quick_del
-				(table, name->string, name->length, name->hash) != SUCCESS) {
-				if (clazz) {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
-						"failed to undefine the constant %s, delete failed", clazz->name, name->string);
-				} else {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
-						"failed to undefine the constant %s, delete failed", name->string);
-				}
-				return 0;
-			}
-		} else {
+		if (zconstant->module_number != PHP_USER_CONSTANT) {
 			zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
 				"failed to undefine the internal constant %s", name->string);	
 			return 0;
 		}
+
+		if (zend_hash_quick_del
+			(table, name->string, name->length, name->hash) != SUCCESS) {
+			zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
+				"failed to undefine the constant %s, delete failed", name->string);
+			return 0;
+		}
+		
 		return 1;
 	}
 	
@@ -1468,6 +1464,7 @@ PHP_FUNCTION(uopz_function) {
 	uopz_free_key(&uname);
 } /* }}} */
 
+/* {{{ */
 static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface TSRMLS_DC) {
 	zend_bool is_final = 
 		(clazz->ce_flags & ZEND_ACC_FINAL);
@@ -1493,7 +1490,7 @@ static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry
 		clazz->ce_flags |= ZEND_ACC_FINAL;
 		
 	return instanceof_function(clazz, interface TSRMLS_CC);
-}
+} /* }}} */
 
 /* {{{ proto bool uopz_implement(string class, string interface) */
 PHP_FUNCTION(uopz_implement)
@@ -1555,6 +1552,7 @@ PHP_FUNCTION(uopz_extend)
 	RETURN_BOOL(uopz_extend(clazz, parent TSRMLS_CC));
 } /* }}} */
 
+/* {{{ */
 static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval *construct TSRMLS_DC) {
 	HashPosition position;
 	zend_class_entry *entry = NULL;
@@ -1629,7 +1627,7 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 	uopz_free_key(&uname);
 	
 	return 1;
-}
+} /* }}} */
 
 /* {{{ proto bool uopz_compose(string name, array classes [, Closure __construct]) */
 PHP_FUNCTION(uopz_compose)
