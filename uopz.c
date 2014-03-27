@@ -928,87 +928,93 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 	zend_bool result = 1;
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	
-	if (name->string && rename->string) {
-		uopz_find_function(table, name, &tuple[0] TSRMLS_CC);
-		uopz_find_function(table, rename, &tuple[1] TSRMLS_CC);
-		
-		if (tuple[0] && tuple[1]) {
-			locals[0] = *tuple[0];
-			locals[1] = *tuple[1];
-			
-			if (tuple[0]->type == ZEND_INTERNAL_FUNCTION && 
-				tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
-				/* both internal */
-			} else {
-				if (tuple[0]->type == ZEND_INTERNAL_FUNCTION ||
-					tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
-					/* one internal */
-					if (tuple[0]->type == ZEND_INTERNAL_FUNCTION) {
-						function_add_ref(&locals[1]);
-					} else if (tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
-						function_add_ref(&locals[0]);
-					}
-				} else {
-					/* both user */
-					function_add_ref(&locals[0]);
-					function_add_ref(&locals[1]);
-				}
-			}
-			
-			if (zend_hash_quick_update(table, 
-					name->string, name->length, name->hash, 
-					(void**) &locals[1], sizeof(zend_function), NULL) != SUCCESS ||
-				zend_hash_quick_update(table,
-					rename->string, rename->length, rename->hash,
-					(void**) &locals[0], sizeof(zend_function), NULL) != SUCCESS) {
-				if (clazz) {
-					uopz_exception(
-						"failed to rename the functions %s::%s and %s::%s, switch failed", 
-						clazz->name, name->string, clazz->name, rename->string);
-				} else {
-					uopz_exception(
-						"failed to rename the functions %s and %s, switch failed", 
-						name->string, rename->string);
-				}
-				result = 0;	
-			}
-		} else if (tuple[0] || tuple[1]) {
-			/* only one existing function */
-			locals[0] = tuple[0] ? *tuple[0] : *tuple[1];
-			
-			function_add_ref(&locals[0]);
-			
-			if (zend_hash_quick_update(table,
-				rename->string, rename->length, rename->hash, 
-				(void**) &locals[0], sizeof(zend_function), NULL) != SUCCESS) {
-				if (clazz) {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to rename the function %s::%s to %s::%s, update failed", 
-						clazz->name, name->string, clazz->name, rename->string);
-					result = 0;
-				} else {
-					zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-						"failed to rename the function %s to %s, update failed", 
-						name->string, rename->string);	
-					result = 0;
-				}
-			}
+	if (!name->string && !rename->string) {
+		return 0;
+	}
+	
+	uopz_find_function(table, name, &tuple[0] TSRMLS_CC);
+	uopz_find_function(table, rename, &tuple[1] TSRMLS_CC);
+	
+	if (!tuple[0] && !tuple[1]) {
+		if (clazz) {
+			uopz_exception(
+				"failed to find the functions %s::%s and %s::%s", 
+				clazz->name, name->string, clazz->name, rename->string);
 		} else {
-			if (clazz) {
-				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-					"failed to find the functions %s::%s and %s::%s", 
-					clazz->name, name->string, clazz->name, rename->string);
+			uopz_exception(
+				"failed to find the functions %s and %s", 
+				name->string, rename->string);
+		}
+		return 0;		
+	}
+	
+	if (tuple[0] && tuple[1]) {
+		locals[0] = *tuple[0];
+		locals[1] = *tuple[1];
+		
+		if (tuple[0]->type == ZEND_INTERNAL_FUNCTION && 
+			tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
+			/* both internal */
+		} else {
+			if (tuple[0]->type == ZEND_INTERNAL_FUNCTION ||
+				tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
+				/* one internal */
+				if (tuple[0]->type == ZEND_INTERNAL_FUNCTION) {
+					function_add_ref(&locals[1]);
+				} else if (tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
+					function_add_ref(&locals[0]);
+				}
 			} else {
-				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
-					"failed to find the functions %s and %s", 
-					name->string, rename->string);
+				/* both user */
+				function_add_ref(&locals[0]);
+				function_add_ref(&locals[1]);
 			}
-			result = 0;
 		}
 		
-	} else result = 0;
+		if (zend_hash_quick_update(table, 
+				name->string, name->length, name->hash, 
+				(void**) &locals[1], sizeof(zend_function), NULL) != SUCCESS ||
+			zend_hash_quick_update(table,
+				rename->string, rename->length, rename->hash,
+				(void**) &locals[0], sizeof(zend_function), NULL) != SUCCESS) {
+			if (clazz) {
+				uopz_exception(
+					"failed to rename the functions %s::%s and %s::%s, switch failed", 
+					clazz->name, name->string, clazz->name, rename->string);
+			} else {
+				uopz_exception(
+					"failed to rename the functions %s and %s, switch failed", 
+					name->string, rename->string);
+			}
+			result = 0;	
+		}
+		
+		return 1;
+		
+	}
 	
-	return result;
+	/* only one existing function */
+	locals[0] = tuple[0] ? *tuple[0] : *tuple[1];
+	
+	if (zend_hash_quick_update(table,
+		rename->string, rename->length, rename->hash, 
+		(void**) &locals[0], sizeof(zend_function), 
+		tuple[0] ? (void**)  &tuple[1] : (void**) &tuple[0]) != SUCCESS) {
+		if (clazz) {
+			uopz_exception(
+				"failed to rename the function %s::%s to %s::%s, update failed", 
+				clazz->name, name->string, clazz->name, rename->string);
+		} else {
+			uopz_exception(
+				"failed to rename the function %s to %s, update failed", 
+				name->string, rename->string);	
+		}
+		return 0;
+	}
+	
+	function_add_ref(tuple[0] ? tuple[1] : tuple[0]);
+	
+	return 1;
 } /* }}} */
 
 /* {{{ proto bool uopz_rename(mixed name, mixed rename)
