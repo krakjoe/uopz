@@ -702,6 +702,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 		ubackup->name.string, ubackup->name.length, ubackup->name.hash,
 		(void**)&ubackup->internal, sizeof(zend_function), (void**)&function) == SUCCESS) {
 		function->common.prototype = function;
+		function_add_ref(function);
 	}
 	
 	return 1;
