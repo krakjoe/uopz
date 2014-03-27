@@ -1212,7 +1212,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 			create.module_number = PHP_USER_CONSTANT;
 			
 			if (zend_register_constant(&create TSRMLS_CC) != SUCCESS) {
-				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				uopz_exception(
 					"failed to redefine the constant %s, operation failed", name->length);
 				zval_dtor(&create.value);
 				return 0;
@@ -1226,7 +1226,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 				table, 
 				name->string, name->length, name->hash, 
 				(void**)&create, sizeof(zval*), NULL) != SUCCESS) {
-				zend_throw_exception_ex(NULL, 0 TSRMLS_CC,
+				uopz_exception(
 					"failed to redefine the constant %s::%s, update failed", clazz->name, name->length);
 				zval_ptr_dtor(&create);	
 				return 0;
