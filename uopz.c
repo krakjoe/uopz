@@ -858,35 +858,32 @@ PHP_FUNCTION(uopz_restore) {
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **return_value, zval *this_ptr TSRMLS_DC) {
+static inline void uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **return_value, zval *this_ptr TSRMLS_DC) {
 	HashTable *table = (clazz) ? &clazz->function_table : CG(function_table);
 	zend_function *function = NULL;
-	zend_bool result = 0;
 	zend_class_entry *scope = EG(scope);
-	if (name->string) {
-		if (uopz_find_function(table, name, &function TSRMLS_CC) != SUCCESS) {
-			if (clazz) {
-				uopz_exception(
-					"could not find the requested function (%s::%s)", 
-					clazz->name, name->string);
-			} else {
-				uopz_exception("could not find the requested function (%s)", name->string);
-			}
-			return 0;
-		}
-		
-		EG(scope)=function->common.scope; 
-		zend_create_closure(
-		    *return_value,
-		    function, function->common.scope,
-		    this_ptr TSRMLS_CC);
-		EG(scope)=scope;
-		return 1;
-	} else {
-		uopz_exception("could not find the requested function (null)");
+	
+	if (!name->string) {
+		return;
 	}
 	
-	return result;
+	if (uopz_find_function(table, name, &function TSRMLS_CC) != SUCCESS) {
+		if (clazz) {
+			uopz_exception(
+				"could not find the requested function (%s::%s)", 
+				clazz->name, name->string);
+		} else {
+			uopz_exception("could not find the requested function (%s)", name->string);
+		}
+		return;
+	}
+	
+	EG(scope)=function->common.scope; 
+	zend_create_closure(
+	    *return_value,
+	    function, function->common.scope,
+	    this_ptr TSRMLS_CC);
+	EG(scope)=scope;
 } /* }}} */
 
 /* {{{ proto Closure uopz_copy(string class, string function)
@@ -914,9 +911,9 @@ PHP_FUNCTION(uopz_copy) {
 				"unexpected parameter combination, expected (class, function) or (function)");
 			return;
 	}
-	
+
 	if (uopz_make_key_ex(name, &uname, 0)) {
-		uopz_copy(clazz, &uname, &return_value, EG(This) TSRMLS_CC);	
+		uopz_copy(clazz, &uname, &return_value, EG(This) TSRMLS_CC);
 	}
 } /* }}} */
 
@@ -1077,8 +1074,7 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TS
 		return 0;
 	}
 	
-	if (zend_hash_quick_del(
-		table, name->string, name->length, name->hash) != SUCCESS) {
+	if (zend_hash_quick_del(table, name->string, name->length, name->hash) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
 				"failed to find the function %s::%s, delete failed", clazz->name, name->string);
@@ -1416,6 +1412,11 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 		name->string, name->length, name->hash, 
 		(void**) function, sizeof(zend_function), 
 		(void**) &destination) != SUCCESS) {
+		if (clazz) {
+			uopz_exception("failed to create function %s::%s, update failed", clazz->name, name->string);
+		} else {
+			uopz_exception("failed to create function %s, update failed", name->string);
+		}
 		return 0;		
 	}
 	
