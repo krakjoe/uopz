@@ -10,8 +10,8 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-24</date>
- <time>10:00:00</time>
+ <date>2014-03-27</date>
+ <time>17:35:00</time>
  <version>
   <release>1.0.4</release>
   <api>1.0.4</api>
@@ -24,6 +24,8 @@
  <notes>
   add copy
   fix various scope issues
+  fix heap corruption issue
+  auto backup on uopz_function
  </notes>
  <contents>
   <dir name="/">
