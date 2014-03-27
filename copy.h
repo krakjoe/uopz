@@ -110,7 +110,9 @@ static zend_op* uopz_copy_opcodes(zend_op_array *op_array, zend_literal *literal
 			switch (copy[it].opcode) {
 				case ZEND_GOTO:
 				case ZEND_JMP:
+#ifdef ZEND_FAST_CALL
 				case ZEND_FAST_CALL:
+#endif
 					copy[it].op1.jmp_addr = copy + 
 						(op_array->opcodes[it].op1.jmp_addr - op_array->opcodes);
 				break;
