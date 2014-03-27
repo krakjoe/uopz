@@ -819,15 +819,26 @@ static inline zend_bool uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zva
 	HashTable *table = (clazz) ? &clazz->function_table : CG(function_table);
 	zend_function *function = NULL;
 	zend_bool result = 0;
-	
+	zend_class_entry *scope = EG(scope);
 	if (name->string) {
-		if (zend_hash_quick_find(table, name->string, name->length, name->hash, (void**)&function) == SUCCESS) {
+		HashPosition position;
+		zend_function *entry;
+		for (zend_hash_internal_pointer_reset_ex(table, &position);
+		     zend_hash_get_current_data_ex(table, (void**)&entry, &position) == SUCCESS;
+		     zend_hash_move_forward_ex(table, &position)) {
+		     if (zend_binary_strcasecmp(name->string, name->length-1, entry->common.function_name, strlen(entry->common.function_name)) == SUCCESS) {
+			EG(scope)=entry->common.scope; 
 			zend_create_closure(
-				*return_value,
-				function, function->common.scope,
-				this_ptr TSRMLS_CC);
+                                *return_value,
+                                entry, entry->common.scope,
+                                this_ptr TSRMLS_CC);
+			EG(scope)=scope;
 			result = 1;
-		} else {
+			break;
+		     }
+		}
+
+		if (!result) {
 			if (clazz) {
 				zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
 					"could not find the requested function (%s::%s)", 
