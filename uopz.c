@@ -59,7 +59,7 @@ static zend_bool uopz_backup(zend_class_entry *scope, uopz_key_t *key TSRMLS_DC)
 
 PHP_INI_BEGIN()
 	 STD_PHP_INI_ENTRY("uopz.backup",     "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.backup,             zend_uopz_globals,        uopz_globals)
-	 STD_PHP_INI_ENTRY("uopz.fixup",      "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.fixup,              zend_uopz_globals,        uopz_globals)
+	 STD_PHP_INI_ENTRY("uopz.fixup",      "0",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.fixup,              zend_uopz_globals,        uopz_globals)
 PHP_INI_END()
 
 /* {{{ */
@@ -199,18 +199,8 @@ static void php_uopz_backup_dtor(void *pData) {
 	
 	if (backup->internal.type == ZEND_USER_FUNCTION) {
 		destroy_zend_function(&backup->internal TSRMLS_CC);
-	} else {
-		if ((zend_hash_quick_find(table, 
-				backup->name.string, backup->name.length, 
-				backup->name.hash, (void**)&restored) == SUCCESS) && 
-			(restored->type == ZEND_USER_FUNCTION)) {
-			zend_hash_quick_update(
-				table, backup->name.string, backup->name.length,
-				backup->name.hash, (void**) &backup->internal,
-				sizeof(zend_function), (void**) &restored);
-		}
 	}
-	
+
 	uopz_free_key(&backup->name);
 } /* }}} */
 
@@ -491,6 +481,29 @@ static PHP_RINIT_FUNCTION(uopz)
 	return SUCCESS;
 } /* }}} */
 
+/* {{{ */
+static inline int php_uopz_clean_user_function(void *pData TSRMLS_DC) {
+	zend_function *function = (zend_function*) pData;
+	
+	if (function->type == ZEND_USER_FUNCTION)
+		return ZEND_HASH_APPLY_REMOVE;
+		
+	return ZEND_HASH_APPLY_KEEP;
+} /* }}} */
+
+/* {{{ */
+static inline int php_uopz_clean_user_class(void *pData TSRMLS_DC) {
+	zend_class_entry **ce = (zend_class_entry**) pData;
+	
+	zend_hash_apply(
+		&(*ce)->function_table, php_uopz_clean_user_function TSRMLS_CC);
+	
+	if ((*ce)->type == ZEND_USER_CLASS)
+		return ZEND_HASH_APPLY_REMOVE;	
+	
+	return ZEND_HASH_APPLY_KEEP;
+} /* }}} */
+
 /* {{{ PHP_RSHUTDOWN_FUNCTION
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
@@ -499,6 +512,9 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 		zval_ptr_dtor(&UOPZ(overload)._exit);
 	}
 
+	zend_hash_apply(CG(function_table), php_uopz_clean_user_function TSRMLS_CC);
+	zend_hash_apply(CG(class_table), php_uopz_clean_user_class TSRMLS_CC);
+	
 	zend_hash_destroy(&UOPZ(overload).table);
 	zend_hash_destroy(&UOPZ(backup));
 	
@@ -728,15 +744,10 @@ static inline void uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **r
 	
 	if (name->string) {
 		if (zend_hash_quick_find(table, name->string, name->length, name->hash, (void**)&function) == SUCCESS) {
-			if (function->type == ZEND_USER_FUNCTION) {
-				zend_create_closure(
-					*return_value,
-					function, function->common.scope,
-					this_ptr TSRMLS_CC);
-			} else {
-				zend_throw_exception_ex(
-					NULL, 0 TSRMLS_CC, "cannot make closure from internal function (%s)", name->string);
-			}
+			zend_create_closure(
+				*return_value,
+				function, function->common.scope,
+				this_ptr TSRMLS_CC);
 		} else {
 			zend_throw_exception_ex(
 			NULL, 0 TSRMLS_CC, "could not find the requested function (%s)", name->string);
@@ -1061,8 +1072,6 @@ static inline zend_bool uopz_undefine(zend_class_entry *clazz, uopz_key_t *name 
 		}
 	}
 	
-	
-	
 	return result;
 } /* }}} */
 
@@ -1102,12 +1111,13 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zend_function *function, zend_bool is_static TSRMLS_DC) {
+static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zend_function *function, long flags TSRMLS_DC) {
 	zend_bool result = 0;
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
 	
 	if (name->string) {
+		
 		if (zend_hash_quick_update(
 			table, 
 			name->string, name->length, name->hash, 
@@ -1115,6 +1125,11 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 			(void**) &destination) == SUCCESS) {
 			
 			result = 1;
+			
+			destination->common.fn_flags = flags;
+			destination->common.prototype = destination;
+			
+			function_add_ref(destination);
 			
 			if (clazz) {
 				uopz_magic_t *magic = umagic;
@@ -1143,12 +1158,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 					}
 					magic++;
 				}
-				destination->common.prototype = destination;
 				destination->common.scope = clazz;
-
-				if (is_static) {
-					destination->common.fn_flags |= ZEND_ACC_STATIC;
-				} else destination->common.fn_flags &= ~ ZEND_ACC_STATIC;
 			}
 		}
 	}
@@ -1157,18 +1167,18 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 } /* }}} */
 
 /* {{{ proto bool uopz_function(string function, Closure handler)
-	   proto bool uopz_function(string class, string method, Closure handler [, bool static = false]) */
+	   proto bool uopz_function(string class, string method, Closure handler [, int flags = ZEND_ACC_PUBLIC]) */
 PHP_FUNCTION(uopz_function) {
 	zval *name = NULL;
 	uopz_key_t uname;
 	zval *closure = NULL;
 	zend_class_entry *clazz = NULL;
-	zend_bool is_static = 0;
+	long flags = ZEND_ACC_PUBLIC;
 	
 	switch (ZEND_NUM_ARGS()) {
 		case 4:
 		case 3: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &name, &closure, zend_ce_closure, &is_static) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
 				return;
 			}
 		} break;
@@ -1177,12 +1187,16 @@ PHP_FUNCTION(uopz_function) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zO", &name, &closure, zend_ce_closure) != SUCCESS) {
 				return;
 			}
+			
+			if (EG(scope)) {
+				flags |= ZEND_ACC_STATIC;
+			}
 		}
 	}
 	
 	uopz_make_key(name, &uname);
 	RETVAL_BOOL(uopz_function(clazz, &uname, (zend_function*) 
-		zend_get_closure_method_def(closure TSRMLS_CC), is_static TSRMLS_CC));
+		zend_get_closure_method_def(closure TSRMLS_CC), flags TSRMLS_CC));
 	uopz_free_key(&uname);
 } /* }}} */
 
@@ -1461,7 +1475,7 @@ ZEND_EXT_API zend_extension zend_extension_entry = {
 	uopz_zend_startup,
 	NULL,           	    /* shutdown_func_t */
 	NULL,                   /* activate_func_t */
-	NULL,           	    /* deactivate_func_t */
+	NULL,                   /* deactivate_func_t */
 	NULL,           	    /* message_handler_func_t */
 	php_uopz_overload_exit, /* op_array_handler_func_t */
 	NULL, 				    /* statement_handler_func_t */
