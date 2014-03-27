@@ -197,10 +197,7 @@ static void php_uopz_backup_dtor(void *pData) {
 	if (backup->scope)
 		backup->scope->refcount--;
 	
-	if (backup->internal.type == ZEND_USER_FUNCTION) {
-		destroy_zend_function(&backup->internal TSRMLS_CC);
-	}
-
+	destroy_zend_function(&backup->internal TSRMLS_CC);
 	uopz_free_key(&backup->name);
 } /* }}} */
 
@@ -485,9 +482,10 @@ static PHP_RINIT_FUNCTION(uopz)
 static inline int php_uopz_clean_user_function(void *pData TSRMLS_DC) {
 	zend_function *function = (zend_function*) pData;
 	
-	if (function->type == ZEND_USER_FUNCTION)
+	if (function->type == ZEND_USER_FUNCTION) {
 		return ZEND_HASH_APPLY_REMOVE;
-		
+	}
+	
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
@@ -497,9 +495,6 @@ static inline int php_uopz_clean_user_class(void *pData TSRMLS_DC) {
 	
 	zend_hash_apply(
 		&(*ce)->function_table, php_uopz_clean_user_function TSRMLS_CC);
-	
-	if ((*ce)->type == ZEND_USER_CLASS)
-		return ZEND_HASH_APPLY_REMOVE;	
 	
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
@@ -688,7 +683,6 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 	zend_function *function = NULL;
 	HashTable     *backup = NULL;
 	uopz_backup_t *ubackup = NULL;
-	zend_function restored;
 	HashTable     *table = clazz ? &clazz->function_table : CG(function_table);
 	
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
@@ -699,17 +693,15 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 		return 0;
 	}
 	
-	backup = ubackup->scope ?
+	table = ubackup->scope ?
 		&ubackup->scope->function_table :
 		CG(function_table);
-		
-	restored = uopz_copy_function(&ubackup->internal TSRMLS_CC);
 	
 	if (zend_hash_quick_update(
-		backup, 
+		table, 
 		ubackup->name.string, ubackup->name.length, ubackup->name.hash,
-		(void**)&restored, sizeof(zend_function), NULL) != SUCCESS) {
-		destroy_zend_function(&restored TSRMLS_CC);
+		(void**)&ubackup->internal, sizeof(zend_function), (void**)&function) == SUCCESS) {
+		function->common.prototype = function;
 	}
 	
 	return 1;
@@ -1117,7 +1109,8 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 	zend_function *destination = NULL;
 	
 	if (name->string) {
-		
+		uopz_backup(clazz, name TSRMLS_CC);
+
 		if (zend_hash_quick_update(
 			table, 
 			name->string, name->length, name->hash, 
@@ -1128,7 +1121,6 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 			
 			destination->common.fn_flags = flags;
 			destination->common.prototype = destination;
-			
 			function_add_ref(destination);
 			
 			if (clazz) {
