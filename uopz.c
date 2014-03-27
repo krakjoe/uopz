@@ -134,7 +134,7 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 		return 0;
 	}
 	
-	if (Z_TYPE_P(pzval) == IS_STRING && Z_STRLEN_P(pzval)) {
+	if (Z_STRLEN_P(pzval)) {
 		key->string = Z_STRVAL_P(pzval);
 		key->length = Z_STRLEN_P(pzval)+1;
 		if (copy) {
@@ -145,7 +145,11 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 		key->hash = zend_inline_hash_func(key->string, key->length);
 		return 1;
 	}
-
+	
+	if (EG(in_execution)) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC, "invalid input to function");
+	}
+	
 	return 0;
 } /*}}} */
 
