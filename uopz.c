@@ -47,7 +47,15 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 # define EX_T(offset) (*(temp_variable *)((char*)execute_data->Ts + offset))
 #endif
 
-static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC);
+/* {{{ */
+typedef struct _uopz_key_t {
+	char       *string;
+	zend_uint   length;
+	zend_ulong  hash;
+	zend_bool   copied;
+} uopz_key_t; /* }}} */
+
+static zend_bool uopz_backup(zend_class_entry *scope, uopz_key_t *key TSRMLS_DC);
 
 PHP_INI_BEGIN()
 	 STD_PHP_INI_ENTRY("uopz.backup",     "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.backup,             zend_uopz_globals,        uopz_globals)
@@ -113,12 +121,52 @@ typedef struct _uopz_handler_t {
 
 /* {{{ */
 typedef struct _uopz_backup_t {
+	uopz_key_t        name;
 	zend_class_entry *scope;
-	char             *name;
-	size_t            length;
-	zend_ulong        hash;
 	zend_function     internal;
 } uopz_backup_t; /* }}} */
+
+/* {{{ */
+static void uopz_make_key_ex(zval* pzval, uopz_key_t *key, zend_bool copy) {
+	memset(key, 0, sizeof(zend_hash_key));
+
+	if (!pzval) {
+		return;
+	}
+	
+	if (Z_TYPE_P(pzval) == IS_STRING) {
+		key->string = Z_STRVAL_P(pzval);
+		key->length = Z_STRLEN_P(pzval)+1;
+		if (copy) {
+			key->string = zend_str_tolower_dup
+				(key->string, key->length);
+			key->copied = copy;
+		}
+		key->hash = zend_inline_hash_func(key->string, key->length);
+		return;
+	}
+} /*}}} */
+
+#define uopz_make_key(p, k) uopz_make_key_ex(p, k, 1)
+
+/* {{{ */
+static uopz_key_t uopz_copy_key(uopz_key_t *key) {
+	uopz_key_t copy = *key;
+	
+	if (copy.copied) {
+		copy.string = estrndup
+			(copy.string, copy.length);
+	}
+	
+	return copy;
+} /* }}} */
+
+/* {{{ */
+static void uopz_free_key(uopz_key_t *key) {
+	if (key && key->string && key->copied) {
+		efree(key->string);
+	}
+} /* }}} */
 
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
@@ -153,17 +201,17 @@ static void php_uopz_backup_dtor(void *pData) {
 		destroy_zend_function(&backup->internal TSRMLS_CC);
 	} else {
 		if ((zend_hash_quick_find(table, 
-				backup->name, backup->length, 
-				backup->hash, (void**)&restored) == SUCCESS) && 
+				backup->name.string, backup->name.length, 
+				backup->name.hash, (void**)&restored) == SUCCESS) && 
 			(restored->type == ZEND_USER_FUNCTION)) {
 			zend_hash_quick_update(
-				table, backup->name, backup->length,
-				backup->hash, (void**) &backup->internal,
+				table, backup->name.string, backup->name.length,
+				backup->name.hash, (void**) &backup->internal,
 				sizeof(zend_function), (void**) &restored);
 		}
 	}
 	
-	efree(backup->name);
+	uopz_free_key(&backup->name);
 } /* }}} */
 
 /* {{{ */
@@ -330,12 +378,13 @@ static inline void php_uopz_backup(TSRMLS_D) {
 	HashTable *table = CG(function_table);
 	HashPosition position[2];
 	zval name;
+	uopz_key_t key;
 	
 	for (zend_hash_internal_pointer_reset_ex(table, &position[0]);
 		 zend_hash_get_current_key_ex(table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[0]) == HASH_KEY_IS_STRING;
 		 zend_hash_move_forward_ex(table, &position[0])) {
-		 if (--Z_STRLEN(name))
-			uopz_backup(NULL, &name TSRMLS_CC);	 
+		 uopz_make_key_ex(&name, &key, 0);
+		 uopz_backup(NULL, &key TSRMLS_CC);	 
 	}
 	
 	table = CG(class_table);
@@ -350,8 +399,8 @@ static inline void php_uopz_backup(TSRMLS_D) {
 			 	for (zend_hash_internal_pointer_reset_ex(&(*clazz)->function_table, &position[1]);
 			 		 zend_hash_get_current_key_ex(&(*clazz)->function_table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[1]) == HASH_KEY_IS_STRING;
 			 		 zend_hash_move_forward_ex(&(*clazz)->function_table, &position[1])) {
-			 		 if (--Z_STRLEN(name))
-			 		 	uopz_backup((*clazz), &name TSRMLS_CC);
+			 		 uopz_make_key_ex(&name, &key, 0);
+			 		 uopz_backup((*clazz), &key TSRMLS_CC);
 			 	}
 			 }
 		}	
@@ -554,17 +603,13 @@ static PHP_FUNCTION(uopz_overload)
 /* }}} */
 
 /* {{{ */
-static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC) {
+static zend_bool uopz_backup(zend_class_entry *scope, uopz_key_t *name TSRMLS_DC) {
 	HashTable     *backup = NULL;
 	zend_function *function = NULL;
-	size_t         lcl = Z_STRLEN_P(name)+1;
-	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
-	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
 	HashTable     *table = (scope) ? &scope->function_table : CG(function_table);
 	
-	if (zend_hash_quick_find(table, lcn, lcl, hash, (void**) &function) != SUCCESS) {
-		efree(lcn);
-		return;
+	if (zend_hash_quick_find(table, name->string, name->length, name->hash, (void**) &function) != SUCCESS) {
+		return 0;
 	}
 	
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
@@ -578,18 +623,16 @@ static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC) {
 			sizeof(HashTable), (void**) &backup);
 	}
 	
-	if (!zend_hash_quick_exists(backup, lcn, lcl, hash)) {
+	if (!zend_hash_quick_exists(backup, name->string, name->length, name->hash)) {
 		uopz_backup_t ubackup;
 		
+		ubackup.name = uopz_copy_key(name);
 		ubackup.scope = scope;
-		ubackup.name = lcn;
-		ubackup.length = lcl;
-		ubackup.hash = hash;
 		ubackup.internal = uopz_copy_function(function TSRMLS_CC);
 		
 		if (zend_hash_quick_update(
 			backup,
-			lcn, lcl, hash,
+			name->string, name->length, name->hash,
 			(void**) &ubackup,
 			sizeof(uopz_backup_t), NULL) == SUCCESS) {
 			if (scope)
@@ -597,8 +640,6 @@ static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC) {
 		}
 		
 		return 1;
-	} else {
-		efree(lcn);
 	}
 	
 	return 0;
@@ -607,43 +648,37 @@ static zend_bool uopz_backup(zend_class_entry *scope, zval *name TSRMLS_DC) {
 /* {{{ proto bool uopz_backup(string class, string function)
        proto bool uopz_backup(string function) */
 PHP_FUNCTION(uopz_backup) {
-	zval *function = NULL;
-	zval *overload = NULL;
+	uopz_key_t key;
+	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
-	HashTable *table = CG(function_table);
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &function) != SUCCESS) {
+		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
 			return;
-		} else {
-			table = &clazz->function_table;
 		} break;
 		
-		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &function) != SUCCESS) {
+		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
 			return;
 		} break;
 	}
 	
-	RETURN_BOOL(uopz_backup(clazz, function TSRMLS_CC));
+	uopz_make_key(name, &key);
+	RETVAL_BOOL(uopz_backup(clazz, &key TSRMLS_CC));
+	uopz_free_key(&key);
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
+static inline zend_bool uopz_restore(HashTable *table, uopz_key_t *key TSRMLS_DC) {
 	zend_function *function = NULL;
 	HashTable     *backup = NULL;
-	size_t         lcl = Z_STRLEN_P(name)+1;
-	char          *lcn = zend_str_tolower_dup(Z_STRVAL_P(name), lcl);
-	zend_ulong     hash = zend_inline_hash_func(lcn, lcl);
 	uopz_backup_t *ubackup = NULL;
 	zend_function restored;
 	
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
-		efree(lcn);
 		return 0;
 	}
 	
-	if (zend_hash_quick_find(backup, lcn, lcl, hash, (void**)&ubackup) != SUCCESS) {
-		efree(lcn);
+	if (zend_hash_quick_find(backup, key->string, key->length, key->hash, (void**)&ubackup) != SUCCESS) {
 		return 0;
 	}
 	
@@ -655,12 +690,10 @@ static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
 	
 	if (zend_hash_quick_update(
 		backup, 
-		ubackup->name, ubackup->length, ubackup->hash,
+		ubackup->name.string, ubackup->name.length, ubackup->name.hash,
 		(void**)&restored, sizeof(zend_function), NULL) != SUCCESS) {
 		destroy_zend_function(&restored TSRMLS_CC);
 	}
-	
-	efree(lcn);
 	
 	return 1;
 } /* }}} */
@@ -668,24 +701,26 @@ static inline zend_bool uopz_restore(HashTable *table, zval *name TSRMLS_DC) {
 /* {{{ proto bool uopz_restore(string class, string function)
 	   proto bool uopz_restore(string function) */
 PHP_FUNCTION(uopz_restore) {
-	zval *function = NULL;
-	zval *overload = NULL;
+	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
 	HashTable *table = CG(function_table);
+	uopz_key_t key;
 	
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &function) != SUCCESS) {
+		case 2: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Cz", &clazz, &name) != SUCCESS) {
 			return;
 		} else {
 			table = &clazz->function_table;
 		} break;
 		
-		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &function) != SUCCESS) {
+		case 1: if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &name) != SUCCESS) {
 			return;
 		} break;
 	}
 	
-	RETURN_BOOL(uopz_restore(table, function TSRMLS_CC));
+	uopz_make_key(name, &key);
+	RETVAL_BOOL(uopz_restore(table, &key TSRMLS_CC));
+	uopz_free_key(&key);
 } /* }}} */
 
 /* {{{ */
@@ -1091,22 +1126,55 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_function(HashTable *table, zval *function, zend_function *override, zend_function **overridden TSRMLS_DC) {
+static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zend_function *function, zend_bool is_static TSRMLS_DC) {
 	zend_bool result = 0;
-
-	if (Z_TYPE_P(function) == IS_STRING) {
-		char *lcname = zend_str_tolower_dup
-			(Z_STRVAL_P(function), Z_STRLEN_P(function)+1);
-		
-		if (zend_hash_update(
+	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
+	zend_function *destination = NULL;
+	
+	if (name->string) {
+		if (zend_hash_quick_update(
 			table, 
-			lcname, Z_STRLEN_P(function)+1, 
-			(void**) override, sizeof(zend_function), 
-			(void**) overridden) == SUCCESS) {
+			name->string, name->length, name->hash, 
+			(void**) function, sizeof(zend_function), 
+			(void**) &destination) == SUCCESS) {
+			
 			result = 1;
+			
+			if (clazz) {
+				uopz_magic_t *magic = umagic;
+
+				while (magic && magic->name) {
+					if ((name->length-1) == magic->length &&
+						strncasecmp(name->string, magic->name, magic->length) == SUCCESS) {
+
+						switch (magic->id) {
+							case 0: clazz->constructor = destination; break;
+							case 1: clazz->destructor = destination; break;
+							case 2: clazz->clone = destination; break;
+							case 3: clazz->__get = destination; break;
+							case 4: clazz->__set = destination; break;
+							case 5: clazz->__unset = destination; break;
+							case 6: clazz->__isset = destination; break;
+							case 7: clazz->__call = destination; break;
+							case 8: clazz->__callstatic = destination; break;
+							case 9: clazz->__tostring = destination; break;
+							case 10: clazz->serialize_func = destination; break;
+							case 11: clazz->unserialize_func = destination; break;
+#ifdef ZEND_DEBUGINFO_FUNC_NAME
+							case 12: clazz->__debugInfo = destination; break;
+#endif
+						}
+					}
+					magic++;
+				}
+				destination->common.prototype = destination;
+				destination->common.scope = clazz;
+
+				if (is_static) {
+					destination->common.fn_flags |= ZEND_ACC_STATIC;
+				} else destination->common.fn_flags &= ~ ZEND_ACC_STATIC;
+			}
 		}
-		
-		efree(lcname);
 	}
 	
 	return result;
@@ -1115,75 +1183,31 @@ static inline zend_bool uopz_function(HashTable *table, zval *function, zend_fun
 /* {{{ proto bool uopz_function(string function, Closure handler)
 	   proto bool uopz_function(string class, string method, Closure handler [, bool static = false]) */
 PHP_FUNCTION(uopz_function) {
-	zval *function = NULL;
-	zval *callable = NULL;
-	HashTable *table = CG(function_table);
+	zval *name = NULL;
+	uopz_key_t uname;
+	zval *closure = NULL;
 	zend_class_entry *clazz = NULL;
-	zend_function *override = NULL;
-	zend_function *method = NULL;
 	zend_bool is_static = 0;
 	
 	switch (ZEND_NUM_ARGS()) {
 		case 4:
 		case 3: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &function, &callable, zend_ce_closure, &is_static) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "CzO|b", &clazz, &name, &closure, zend_ce_closure, &is_static) != SUCCESS) {
 				return;
-			} else {
-				table = &clazz->function_table;
 			}
 		} break;
 		
 		default: {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zO", &function, &callable, zend_ce_closure) != SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zO", &name, &closure, zend_ce_closure) != SUCCESS) {
 				return;
 			}
 		}
 	}
 	
-	method = (zend_function*) 
-		zend_get_closure_method_def(callable TSRMLS_CC);
-
-	if (!uopz_function(table, function, method, &override TSRMLS_CC)) {
-		RETURN_FALSE;
-	}
-
-	if (table != CG(function_table)) {
-		uopz_magic_t *magic = umagic;
-
-		while (magic && magic->name) {
-			if (Z_STRLEN_P(function) == magic->length &&
-				strncasecmp(Z_STRVAL_P(function), magic->name, magic->length) == SUCCESS) {
-
-				switch (magic->id) {
-					case 0: clazz->constructor = override; break;
-					case 1: clazz->destructor = override; break;
-					case 2: clazz->clone = override; break;
-					case 3: clazz->__get = override; break;
-					case 4: clazz->__set = override; break;
-					case 5: clazz->__unset = override; break;
-					case 6: clazz->__isset = override; break;
-					case 7: clazz->__call = override; break;
-					case 8: clazz->__callstatic = override; break;
-					case 9: clazz->__tostring = override; break;
-					case 10: clazz->serialize_func = override; break;
-					case 11: clazz->unserialize_func = override; break;
-#ifdef ZEND_DEBUGINFO_FUNC_NAME
-					case 12: clazz->__debugInfo = override; break;
-#endif
-				}
-			}
-			magic++;
-		}
-	
-		override->common.prototype = NULL;
-		override->common.scope = clazz;
-		
-		if (is_static) {
-			override->common.fn_flags |= ZEND_ACC_STATIC;
-		} else override->common.fn_flags &= ~ ZEND_ACC_STATIC;
-	}
-	
-	RETURN_TRUE;
+	uopz_make_key(name, &uname);
+	RETVAL_BOOL(uopz_function(clazz, &uname, (zend_function*) 
+		zend_get_closure_method_def(closure TSRMLS_CC), is_static TSRMLS_CC));
+	uopz_free_key(&uname);
 } /* }}} */
 
 static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface TSRMLS_DC) {
