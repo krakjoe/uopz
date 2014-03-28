@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-27</date>
- <time>17:35:00</time>
+ <date>2014-03-28</date>
+ <time>00:50:00</time>
  <version>
-  <release>1.0.4</release>
-  <api>1.0.4</api>
+  <release>1.0.5</release>
+  <api>1.0.5</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,10 +22,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  add copy
   fix various scope issues
-  fix heap corruption issue
-  auto backup on uopz_function
+  use exceptions where appropriate
+  tidy all code
+  add some more tests
  </notes>
  <contents>
   <dir name="/">
