@@ -144,7 +144,9 @@ typedef struct _uopz_backup_t {
 
 /* {{{ */
 static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zend_bool copy TSRMLS_DC) {
-	memset(key, 0, sizeof(zend_hash_key));
+	key->string = NULL;
+	key->length = 0;
+	key->copied = 0;
 
 	if (!pzval) {
 		return 0;
@@ -409,6 +411,7 @@ static inline void php_uopz_backup(TSRMLS_D) {
 	for (zend_hash_internal_pointer_reset_ex(table, &position[0]);
 		 zend_hash_get_current_key_ex(table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[0]) == HASH_KEY_IS_STRING;
 		 zend_hash_move_forward_ex(table, &position[0])) {
+		 Z_STRLEN(name)--;
 		 if (uopz_make_key_ex(&name, &key, 0)) {
 		 	uopz_backup(NULL, &key TSRMLS_CC);	
 		 }
@@ -426,6 +429,7 @@ static inline void php_uopz_backup(TSRMLS_D) {
 			 	for (zend_hash_internal_pointer_reset_ex(&(*clazz)->function_table, &position[1]);
 			 		 zend_hash_get_current_key_ex(&(*clazz)->function_table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[1]) == HASH_KEY_IS_STRING;
 			 		 zend_hash_move_forward_ex(&(*clazz)->function_table, &position[1])) {
+			 		 Z_STRLEN(name)--;
 			 		 if (uopz_make_key_ex(&name, &key, 0)) {
 			 		 	uopz_backup((*clazz), &key TSRMLS_CC);
 			 		 }
