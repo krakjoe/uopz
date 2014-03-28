@@ -149,7 +149,7 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 	if (!pzval) {
 		return 0;
 	}
-	
+
 	if (Z_STRLEN_P(pzval)) {
 		key->string = Z_STRVAL_P(pzval);
 		key->length = Z_STRLEN_P(pzval)+1;
@@ -161,11 +161,11 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 		key->hash = zend_inline_hash_func(key->string, key->length);
 		return 1;
 	}
-	
+
 	if (EG(in_execution)) {
 		uopz_exception("invalid input to function");
 	}
-	
+
 	return 0;
 } /*}}} */
 
@@ -175,12 +175,12 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 /* {{{ */
 static uopz_key_t uopz_copy_key(uopz_key_t *key) {
 	uopz_key_t copy = *key;
-	
+
 	if (copy.copied) {
 		copy.string = estrndup
 			(copy.string, copy.length);
 	}
-	
+
 	return copy;
 } /* }}} */
 
@@ -229,14 +229,14 @@ static void php_uopz_backup_dtor(void *pData) {
 	zend_function *restored = NULL;
 	HashTable *table = NULL;
 	TSRMLS_FETCH();
-	
+
 	table = backup->scope ?
 		&backup->scope->function_table :
 		CG(function_table);
-	
+
 	if (backup->scope)
 		backup->scope->refcount--;
-	
+
 	destroy_zend_function(&backup->internal TSRMLS_CC);
 	uopz_free_key(&backup->name);
 } /* }}} */
@@ -284,7 +284,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
 						fci.params[1] = &op2;
 					} break;
-				
+
 					case ZEND_ADD_INTERFACE:
 					case ZEND_ADD_TRAIT: {
 						oce = EX_T(OPLINE->op1.var).class_entry;
@@ -321,7 +321,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						GET_OP2(BP_VAR_RW);
 					}
 				}
-			
+
 				fci.retval_ptr_ptr = &retval;
 
 				zend_try {
@@ -381,7 +381,6 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 				}
 			}
 		}
-		
 	}
 
 	if (dispatching) switch(dispatching) {
@@ -406,7 +405,7 @@ static inline void php_uopz_backup(TSRMLS_D) {
 	HashPosition position[2];
 	zval name;
 	uopz_key_t key;
-	
+
 	for (zend_hash_internal_pointer_reset_ex(table, &position[0]);
 		 zend_hash_get_current_key_ex(table, &Z_STRVAL(name), &Z_STRLEN(name), NULL, 0, &position[0]) == HASH_KEY_IS_STRING;
 		 zend_hash_move_forward_ex(table, &position[0])) {
@@ -414,12 +413,12 @@ static inline void php_uopz_backup(TSRMLS_D) {
 		 	uopz_backup(NULL, &key TSRMLS_CC);	
 		 }
 	}
-	
+
 	table = CG(class_table);
-	
+
 	{
 		zend_class_entry **clazz = NULL;
-		
+
 		for (zend_hash_internal_pointer_reset_ex(table, &position[0]);
 			 zend_hash_get_current_data_ex(table, (void**) &clazz, &position[0]) == SUCCESS;
 			 zend_hash_move_forward_ex(table, &position[0])) {
@@ -446,7 +445,7 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	CG(compiler_options) |= 
 		(ZEND_COMPILE_HANDLE_OP_ARRAY);
-	
+
 	memset(ohandlers, 0, sizeof(user_opcode_handler_t) * MAX_OPCODE);
 
 	{
@@ -480,16 +479,16 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_DISPATCH", ZEND_USER_OPCODE_DISPATCH, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_DISPATCH_TO", ZEND_USER_OPCODE_DISPATCH_TO, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_RETURN", ZEND_USER_OPCODE_RETURN, CONST_CS|CONST_PERSISTENT);
-	
+
 	REGISTER_LONG_CONSTANT("ZEND_ACC_PUBLIC", ZEND_ACC_PUBLIC, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_PRIVATE", ZEND_ACC_PRIVATE, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_PROTECTED", ZEND_ACC_PROTECTED, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_PPP_MASK", ZEND_ACC_PPP_MASK, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_STATIC", ZEND_ACC_STATIC, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_FINAL", ZEND_ACC_FINAL, CONST_CS|CONST_PERSISTENT);
-	
+
 	REGISTER_INI_ENTRIES();
-	
+
 	if (UOPZ(ini).fixup) {
 		CG(class_table)->pDestructor = NULL;
 		CG(function_table)->pDestructor = NULL;
@@ -503,7 +502,7 @@ static PHP_MINIT_FUNCTION(uopz)
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	CG(compiler_options) = UOPZ(copts);
-	
+
 	UNREGISTER_INI_ENTRIES();
 
 	return SUCCESS;
@@ -522,14 +521,14 @@ static PHP_RINIT_FUNCTION(uopz)
 	spl_ce_InvalidArgumentException = 
 			(zend_lookup_class(ZEND_STRL("InvalidArgumentException"), &ce TSRMLS_CC) == SUCCESS) ?
 				*ce : zend_exception_get_default(TSRMLS_C);
-	
+
 	zend_hash_init(
 		&UOPZ(overload).table, 8, NULL,
 		(dtor_func_t) php_uopz_handler_dtor, 0);	
 	zend_hash_init(
 		&UOPZ(backup), 8, NULL, 
 		(dtor_func_t) php_uopz_backup_table_dtor, 0);
-	
+
 	if (UOPZ(ini).backup) {
 		php_uopz_backup(TSRMLS_C);
 	}
@@ -540,18 +539,18 @@ static PHP_RINIT_FUNCTION(uopz)
 /* {{{ */
 static inline int php_uopz_clean_user_function(void *pData TSRMLS_DC) {
 	zend_function *function = (zend_function*) pData;
-	
+
 	if (function->type == ZEND_USER_FUNCTION) {
 		return ZEND_HASH_APPLY_REMOVE;
 	}
-	
+
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
 /* {{{ */
 static inline int php_uopz_clean_user_class(void *pData TSRMLS_DC) {
 	zend_class_entry **ce = (zend_class_entry**) pData;
-	
+
 	zend_hash_apply(
 		&(*ce)->function_table, php_uopz_clean_user_function TSRMLS_CC);
 	
@@ -568,10 +567,10 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 
 	zend_hash_apply(CG(function_table), php_uopz_clean_user_function TSRMLS_CC);
 	zend_hash_apply(CG(class_table), php_uopz_clean_user_class TSRMLS_CC);
-	
+
 	zend_hash_destroy(&UOPZ(overload).table);
 	zend_hash_destroy(&UOPZ(backup));
-	
+
 	return SUCCESS;
 }
 /* }}} */
@@ -681,15 +680,15 @@ static zend_bool uopz_backup(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC
 	HashTable     *backup = NULL;
 	zend_function *function = NULL;
 	HashTable     *table = (clazz) ? &clazz->function_table : CG(function_table);
-	
+
 	if (!name->string) {
 		return 0;
 	}
-	
+
 	if (zend_hash_quick_find(table, name->string, name->length, name->hash, (void**) &function) != SUCCESS) {
 		return 0;
 	}
-	
+
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
 		HashTable creating;
 		
@@ -730,7 +729,7 @@ static zend_bool uopz_backup(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC
 
 		return 1;
 	}
-	
+
 	return 0;
 } /* }}} */
 
@@ -740,26 +739,26 @@ PHP_FUNCTION(uopz_backup) {
 	uopz_key_t uname;
 	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
-	
+
 	switch (ZEND_NUM_ARGS()) {
 		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, (class, function)");
 			return;
 		} break;
-		
+
 		case 1: if (uopz_parse_parameters("z", &name) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, (function)");
 			return;
 		} break;
-		
+
 		default:
 			uopz_refuse_parameters(
 				"unexpected parameter combination, (class, function) or (function)");
 			return;
 	}
-	
+
 	if (uopz_make_key(name, &uname)) {
 		RETVAL_BOOL(uopz_backup(clazz, &uname TSRMLS_CC));
 		uopz_free_key(&uname);
@@ -772,7 +771,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 	HashTable     *backup = NULL;
 	uopz_backup_t *ubackup = NULL;
 	HashTable     *table = clazz ? &clazz->function_table : CG(function_table);
-	
+
 	if (zend_hash_index_find(&UOPZ(backup), (zend_ulong) table, (void**) &backup) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
@@ -785,7 +784,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 		}
 		return 0;
 	}
-	
+
 	if (zend_hash_quick_find(backup, name->string, name->length, name->hash, (void**)&ubackup) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
@@ -798,11 +797,11 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 		}
 		return 0;
 	}
-	
+
 	table = ubackup->scope ?
 		&ubackup->scope->function_table :
 		CG(function_table);
-	
+
 	if (zend_hash_quick_update(
 		table, 
 		ubackup->name.string, ubackup->name.length, ubackup->name.hash,
@@ -821,7 +820,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 		}
 		return 0;
 	}
-	
+
 	return 1;
 } /* }}} */
 
@@ -831,26 +830,26 @@ PHP_FUNCTION(uopz_restore) {
 	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
 	uopz_key_t uname;
-	
+
 	switch (ZEND_NUM_ARGS()) {
 		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, (class, function)");
 			return;
 		} break;
-		
+
 		case 1: if (uopz_parse_parameters("z", &name) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, (function)");
 			return;
 		} break;
-		
+
 		default:
 			uopz_refuse_parameters(
 				"unexpected parameter combination, (class, function) or (function) expected");
 			return;
 	}
-	
+
 	if (uopz_make_key(name, &uname)) {
 		RETVAL_BOOL(uopz_restore(clazz, &uname TSRMLS_CC));
 		uopz_free_key(&uname);
@@ -862,11 +861,11 @@ static inline void uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **r
 	HashTable *table = (clazz) ? &clazz->function_table : CG(function_table);
 	zend_function *function = NULL;
 	zend_class_entry *scope = EG(scope);
-	
+
 	if (!name->string) {
 		return;
 	}
-	
+
 	if (uopz_find_function(table, name, &function TSRMLS_CC) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
@@ -877,7 +876,7 @@ static inline void uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **r
 		}
 		return;
 	}
-	
+
 	EG(scope)=function->common.scope; 
 	zend_create_closure(
 	    *return_value,
@@ -892,20 +891,20 @@ PHP_FUNCTION(uopz_copy) {
 	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
 	uopz_key_t uname;
-	
+
 	switch (ZEND_NUM_ARGS()) {
 		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function)");
 			return;
 		} break;
-		
+
 		case 1: if (uopz_parse_parameters("z", &name) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (function)");
 			return;
 		} break;
-		
+
 		default:
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function) or (function)");
@@ -924,14 +923,14 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 	zend_function locals[2];
 	zend_bool result = 1;
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	
+
 	if (!name->string && !rename->string) {
 		return 0;
 	}
-	
+
 	uopz_find_function(table, name, &tuple[0] TSRMLS_CC);
 	uopz_find_function(table, rename, &tuple[1] TSRMLS_CC);
-	
+
 	if (!tuple[0] && !tuple[1]) {
 		if (clazz) {
 			uopz_exception(
@@ -944,11 +943,11 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 		}
 		return 0;		
 	}
-	
+
 	if (tuple[0] && tuple[1]) {
 		locals[0] = *tuple[0];
 		locals[1] = *tuple[1];
-		
+
 		if (tuple[0]->type == ZEND_INTERNAL_FUNCTION && 
 			tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
 			/* both internal */
@@ -967,7 +966,7 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 				function_add_ref(&locals[1]);
 			}
 		}
-		
+
 		if (zend_hash_quick_update(table, 
 				name->string, name->length, name->hash, 
 				(void**) &locals[1], sizeof(zend_function), NULL) != SUCCESS ||
@@ -985,14 +984,14 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 			}
 			result = 0;	
 		}
-		
+
 		return 1;
 		
 	}
-	
+
 	/* only one existing function */
 	locals[0] = tuple[0] ? *tuple[0] : *tuple[1];
-	
+
 	if (zend_hash_quick_update(table,
 		rename->string, rename->length, rename->hash, 
 		(void**) &locals[0], sizeof(zend_function), 
@@ -1008,9 +1007,9 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 		}
 		return 0;
 	}
-	
+
 	function_add_ref(tuple[0] ? tuple[1] : tuple[0]);
-	
+
 	return 1;
 } /* }}} */
 
@@ -1058,11 +1057,11 @@ PHP_FUNCTION(uopz_rename) {
 /* {{{ */
 static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	
+
 	if (!name->string) {
 		return 0;
 	}
-	
+
 	if (!zend_hash_quick_exists(table, name->string, name->length, name->hash)) {
 		if (clazz) {
 			uopz_exception(
@@ -1073,7 +1072,7 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TS
 		}
 		return 0;
 	}
-	
+
 	if (zend_hash_quick_del(table, name->string, name->length, name->hash) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
@@ -1082,10 +1081,9 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TS
 			uopz_exception(
 				"failed to find the function %s, delete failed", name->string);
 		}
-		
 		return 0;
 	}
-	
+
 	return 1;
 } /* }}} */
 
@@ -1095,7 +1093,7 @@ PHP_FUNCTION(uopz_delete) {
 	uopz_key_t uname;
 	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
-	
+
 	switch (ZEND_NUM_ARGS()) {
 		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
 			uopz_refuse_parameters(
@@ -1114,11 +1112,11 @@ PHP_FUNCTION(uopz_delete) {
 				"unexpected parameter combination, expected (class, function) or (function)");
 			return;
 	}
-	
+
 	if (!uopz_make_key(name, &uname)) {
 		return;
 	}
-	
+
 	RETVAL_BOOL(uopz_delete(clazz, &uname TSRMLS_CC));
 	uopz_free_key(&uname);
 } /* }}} */
@@ -1170,7 +1168,7 @@ PHP_FUNCTION(__uopz_exit_overload) {
 static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name, zval *variable TSRMLS_DC) {
 	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
-	
+
 	switch (Z_TYPE_P(variable)) {
 		case IS_LONG:
 		case IS_DOUBLE:
@@ -1179,7 +1177,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 		case IS_RESOURCE:
 		case IS_NULL:
 			break;
-			
+
 		default:
 			if (clazz) {
 				uopz_exception(
@@ -1197,16 +1195,15 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 
 	if (zend_hash_quick_find(
 		table, name->string, name->length, name->hash, (void**)&zconstant) != SUCCESS) {
-		
 		if (!clazz) {
 			zend_constant create;
-			
+
 			ZVAL_ZVAL(&create.value, variable, 1, 0);
 			create.flags = CONST_CS;
 			create.name = zend_strndup(name->string, name->length);
 			create.name_len = name->length;
 			create.module_number = PHP_USER_CONSTANT;
-			
+
 			if (zend_register_constant(&create TSRMLS_CC) != SUCCESS) {
 				uopz_exception(
 					"failed to redefine the constant %s, operation failed", name->length);
@@ -1215,7 +1212,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 			}
 		} else {
 			zval *create;
-			
+
 			MAKE_STD_ZVAL(create);
 			ZVAL_ZVAL(create, variable, 1, 0);
 			if (zend_hash_quick_update(
@@ -1228,10 +1225,10 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 				return 0;
 			}
 		}
-		
+
 		return 1;
 	}
-	
+
 	if (!clazz) {
 		if (zconstant->module_number == PHP_USER_CONSTANT) {
 			zval_dtor(&zconstant->value);
@@ -1257,7 +1254,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, uopz_key_t *name,
 			return 0;
 		}
 	}
-	
+
 	return 1;
 } /* }}} */
 
@@ -1269,7 +1266,7 @@ PHP_FUNCTION(uopz_redefine)
 	zval *name = NULL;
 	zval *variable = NULL;
 	zend_class_entry *clazz = NULL;
-	
+
 	switch (ZEND_NUM_ARGS()) {
 		case 3: {
 			if (uopz_parse_parameters("Czz", &clazz, &name, &variable) != SUCCESS) {
@@ -1278,24 +1275,24 @@ PHP_FUNCTION(uopz_redefine)
 				return;
 			}
 		} break;
-		
+
 		case 2: if (uopz_parse_parameters("zz", &name, &variable) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (constant, variable)");
 			return;
 		} break;
-		
+
 		default: {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, constant, variable) or (constant, variable)");
 			return;
 		}
 	}
-	
+
 	if (!uopz_make_key_ex(name, &uname, 0)) {
 		return;
 	}
-	
+
 	if (uopz_redefine(clazz, &uname, variable TSRMLS_CC)) {
 		if (clazz) {
 			while ((clazz = clazz->parent)) {
@@ -1313,16 +1310,16 @@ PHP_FUNCTION(uopz_redefine)
 static inline zend_bool uopz_undefine(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC) {
 	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
-	
+
 	if (!name->string) {
 		return 0;
 	}
-	
+
 	if (zend_hash_quick_find(
 			table, name->string, name->length, name->hash, (void**)&zconstant) != SUCCESS) {
 		return 0;
 	}
-	
+
 	if (!clazz) {
 		if (zconstant->module_number != PHP_USER_CONSTANT) {
 			uopz_exception(
@@ -1336,16 +1333,16 @@ static inline zend_bool uopz_undefine(zend_class_entry *clazz, uopz_key_t *name 
 				"failed to undefine the constant %s, delete failed", name->string);
 			return 0;
 		}
-		
+
 		return 1;
 	}
-	
+
 	if (zend_hash_quick_del(table, name->string, name->length, name->hash) != SUCCESS) {
 		uopz_exception(
 			"failed to undefine the constant %s::%s, delete failed", clazz->name, name->length);
 		return 0;
 	}
-	
+
 	return 1;
 } /* }}} */
 
@@ -1365,7 +1362,7 @@ PHP_FUNCTION(uopz_undefine)
 				return;
 			}
 		} break;
-		
+
 		case 1: {
 			if (uopz_parse_parameters("z", &name) != SUCCESS) {
 				uopz_refuse_parameters(
@@ -1373,17 +1370,17 @@ PHP_FUNCTION(uopz_undefine)
 				return;
 			}
 		} break;
-		
+
 		default:
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, constant) or (constant)");
 			return;
 	}
-	
+
 	if (!uopz_make_key_ex(name, &uname, 0)) {
 		return;
 	}
-	
+
 	if (uopz_undefine(clazz, &uname TSRMLS_CC)) {
 		if (clazz) {
 			while ((clazz = clazz->parent)) {
@@ -1400,11 +1397,11 @@ PHP_FUNCTION(uopz_undefine)
 static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zend_function *function, long flags TSRMLS_DC) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
-	
+
 	if (!name->string) {
 		return 0;	
 	}
-	
+
 	uopz_backup(clazz, name TSRMLS_CC);
 
 	if (zend_hash_quick_update(
@@ -1419,7 +1416,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 		}
 		return 0;		
 	}
-	
+
 	destination->common.fn_flags = flags;
 	destination->common.prototype = destination;
 	function_add_ref(destination);
@@ -1453,7 +1450,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 		}
 		destination->common.scope = clazz;
 	}
-	
+
 	return 1;
 } /* }}} */
 
@@ -1465,7 +1462,7 @@ PHP_FUNCTION(uopz_function) {
 	zval *closure = NULL;
 	zend_class_entry *clazz = NULL;
 	long flags = ZEND_ACC_PUBLIC;
-	
+
 	switch (ZEND_NUM_ARGS()) {
 		case 4:
 		case 3: {
@@ -1475,7 +1472,7 @@ PHP_FUNCTION(uopz_function) {
 				return;
 			}
 		} break;
-		
+
 		case 2: {
 			if (uopz_parse_parameters("zO", &name, &closure, zend_ce_closure) != SUCCESS) {
 				uopz_refuse_parameters(
@@ -1487,17 +1484,17 @@ PHP_FUNCTION(uopz_function) {
 				flags |= ZEND_ACC_STATIC;
 			}
 		} break;
-		
+
 		default:
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, name, closure [, flags]) or (name, closure)");
 			return;
 	}
-	
+
 	if (!uopz_make_key(name, &uname)) {
 		return;
 	}
-	
+
 	RETVAL_BOOL(uopz_function(clazz, &uname, (zend_function*) 
 		zend_get_closure_method_def(closure TSRMLS_CC), flags TSRMLS_CC));
 	uopz_free_key(&uname);
@@ -1507,19 +1504,19 @@ PHP_FUNCTION(uopz_function) {
 static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface TSRMLS_DC) {
 	zend_bool is_final = 
 		(clazz->ce_flags & ZEND_ACC_FINAL);
-	
+
 	if (!interface->ce_flags & ZEND_ACC_INTERFACE) {
 		uopz_exception(
 			"the class provided (%s) is not an interface", interface->name);
 		return 0;
 	}
-	
+
 	if (instanceof_function(clazz, interface TSRMLS_CC)) {
 		uopz_exception(
 			"the class provided (%s) already has the interface interface", clazz->name);
 		return 0;
 	}
-	
+
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
 
 	zend_do_implement_interface
@@ -1527,7 +1524,7 @@ static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry
 
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
-		
+
 	return instanceof_function(clazz, interface TSRMLS_CC);
 } /* }}} */
 
@@ -1536,20 +1533,20 @@ PHP_FUNCTION(uopz_implement)
 {
 	zend_class_entry *clazz = NULL;
 	zend_class_entry *interface = NULL;
-	
+
 	if (uopz_parse_parameters("CC", &clazz, &interface) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (class, interface)");
 		return;
 	}
-	
+
 	RETURN_BOOL(uopz_implement(clazz, interface TSRMLS_CC));
 } /* }}} */
 
 /* {{{ */
 static inline zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent TSRMLS_DC) {
 	zend_bool is_final = clazz->ce_flags & ZEND_ACC_FINAL;
-	
+
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
 
 	if (parent->ce_flags & ZEND_ACC_INTERFACE) {
@@ -1567,13 +1564,13 @@ static inline zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *p
 	if (parent->ce_flags & ZEND_ACC_TRAIT) {
 		zend_do_implement_trait(clazz, parent TSRMLS_CC);
 	} else zend_do_inheritance(clazz, parent TSRMLS_CC);
-	
+
 	if (parent->ce_flags & ZEND_ACC_TRAIT)
 		zend_do_bind_traits(clazz TSRMLS_CC);
-	
+
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
-	
+
 	return instanceof_function(clazz, parent TSRMLS_CC);
 } /* }}} */
 
@@ -1582,13 +1579,13 @@ PHP_FUNCTION(uopz_extend)
 {
 	zend_class_entry *clazz = NULL;
 	zend_class_entry *parent = NULL;
-	
+
 	if (uopz_parse_parameters("CC", &clazz, &parent) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (class, parent)");
 		return;
 	}
-	
+
 	RETURN_BOOL(uopz_extend(clazz, parent TSRMLS_CC));
 } /* }}} */
 
@@ -1598,18 +1595,18 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 	zend_class_entry *entry = NULL;
 	uopz_key_t uname = *name;
 	zval **next = NULL;
-	
+
 	uname.string = zend_str_tolower_dup(name->string, name->length);
 	uname.hash   = zend_inline_hash_func(uname.string, uname.length);
 	uname.copied = 1;
-	
+
 	if (zend_hash_quick_exists(CG(class_table), uname.string, uname.length, uname.hash)) {
 		uopz_exception(
 			"cannot compose existing class (%s)", name->string);
 		uopz_free_key(&uname);
 		return 0;
 	}
-	
+
 	entry = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
 	entry->name = estrndup(name->string, name->length-1);
 	entry->name_length = name->length-1;
@@ -1650,12 +1647,13 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 
 	if (construct) {
 		const zend_function *method = zend_get_closure_method_def(construct TSRMLS_CC);
-	
+
 		if (zend_hash_update(
 				&entry->function_table,
 				"__construct", sizeof("__construct")-1,
 				(void**)method, sizeof(zend_function),
 				(void**) &entry->constructor) == SUCCESS) {
+				(entry->constructor);
 			function_add_ref
 				(entry->constructor);
 			entry->constructor->common.scope = entry;
@@ -1665,7 +1663,7 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 
 	zend_do_bind_traits(entry TSRMLS_CC);	
 	uopz_free_key(&uname);
-	
+
 	return 1;
 } /* }}} */
 
@@ -1686,7 +1684,7 @@ PHP_FUNCTION(uopz_compose)
 	if (!uopz_make_key_ex(name, &uname, 0)) {
 		return;
 	}
-	
+
 	RETURN_BOOL(uopz_compose(&uname, classes, construct TSRMLS_CC));
 } /* }}} */
 
