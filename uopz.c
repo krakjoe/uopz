@@ -487,6 +487,10 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_STATIC", ZEND_ACC_STATIC, CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_FINAL", ZEND_ACC_FINAL, CONST_CS|CONST_PERSISTENT);
 
+	REGISTER_LONG_CONSTANT("ZEND_ACC_INTERFACE", ZEND_ACC_INTERFACE, CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ZEND_ACC_TRAIT",     ZEND_ACC_TRAIT,     CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ZEND_ACC_ABSTRACT",  ZEND_ACC_ABSTRACT,  CONST_CS|CONST_PERSISTENT);
+	
 	REGISTER_INI_ENTRIES();
 
 	if (UOPZ(ini).fixup) {
@@ -1590,7 +1594,7 @@ PHP_FUNCTION(uopz_extend)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval *construct TSRMLS_DC) {
+static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval *construct, long flags TSRMLS_DC) {
 	HashPosition position;
 	zend_class_entry *entry = NULL;
 	uopz_key_t uname = *name;
@@ -1614,6 +1618,8 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 
 	zend_initialize_class_data(entry, 1 TSRMLS_CC);
 
+	entry->ce_flags |= flags;
+	
 	if (zend_hash_quick_update(
 		CG(class_table),
 		uname.string, uname.length, uname.hash,
@@ -1674,10 +1680,12 @@ PHP_FUNCTION(uopz_compose)
 	zval *name = NULL;
 	HashTable *classes = NULL;
 	zval *construct = NULL;
-
-	if (uopz_parse_parameters("zh|O", &name, &classes, &construct, zend_ce_closure) != SUCCESS) {
+	long flags = 0;
+	
+	if (uopz_parse_parameters("zh|O", &name, &classes, &construct, zend_ce_closure) != SUCCESS &&
+		uopz_parse_parameters("zh|l", &name, &classes, &flags) != SUCCESS) {
 		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (name, classes [, __construct])");
+			"unexpected parameter combination, expected (name, classes [, __construct | flags])");
 		return;
 	}
 
@@ -1685,7 +1693,7 @@ PHP_FUNCTION(uopz_compose)
 		return;
 	}
 
-	RETURN_BOOL(uopz_compose(&uname, classes, construct TSRMLS_CC));
+	RETURN_BOOL(uopz_compose(&uname, classes, construct, flags TSRMLS_CC));
 } /* }}} */
 
 /* {{{ uopz */
