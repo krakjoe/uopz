@@ -1641,12 +1641,57 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 			if (zend_lookup_class(
 					Z_STRVAL_PP(next),
 					Z_STRLEN_PP(next), &parent TSRMLS_CC) == SUCCESS) {
-
+				
+				if (entry->ce_flags & ZEND_ACC_TRAIT) {
+					if ((*parent)->ce_flags & ZEND_ACC_INTERFACE) {
+						uopz_exception(
+							"trait %s can not implement interface %s, not allowed",
+							entry->name, (*parent)->name);
+						zend_hash_quick_del(
+							CG(class_table),
+							uname.string, uname.length, uname.hash);
+						uopz_free_key(&uname);
+						return 0;
+					}
+				}
+				
 				if ((*parent)->ce_flags & ZEND_ACC_INTERFACE) {
-					zend_do_implement_interface(entry, *parent TSRMLS_CC);
+					if (entry->ce_flags & ZEND_ACC_INTERFACE) {
+						if (!entry->parent) {
+							zend_do_inheritance(entry, *parent TSRMLS_CC);
+						} else {
+							uopz_exception(
+								"interface %s may not extend %s, parent of %s already set to %s",
+								entry->name, 
+								(*parent)->name, 
+								entry->name, 
+								entry->parent->name);
+							zend_hash_quick_del(
+								CG(class_table), 
+								uname.string, uname.length, uname.hash);
+							uopz_free_key(&uname);
+							return 0;
+						}
+					} else zend_do_implement_interface(entry, *parent TSRMLS_CC);
 				} else if ((*parent)->ce_flags & ZEND_ACC_TRAIT) {
 					zend_do_implement_trait(entry, *parent TSRMLS_CC);
-				} else zend_do_inheritance(entry, *parent TSRMLS_CC);
+				} else {
+					if (!entry->parent) {
+						zend_do_inheritance(entry, *parent TSRMLS_CC);
+					} else {
+						uopz_exception(
+							"class %s may not extend %s, parent of %s already set to %s",
+							entry->name, 
+							(*parent)->name, 
+							entry->name, 
+							entry->parent->name);
+						zend_hash_quick_del(
+							CG(class_table), 
+							uname.string, uname.length, uname.hash);
+						uopz_free_key(&uname);
+						return 0;
+					}
+				}
 			}
 		}
 	}
@@ -1667,7 +1712,7 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 		}
 	}
 
-	zend_do_bind_traits(entry TSRMLS_CC);	
+	zend_do_bind_traits(entry TSRMLS_CC);
 	uopz_free_key(&uname);
 
 	return 1;
