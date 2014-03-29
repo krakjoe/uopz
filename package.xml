@@ -23,6 +23,7 @@
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
   fix bug in applying method modifiers
+  work on uopz_compose, compose classes in one function call is possible
  </notes>
  <contents>
   <dir name="/">
@@ -62,6 +63,7 @@
    <file name="tests/035.phpt" role="test" />
    <file name="tests/036.phpt" role="test" />
    <file name="tests/037.phpt" role="test" />
+   <file name="tests/038.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
