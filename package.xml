@@ -11,10 +11,10 @@
   <active>yes</active>
  </lead>
  <date>2014-03-29</date>
- <time>08:00:00</time>
+ <time>22:00:00</time>
  <version>
-  <release>1.0.7</release>
-  <api>1.0.7</api>
+  <release>1.0.9</release>
+  <api>1.0.9</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,8 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix bug in applying method modifiers
-  work on uopz_compose, compose classes in one function call is possible
+  <!--insert things -->
  </notes>
  <contents>
   <dir name="/">
