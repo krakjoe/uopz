@@ -94,6 +94,7 @@ typedef struct _uopz_opcode_t {
 uopz_opcode_t uoverrides[] = {
 	UOPZ_CODE(ZEND_NEW),
 	UOPZ_CODE(ZEND_THROW),
+	UOPZ_CODE(ZEND_FETCH_CLASS),
 	UOPZ_CODE(ZEND_ADD_TRAIT),
 	UOPZ_CODE(ZEND_ADD_INTERFACE),
 	UOPZ_CODE(ZEND_INSTANCEOF),
@@ -286,6 +287,24 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
 						fci.params[1] = &op2;
 					} break;
+					
+					case ZEND_FETCH_CLASS: {						
+						switch(OPLINE->op2_type) {
+							case IS_UNUSED:
+								/* allow the vm to do whatever it was doing, I 'unno ... */
+								return ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS;
+							
+							default: {
+								/* allow the vm to handle exceptions */
+								if (UNEXPECTED(EG(exception) != NULL)) {
+									return ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS;
+								}
+							}
+						}
+						
+						GET_OP2_IN(BP_VAR_RW, 0);
+						fci.param_count = 1;
+					} break;
 
 					case ZEND_ADD_INTERFACE:
 					case ZEND_ADD_TRAIT: {
@@ -354,6 +373,27 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 						zval_ptr_dtor(&op2);
 					} break;
+					
+					/* note: fetch requires us to continue explicitly; nobody else gets a shot, caches are ignored
+						note: you get what you pay for, but you must pay !! */
+					case ZEND_FETCH_CLASS: {
+						if (Z_TYPE_P(op2) == IS_OBJECT) {
+							EX_T(OPLINE->result.var).class_entry = Z_OBJCE_P(op2);
+						} else if (Z_TYPE_P(op2) == IS_STRING) {
+							EX_T(OPLINE->result.var).class_entry =  zend_fetch_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), OPLINE->extended_value TSRMLS_CC);
+						} else {
+							if (UNEXPECTED(EG(exception) != NULL)) {
+								return (ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS);
+							}
+							
+							zend_error_noreturn(E_ERROR, "Class name must be a valid object or a string");
+						}
+						
+						if (EX_T(OPLINE->result.var).class_entry) {
+							OPLINE++;
+							return ZEND_USER_OPCODE_CONTINUE;
+						}
+					} break;
 
 					case ZEND_ADD_INTERFACE:
 					case ZEND_ADD_TRAIT: {
@@ -384,7 +424,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 			}
 		}
 	}
-
+	
 	if (dispatching) switch(dispatching) {
 		case ZEND_USER_OPCODE_CONTINUE:
 			EX(opline)++;

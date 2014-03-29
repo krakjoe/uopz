@@ -50,45 +50,50 @@
 	} while (0)
 	
 #if PHP_VERSION_ID < 50500
-#define GET_OP1(as) do {\
+#define GET_OP1_IN(as, i) do {\
 	if ((OPLINE->op1_type != IS_UNUSED) &&\
 		(op1 = zend_get_zval_ptr(\
 			OPLINE->op1_type, &OPLINE->op1, execute_data->Ts, &free_op1, as TSRMLS_CC))) {\
-		fci.params[0] = &op1;\
+		fci.params[i] = &op1;\
 	} else {\
-		fci.params[0] = &EG(uninitialized_zval_ptr);\
+		fci.params[i] = &EG(uninitialized_zval_ptr);\
 	}\
 } while(0)
+#define GET_OP1(as) GET_OP1_IN(as, 0)
 
-#define GET_OP2(as) do {\
+#define GET_OP2_IN(as, i) do {\
 	if ((OPLINE->op2_type != IS_UNUSED) &&\
 		(op2 = zend_get_zval_ptr(\
 			OPLINE->op2_type, &OPLINE->op2, execute_data->Ts, &free_op2, as TSRMLS_CC))) {\
-		fci.params[1] = &op2;\
+		fci.params[i] = &op2;\
 	} else {\
-		fci.params[1] = &EG(uninitialized_zval_ptr);\
+		fci.params[i] = &EG(uninitialized_zval_ptr);\
 	}\
 } while(0)
+#define GET_OP2(as) GET_OP2_IN(as, 1)
+
 #else
-#define GET_OP1(as) do {\
+#define GET_OP1_IN(as, i) do {\
 	if ((OPLINE->op1_type != IS_UNUSED) &&\
 		(op1 = zend_get_zval_ptr(\
 			OPLINE->op1_type, &OPLINE->op1, execute_data, &free_op1, as TSRMLS_CC))) {\
-		fci.params[0] = &op1;\
+		fci.params[i] = &op1;\
 	} else {\
-		fci.params[0] = &EG(uninitialized_zval_ptr);\
+		fci.params[i] = &EG(uninitialized_zval_ptr);\
 	}\
 } while(0)
+#define GET_OP1(as) GET_OP1_IN(as, 0)
 
-#define GET_OP2(as) do {\
+#define GET_OP2_IN(as, i) do {\
 	if ((OPLINE->op2_type != IS_UNUSED) &&\
 		(op2 = zend_get_zval_ptr(\
 			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
-		fci.params[1] = &op2;\
+		fci.params[i] = &op2;\
 	} else {\
-		fci.params[1] = &EG(uninitialized_zval_ptr);\
+		fci.params[i] = &EG(uninitialized_zval_ptr);\
 	}\
 } while(0)
+#define GET_OP2(as) GET_OP2_IN(as, 1)
 #endif
 	
 /* Common part of zend_add_literal and zend_append_individual_literal */
