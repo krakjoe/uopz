@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-28</date>
- <time>00:50:00</time>
+ <date>2014-03-29</date>
+ <time>08:00:00</time>
  <version>
-  <release>1.0.5</release>
-  <api>1.0.5</api>
+  <release>1.0.6</release>
+  <api>1.0.6</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,10 +22,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix various scope issues
-  use exceptions where appropriate
-  tidy all code
-  add some more tests
+  fix memory error causing segfault in auto backup
+  allow composition of interfaces and traits
+  enforce inheritance rules while composing classes
  </notes>
  <contents>
   <dir name="/">
@@ -55,6 +54,12 @@
    <file name="tests/025.phpt" role="test" />
    <file name="tests/026.phpt" role="test" />
    <file name="tests/027.phpt" role="test" />
+   <file name="tests/028.phpt" role="test" />
+   <file name="tests/029.phpt" role="test" />
+   <file name="tests/030.phpt" role="test" />
+   <file name="tests/031.phpt" role="test" />
+   <file name="tests/032.phpt" role="test" />
+   <file name="tests/033.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
