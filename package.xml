@@ -13,8 +13,8 @@
  <date>2014-03-29</date>
  <time>08:00:00</time>
  <version>
-  <release>1.0.6</release>
-  <api>1.0.6</api>
+  <release>1.0.7</release>
+  <api>1.0.7</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,9 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix memory error causing segfault in auto backup
-  allow composition of interfaces and traits
-  enforce inheritance rules while composing classes
+  fix bug in applying method modifiers
  </notes>
  <contents>
   <dir name="/">
@@ -62,6 +60,7 @@
    <file name="tests/033.phpt" role="test" />
    <file name="tests/034.phpt" role="test" />
    <file name="tests/035.phpt" role="test" />
+   <file name="tests/036.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />

@@ -1462,9 +1462,9 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 		} else {
 			uopz_exception("failed to create function %s, update failed", name->string);
 		}
-		return 0;		
+		return 0;
 	}
-
+	
 	destination->common.fn_flags = flags;
 	destination->common.prototype = destination;
 	function_add_ref(destination);
@@ -1514,7 +1514,7 @@ PHP_FUNCTION(uopz_function) {
 	switch (ZEND_NUM_ARGS()) {
 		case 4:
 		case 3: {
-			if (uopz_parse_parameters("CzO|b", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
+			if (uopz_parse_parameters("CzO|l", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
 				uopz_refuse_parameters(
 					"unexpected parameter combination, expected (class, name, closure [, flags])");
 				return;
