@@ -1,5 +1,5 @@
 --TEST--
-Test ZEND_FETCH_CLASS overload
+Test fetch class overload
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
