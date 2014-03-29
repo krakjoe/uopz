@@ -166,7 +166,7 @@ uopz_compose("CreatedClass", [
 			}
 		],
 		"__callStatic" => [
-			ZEND_ACC_PUBLIC | ZEND_ACC_STATIC => function() {
+			ZEND_ACC_PUBLIC | ZEND_ACC_STATIC => function($method, $args) {
 				/* magic */
 			}
 		],
