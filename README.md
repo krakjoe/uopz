@@ -171,7 +171,7 @@ uopz_compose("CreatedClass", [
 			}
 		],
 		"is" => function() {
-			/* implement the interface */
+			/* reimplement the interface */
 		}
 	]
 ]);
