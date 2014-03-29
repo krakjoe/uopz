@@ -230,16 +230,24 @@ static void php_uopz_handler_dtor(void *pData) {
 static void php_uopz_backup_dtor(void *pData) {
 	uopz_backup_t *backup = (uopz_backup_t *) pData;
 	zend_function *restored = NULL;
-	HashTable *table = NULL;
+	
 	TSRMLS_FETCH();
 
-	table = backup->scope ?
-		&backup->scope->function_table :
-		CG(function_table);
-
+	if ((backup->internal.type == ZEND_INTERNAL_FUNCTION)) {
+		HashTable *table = backup->scope ?
+			&backup->scope->function_table :
+			CG(function_table);;
+		
+		zend_hash_quick_update(
+			table, 
+			backup->name.string, backup->name.length, backup->name.hash,
+			(void**) &backup->internal, sizeof(zend_function),
+			NULL);
+	}
+	
 	if (backup->scope)
 		backup->scope->refcount--;
-
+	
 	destroy_zend_function(&backup->internal TSRMLS_CC);
 	uopz_free_key(&backup->name);
 } /* }}} */
@@ -1452,6 +1460,16 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 
 	uopz_backup(clazz, name TSRMLS_CC);
 
+	if (!flags) {
+		/* get flags from original function */
+		if (uopz_find_function(table, name, &destination TSRMLS_CC) == SUCCESS) {
+			flags = destination->common.fn_flags;
+		} else {
+			/* set flags to sensible default */
+			flags = ZEND_ACC_PUBLIC;
+		}
+	}
+
 	if (zend_hash_quick_update(
 		table, 
 		name->string, name->length, name->hash, 
@@ -1467,6 +1485,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 	
 	destination->common.fn_flags = flags;
 	destination->common.prototype = destination;
+
 	function_add_ref(destination);
 
 	if (clazz) {
@@ -1503,13 +1522,13 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 } /* }}} */
 
 /* {{{ proto bool uopz_function(string function, Closure handler)
-	   proto bool uopz_function(string class, string method, Closure handler [, int flags = ZEND_ACC_PUBLIC]) */
+	   proto bool uopz_function(string class, string method, Closure handler [, int flags = 0]) */
 PHP_FUNCTION(uopz_function) {
 	zval *name = NULL;
 	uopz_key_t uname;
 	zval *closure = NULL;
 	zend_class_entry *clazz = NULL;
-	long flags = ZEND_ACC_PUBLIC;
+	long flags = 0;
 
 	switch (ZEND_NUM_ARGS()) {
 		case 4:
