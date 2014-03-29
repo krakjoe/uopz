@@ -24,6 +24,7 @@ The following opcodes can be overloaded by ```uopz```:
  - ZEND_EXIT
  - ZEND_NEW
  - ZEND_THROW
+ - ZEND_FETCH_CLASS
  - ZEND_ADD_TRAIT
  - ZEND_ADD_INTERFACE
  - ZEND_INSTANCEOF
@@ -152,7 +153,27 @@ trait myTrait {
 uopz_compose("CreatedClass", [
 	My::class, 
 	IMy::class, 
-	myTrait::class
+	myTrait::class, [
+		"__construct" => function() {
+		
+		},
+		"hidden" => [
+			ZEND_ACC_PRIVATE => function(){}
+		],
+		"horrible" => [
+			ZEND_ACC_PUBLIC | ZEND_ACC_STATIC => function() {
+				/* yuk */
+			}
+		],
+		"__callStatic" => [
+			ZEND_ACC_PUBLIC | ZEND_ACC_STATIC => function() {
+				/* magic */
+			}
+		],
+		"is" => function() {
+			/* implement the interface */
+		}
+	]
 ]);
 
 if (class_exists("CreatedClass")) {
