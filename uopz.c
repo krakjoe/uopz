@@ -236,7 +236,7 @@ static void php_uopz_backup_dtor(void *pData) {
 	if ((backup->internal.type == ZEND_INTERNAL_FUNCTION)) {
 		HashTable *table = backup->scope ?
 			&backup->scope->function_table :
-			CG(function_table);;
+			CG(function_table);
 		
 		zend_hash_quick_update(
 			table, 
