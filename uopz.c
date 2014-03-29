@@ -1468,6 +1468,8 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 			/* set flags to sensible default */
 			flags = ZEND_ACC_PUBLIC;
 		}
+		
+		destination = NULL;
 	}
 
 	if (zend_hash_quick_update(
