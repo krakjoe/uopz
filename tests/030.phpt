@@ -7,7 +7,7 @@ Test sane composition of normal classes
 class Base {}
 class Other {}
 
-uopz_compose(Concrete::class, [Base::class, Other::class]);
+uopz_compose("Concrete", ["Base", "Other"]);
 ?>
 --EXPECTF--
 Fatal error: Uncaught exception '%s' with message 'class Concrete may not extend Other, parent of Concrete already set to Base' in %s:%d

@@ -7,8 +7,8 @@ Test sane use of traits and interfaces
 trait Base {}
 interface Other {}
 
-uopz_compose(Concrete::class,
-	[Base::class, Other::class], ZEND_ACC_TRAIT);
+uopz_compose("Concrete",
+	["Base", "Other"], ZEND_ACC_TRAIT);
 ?>
 --EXPECTF--
 Fatal error: Uncaught exception '%s' with message 'trait Concrete can not implement interface Other, not allowed' in %s:%d

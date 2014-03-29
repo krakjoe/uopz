@@ -7,7 +7,7 @@ Test sane composition of interfaces
 interface Base {}
 interface Other {}
 
-uopz_compose(Concrete::class, [Base::class, Other::class], ZEND_ACC_INTERFACE);
+uopz_compose("Concrete", ["Base", "Other"], ZEND_ACC_INTERFACE);
 ?>
 --EXPECTF--
 Fatal error: Uncaught exception '%s' with message 'interface Concrete may not extend Other, parent of Concrete already set to Base' in %s:%d

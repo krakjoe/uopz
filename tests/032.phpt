@@ -7,10 +7,10 @@ Test sane composition of traits
 trait Base {}
 trait Other {}
 
-uopz_compose(Concrete::class,
-	[Base::class, Other::class], ZEND_ACC_TRAIT);
+uopz_compose("Concrete",
+	["Base", "Other"], ZEND_ACC_TRAIT);
 
-var_dump(class_uses(Concrete::class));
+var_dump(class_uses("Concrete"));
 
 new Concrete();
 ?>
