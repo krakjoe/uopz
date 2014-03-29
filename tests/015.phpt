@@ -12,32 +12,33 @@ class A {
 	}
 }
 
-uopz_compose("B", array("A"), function() { 
-	var_dump($this, 	
-			 $this->data); 
-});
+uopz_compose("B", ["A"], [
+	"__construct" => function() { 
+		var_dump($this, 	
+				 $this->data); 
+	},
+	"foo" => function() {
+		return "overriden";
+	},
+	"FoF" => function() {
+		return true;
+	},
+	"myClosure" => [
+		ZEND_ACC_STATIC | ZEND_ACC_PUBLIC => function() {
+			return __FUNCTION__;
+		}
+	]
+]);
 
 uopz_function("whatever", function(){
 	return "whatever";
 });
 
-uopz_function("B", "foo", function(){
-	return "overriden";
-});
-
-uopz_function("B", "FoF", function(){
-	return true;
-});
-
-uopz_function("B", "myClosure", function(){
-	return __FUNCTION__;
-}, ZEND_ACC_STATIC);
-
 $b = new B();
 var_dump($b->foo(), whatever(), $b->fof(), B::myClosure());
 
---EXPECT--
-object(B)#1 (1) {
+--EXPECTF--
+object(B)#%d (1) {
   ["data":protected]=>
   string(9) "protected"
 }

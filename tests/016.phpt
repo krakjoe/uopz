@@ -12,9 +12,11 @@ class A {
 	}
 }
 
-uopz_compose("C", ["A"], function(){
-	echo "do not execute\n";
-});
+uopz_compose("C", ["A"], [
+	"__construct" => function(){
+		echo "do not execute\n";
+	}
+]);
 
 uopz_function("C", "__toString", function(){
 	return "converting to string\n";

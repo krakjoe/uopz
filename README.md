@@ -318,12 +318,14 @@ void uopz_implement(string class, string interface);
 void uopz_extend(string class, string parent);
 
 /**
-* Composes new class $name using the list of classes that follow
+* Composes new class $name using the list of classes that follow, applying all methods provided
 * @param string name
 * @param array classes
-* @param Closure __construct
+* @param array methods
+* @param int flags
+* Note: methods are in the form ```[name => function()]``` or ```[name => [flags => function]]```
 **/
-void uoopz_compose(string name, array classes [, Closure __construct = null]);
+void uopz_compose(string name, array classes [, array methods [, int flags = ZEND_ACC_CLASS]]);
 ```
 
 *Note: For a look at what is possible, see /tests.*

@@ -18,9 +18,11 @@ class TestBundle {
 uopz_overload(ZEND_FETCH_CLASS, function(&$class) {
 	switch ($class) {
 		case "test": {
-			uopz_compose($class, ["TestBundle"], function($arg) {
-				$this->arg = $arg;
-			});
+			uopz_compose($class, ["TestBundle"], [
+				"__construct" => function($arg) {
+					$this->arg = $arg;
+				}
+			]);
 		} break;
 	}
 });
