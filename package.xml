@@ -22,7 +22,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  <!-- put things here -->
+  fix unresolved external symbols on some builds
+  fix bug in overload for add trait/interface
  </notes>
  <contents>
   <dir name="/">
