@@ -10,8 +10,8 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-29</date>
- <time>22:00:00</time>
+ <date>2014-03-30</date>
+ <time>10:00:00</time>
  <version>
   <release>1.0.9</release>
   <api>1.0.9</api>
@@ -23,6 +23,7 @@
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
   fix bug in finding functions, affecting various
+  add more tests
  </notes>
  <contents>
   <dir name="/">
