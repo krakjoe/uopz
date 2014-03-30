@@ -1698,11 +1698,12 @@ PHP_FUNCTION(uopz_extend)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval *methods, zval *properties, long flags TSRMLS_DC) {
-	HashPosition position;
+static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, HashTable *methods, HashTable *properties, long flags TSRMLS_DC) {
+	HashPosition position[2];
 	zend_class_entry *entry = NULL;
 	uopz_key_t uname = *name;
-	zval **next = NULL;
+	uopz_key_t ukey;
+	zval **member = NULL;
 
 	uname.string = zend_str_tolower_dup(name->string, name->length);
 	uname.hash   = zend_inline_hash_func(uname.string, uname.length);
@@ -1745,15 +1746,15 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 	return 0; \
 } while(0)
 
-	for (zend_hash_internal_pointer_reset_ex(classes, &position);
-		zend_hash_get_current_data_ex(classes, (void**)&next, &position) == SUCCESS;
-		zend_hash_move_forward_ex(classes, &position)) {
+	for (zend_hash_internal_pointer_reset_ex(classes, &position[0]);
+		zend_hash_get_current_data_ex(classes, (void**)&member, &position[0]) == SUCCESS;
+		zend_hash_move_forward_ex(classes, &position[0])) {
 		zend_class_entry **parent = NULL;
 
-		if (Z_TYPE_PP(next) == IS_STRING) {
+		if (Z_TYPE_PP(member) == IS_STRING) {
 			if (zend_lookup_class(
-					Z_STRVAL_PP(next),
-					Z_STRLEN_PP(next), &parent TSRMLS_CC) == SUCCESS) {
+					Z_STRVAL_PP(member),
+					Z_STRLEN_PP(member), &parent TSRMLS_CC) == SUCCESS) {
 				
 				if (entry->ce_flags & ZEND_ACC_TRAIT) {
 					if ((*parent)->ce_flags & ZEND_ACC_INTERFACE) {
@@ -1795,14 +1796,9 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 	}
 
 	if (methods) {
-		HashPosition position[2];
-		zval **member = NULL;
-		zval key;
-		
-		for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(methods), &position[0]);
-			 zend_hash_get_current_data_ex(Z_ARRVAL_P(methods), (void**)&member, &position[0]) == SUCCESS;
-			 zend_hash_move_forward_ex(Z_ARRVAL_P(methods), &position[0])) {
-			 uopz_key_t ukey;
+		for (zend_hash_internal_pointer_reset_ex(methods, &position[0]);
+			 zend_hash_get_current_data_ex(methods, (void**)&member, &position[0]) == SUCCESS;
+			 zend_hash_move_forward_ex(methods, &position[0])) {
 			 zval **closure = NULL;
 			 zend_ulong flags = 0;
 			 
@@ -1822,13 +1818,10 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 		 				"invalid member found in methods array, expects [modifiers => closure], or closure");
 			 }
 			 
-			 if (zend_hash_get_current_key_ex(Z_ARRVAL_P(methods), &Z_STRVAL(key), &Z_STRLEN(key), NULL, 0, &position[0]) != HASH_KEY_IS_STRING) {
+			 if (zend_hash_get_current_key_ex(methods, &ukey.string, &ukey.length, NULL, 0, &position[0]) != HASH_KEY_IS_STRING) {
 			 	uopz_compose_bail(
 			 		"invalid key found in methods array, expect string keys to be legal function names");
 			 }
-			 
-			 Z_STRLEN(key)--;
-			 uopz_make_key_ex(&key, &ukey, 0);
 			 
 			 if (Z_TYPE_PP(member) == IS_ARRAY) {
 			 	 zend_hash_internal_pointer_reset_ex(Z_ARRVAL_PP(member), &position[1]);
@@ -1859,17 +1852,13 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 	}
 
 	if (properties) {
-		HashPosition position;
-		zval **member = NULL;
-		uopz_key_t ukey;
-
-		for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(properties), &position);
-			 zend_hash_get_current_data_ex(Z_ARRVAL_P(properties), (void**) &member, &position) == SUCCESS;
-			 zend_hash_move_forward_ex(Z_ARRVAL_P(properties), &position)) {
+		for (zend_hash_internal_pointer_reset_ex(properties, &position[0]);
+			 zend_hash_get_current_data_ex(properties, (void**) &member, &position[0]) == SUCCESS;
+			 zend_hash_move_forward_ex(properties, &position[0])) {
 			 memset(&ukey, 0, sizeof(uopz_key_t));
 
 			 if ((Z_TYPE_PP(member) != IS_LONG) || 
-			 	 (zend_hash_get_current_key_ex(Z_ARRVAL_P(properties), &ukey.string, &ukey.length, &ukey.hash, 0, &position) != HASH_KEY_IS_STRING)) {
+			 	 (zend_hash_get_current_key_ex(properties, &ukey.string, &ukey.length, &ukey.hash, 0, &position[0]) != HASH_KEY_IS_STRING)) {
 			 	uopz_compose_bail(
 			 		"invalid member found in properties array, expects [string => int]");
 			 }
@@ -1891,14 +1880,14 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 /* {{{ proto bool uopz_compose(string name, array classes [, array methods [, array properties [, int flags = ZEND_ACC_CLASS]]]) */
 PHP_FUNCTION(uopz_compose)
 {
-	uopz_key_t uname;
 	zval *name = NULL;
 	HashTable *classes = NULL;
-	zval *methods = NULL;
-	zval *properties = NULL;
+	HashTable *methods = NULL;
+	HashTable *properties = NULL;
 	long flags = 0;
+	uopz_key_t uname;
 	
-	if (uopz_parse_parameters("zh|aal", &name, &classes, &methods, &properties, &flags) != SUCCESS) {
+	if (uopz_parse_parameters("zh|hhl", &name, &classes, &methods, &properties, &flags) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (name, classes [, array methods [, int flags]])");
 		return;
