@@ -13,8 +13,8 @@
  <date>2014-03-30</date>
  <time>15:00:00</time>
  <version>
-  <release>1.0.11</release>
-  <api>1.0.11</api>
+  <release>2.0.0</release>
+  <api>2.0.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,8 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix unresolved external symbols on some builds
-  fix bug in overload for add trait/interface
+  API finalized, no moar changes
  </notes>
  <contents>
   <dir name="/">
