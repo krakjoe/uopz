@@ -23,7 +23,7 @@ Declare all the things
 ```php
 <?php
 uopz_compose('Something', [], [
-	"do" => function() {
+	"execute" => function() {
 		return true;
 	}
 ]);
@@ -44,7 +44,7 @@ Declare what you need
 =====================
 *A more elegant solution ...*
 
-```uopz``` allows the programmer to overload VM opcodes with a user functions, this provides many opportunities to compose classes, interfaces and traits on the fly.
+```uopz``` allows the programmer to overload VM opcodes with a user function; this provides many opportunities to compose classes, interfaces and traits on the fly.
 
 Following is a simple example of doing this:
 
