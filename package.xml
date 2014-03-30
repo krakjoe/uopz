@@ -28,6 +28,7 @@
   enforce using correct handlers (stability++)
   fix scope issue in global functions created with uopz_function
   take modifiers to uopz_function for global functions
+  fix bug in uopz_delete on magic methods
  </notes>
  <contents>
   <dir name="/">
@@ -75,6 +76,7 @@
    <file name="tests/043.phpt" role="test" />
    <file name="tests/044.phpt" role="test" />
    <file name="tests/045.phpt" role="test" />
+   <file name="tests/046.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
