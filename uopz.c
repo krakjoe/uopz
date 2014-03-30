@@ -402,13 +402,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 							EX_T(OPLINE->result.var).class_entry = Z_OBJCE_P(op2);
 						} else if (Z_TYPE_P(op2) == IS_STRING) {
 							EX_T(OPLINE->result.var).class_entry =  zend_fetch_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), OPLINE->extended_value TSRMLS_CC);
-						} else {
-							if (UNEXPECTED(EG(exception) != NULL)) {
-								return (ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS);
-							}
-							
-							zend_error_noreturn(E_ERROR, "Class name must be a valid object or a string");
-						}
+						} else return (ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS);
 						
 						if (EX_T(OPLINE->result.var).class_entry) {
 							OPLINE++;
