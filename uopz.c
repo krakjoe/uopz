@@ -731,16 +731,22 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_verify_overload(zval *handler, zend_fcall_info_cache *fcc, long opcode, char **expected TSRMLS_DC) {
+static inline zend_bool uopz_verify_overload(zval *handler, long opcode, char **expected TSRMLS_DC) {
 	const uopz_opcode_t *uop = uopz_opcode_find(opcode);
+	zend_fcall_info_cache fcc;
+	char *cerror = NULL;
 	
 	if (!uop) {
 		*expected = "a supported opcode";
 		return 0;
 	}
 	
-	if (fcc->function_handler->common.num_args != uop->arguments) {
+	if (!zend_is_callable_ex(handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC) ||
+		fcc.function_handler->common.num_args != uop->arguments) {
 		*expected = (char*) uop->expected;
+		if (cerror) {
+			efree(cerror);
+		}
 		return 0;
 	}
 	
@@ -752,8 +758,7 @@ static PHP_FUNCTION(uopz_overload)
 {
 	zval *handler = NULL;
 	long  opcode = ZEND_NOP;
-	zend_fcall_info_cache fcc;
-	char *cerror = NULL;
+	char *expected = NULL;
 
 	if (uopz_parse_parameters("l|z", &opcode, &handler) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -775,15 +780,10 @@ static PHP_FUNCTION(uopz_overload)
 		RETURN_TRUE;
 	}
 
-	if (!zend_is_callable_ex(handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
+	if (!uopz_verify_overload(handler, opcode, &expected TSRMLS_CC)) {
 		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (int, callable)");
-		return;
-	}
-
-	if (!uopz_verify_overload(handler, &fcc, opcode, &cerror TSRMLS_CC)) {
-		uopz_refuse_parameters(
-			"invalid handler for %s, expected %s", uopz_opcode_name(opcode), cerror);
+			"invalid handler for %s, expected %s", 
+			uopz_opcode_name(opcode), expected);
 		return;
 	}
 
