@@ -150,7 +150,7 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 	key->copied = 0;
 
 	if (!pzval) {
-		return 0;
+		goto bad;
 	}
 
 	if (Z_STRLEN_P(pzval)) {
@@ -165,8 +165,11 @@ static inline zend_bool __uopz_make_key_inline(zval* pzval, uopz_key_t *key, zen
 		return 1;
 	}
 
+bad:
 	if (EG(in_execution)) {
-		uopz_exception("invalid input to function");
+		uopz_refuse_parameters(
+			"invalid input to function, expected string and got %s", 
+			pzval ? zend_zval_type_name(pzval) : "nothin'");
 	}
 
 	return 0;
@@ -198,19 +201,36 @@ static void uopz_free_key(uopz_key_t *key) {
 static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function **function TSRMLS_DC) {
 	HashPosition position;
 	zend_function *entry;
-	for (zend_hash_internal_pointer_reset_ex(table, &position);
-	     zend_hash_get_current_data_ex(table, (void**)&entry, &position) == SUCCESS;
-	     zend_hash_move_forward_ex(table, &position)) {
-	     if (zend_binary_strcasecmp(
-	     	name->string, name->length-1,
-	     	entry->common.function_name, strlen(entry->common.function_name)) == SUCCESS) { 
-	     	if (function) {
-	     		*function = entry;
-	     	}
-	     	
-	     	return SUCCESS;
-		 }
+	Bucket *bucket = table ? table->pListHead : NULL;
+	uopz_key_t lower = *name;
+	
+	if (!bucket) {
+		return;
 	}
+
+	if (!lower.copied) {
+		lower.copied = 3;
+		lower.string = zend_str_tolower_dup(lower.string, lower.length);
+		lower.hash = zend_inline_hash_func(lower.string, lower.length);
+	}
+	
+	while (bucket) {
+		if (lower.length == bucket->nKeyLength &&
+			lower.hash   == bucket->h &&
+			memcmp(lower.string, bucket->arKey, lower.length) == SUCCESS) {
+			if (function) {
+				*function = (zend_function*) bucket->pData;
+				if (lower.copied == 3)
+					uopz_free_key(&lower);
+				return SUCCESS;
+			}
+		}
+		bucket = bucket->pListNext;
+	}
+	
+	if (lower.copied == 3)	
+		uopz_free_key(&lower);
+	
 	return FAILURE;
 } /* }}} */
 
@@ -1455,13 +1475,14 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zend_function *function, long flags TSRMLS_DC) {
+static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zval *closure, long flags TSRMLS_DC) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
 	uopz_key_t lower = *name;
+	zend_function *function = (zend_function*) zend_get_closure_method_def(closure TSRMLS_CC);
 	
 	if (!name->string) {
-		return 0;	
+		return 0;
 	}
 	
 	if (!lower.copied) {
@@ -1582,8 +1603,7 @@ PHP_FUNCTION(uopz_function) {
 		return;
 	}
 
-	RETVAL_BOOL(uopz_function(clazz, &uname, (zend_function*) 
-		zend_get_closure_method_def(closure TSRMLS_CC), flags TSRMLS_CC));
+	RETVAL_BOOL(uopz_function(clazz, &uname, closure, flags TSRMLS_CC));
 	uopz_free_key(&uname);
 } /* }}} */
 
@@ -1703,15 +1723,6 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 
 	entry->ce_flags |= flags;
 
-#define uopz_compose_bail(s, ...) do {\
-	uopz_exception(s, ##__VA_ARGS__);\
-	zend_hash_quick_del( \
-		CG(class_table), \
-		uname.string, uname.length, uname.hash); \
-	uopz_free_key(&uname);\
-	return 0; \
-} while(0)
-
 	if (zend_hash_quick_update(
 		CG(class_table),
 		uname.string, uname.length, uname.hash,
@@ -1723,6 +1734,15 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 		efree(entry);
 		return 0;	
 	}
+
+#define uopz_compose_bail(s, ...) do {\
+	uopz_exception(s, ##__VA_ARGS__);\
+	zend_hash_quick_del( \
+		CG(class_table), \
+		uname.string, uname.length, uname.hash); \
+	uopz_free_key(&uname);\
+	return 0; \
+} while(0)
 
 	for (zend_hash_internal_pointer_reset_ex(classes, &position);
 		zend_hash_get_current_data_ex(classes, (void**)&next, &position) == SUCCESS;
@@ -1813,23 +1833,26 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 			 	 zend_hash_internal_pointer_reset_ex(Z_ARRVAL_PP(member), &position[1]);
 				 if ((zend_hash_get_current_key_ex(Z_ARRVAL_PP(member), NULL, NULL, &flags, 0, &position[1]) != HASH_KEY_IS_LONG) ||
 				 	(zend_hash_get_current_data_ex(Z_ARRVAL_PP(member), (void**)&closure, &position[1]) != SUCCESS)) {
-				 	uopz_compose_bail
-				 		("invalid member found in methods array, expects [int => closure]");
+				 	uopz_compose_bail(
+				 		"invalid member found in methods array, "
+				 		"expects [int => closure]");
 				 }
 				 
 				 if ((Z_TYPE_PP(closure) != IS_OBJECT) || 
 				 	 (!instanceof_function(Z_OBJCE_PP(closure), zend_ce_closure TSRMLS_CC))) {
 				 	uopz_compose_bail(
-				 		"invalid member found in methods array, expects [int => closure], got [int => other]");
+				 		"invalid member found in methods array, "
+				 		"expects [int => closure], got [int => other]");
 				 }
 			 } else {
 			 	flags = ZEND_ACC_PUBLIC;
 			 	closure = member;
 			 }
 			 
-			 if (!uopz_function(entry, &ukey, (zend_function*) zend_get_closure_method_def(*closure TSRMLS_CC), flags TSRMLS_CC)) {
+			 if (!uopz_function(entry, &ukey, *closure, flags TSRMLS_CC)) {
 			 	uopz_compose_bail(
-			 		"failed to add method %s to class %s, previous exceptions occured", ukey.string, uname.string);
+			 		"failed to add method %s to class %s, "
+			 		"previous exceptions occured", ukey.string, uname.string);
 			 }
 		}
 	}
