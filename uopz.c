@@ -345,19 +345,8 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						MAKE_STD_ZVAL(op1);
 						ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
 						fci.params[0] = &op1;
-					
-						if (CACHED_PTR(OPLINE->op2.literal->cache_slot)) {
-							oce = CACHED_PTR(OPLINE->op2.literal->cache_slot);
-						} else {
-							oce = zend_fetch_class_by_name(
-								Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 
-								OPLINE->op2.literal + 1, ZEND_FETCH_CLASS_NO_AUTOLOAD TSRMLS_CC);
-						}
-
-						MAKE_STD_ZVAL(op2);
-						ZVAL_STRINGL(op2, oce->name, oce->name_length, 1);
-						fci.params[1] = &op2;
-						fci.param_count = 2;
+						
+						GET_OP2(BP_VAR_RW);
 					} break;
 
 					case ZEND_NEW: {
