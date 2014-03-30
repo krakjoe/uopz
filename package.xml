@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  <!--insert things -->
+  fix bug in finding functions, affecting various
  </notes>
  <contents>
   <dir name="/">
@@ -63,6 +63,7 @@
    <file name="tests/036.phpt" role="test" />
    <file name="tests/037.phpt" role="test" />
    <file name="tests/038.phpt" role="test" />
+   <file name="tests/039.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
