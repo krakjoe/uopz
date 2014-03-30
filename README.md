@@ -9,6 +9,7 @@ It supports the following activities:
  - Overloading some Zend opcodes including exit/new and composure opcodes
  - Renaming functions and methods
  - Deletion of functions and methods
+ - Copying of functions and methods
  - Redefinition of constants
  - Deletion of constants
  - Runtime composition and modification of classes
