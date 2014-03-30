@@ -278,18 +278,19 @@ void uopz_delete(string function);
 * @param string class
 * @param string function
 * @param Closure handler
-* @param bool static
+* @param int modifiers
 * Note: if the method does not exist it will be created
 **/
-void uopz_function(string class, string method, Closure handler [, bool static = false]);
+void uopz_function(string class, string method, Closure handler [, int modifiers = false]);
 
 /**
 * Declare $function as $handler
 * @param string function
 * @param Closure handler
+* @param int modifiers
 * Note: if the function does not exist it will be created
 **/
-void uopz_function(string function, Closure handler);
+void uopz_function(string function, Closure handler [, int modifiers = 0]);
 
 /**
 * Redefine $class::$constant to $value

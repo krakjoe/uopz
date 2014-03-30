@@ -26,6 +26,7 @@
   fix logical error in uopz_extend
   fix logical errors in uopz_compose
   enforce using correct handlers (stability++)
+  fix scope issue in global functions created with uopz_function
  </notes>
  <contents>
   <dir name="/">

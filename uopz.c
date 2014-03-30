@@ -1560,7 +1560,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 	if (zend_hash_quick_update(
 		table, 
 		lower.string, lower.length, lower.hash, 
-		(void**) function, sizeof(zend_function), 
+		(void**) function, sizeof(zend_function),
 		(void**) &destination) != SUCCESS) {
 		uopz_free_key(&lower);
 		if (clazz) {
@@ -1577,7 +1577,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 	
 	destination->common.fn_flags = flags;
 	destination->common.prototype = destination;
-
+	
 	function_add_ref(destination);
 
 	if (clazz) {
@@ -1608,12 +1608,12 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 			magic++;
 		}
 		destination->common.scope = clazz;
-	}
+	} else destination->common.scope = NULL;
 
 	return 1;
 } /* }}} */
 
-/* {{{ proto bool uopz_function(string function, Closure handler)
+/* {{{ proto bool uopz_function(string function, Closure handler [, int flags = 0])
 	   proto bool uopz_function(string class, string method, Closure handler [, int flags = 0]) */
 PHP_FUNCTION(uopz_function) {
 	zval *name = NULL;
@@ -1622,28 +1622,13 @@ PHP_FUNCTION(uopz_function) {
 	zend_class_entry *clazz = NULL;
 	long flags = 0;
 
-	switch (ZEND_NUM_ARGS()) {
-		case 4:
-		case 3: {
-			if (uopz_parse_parameters("CzO|l", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
-				uopz_refuse_parameters(
-					"unexpected parameter combination, expected (class, name, closure [, flags])");
-				return;
-			}
-		} break;
-
-		case 2: {
-			if (uopz_parse_parameters("zO", &name, &closure, zend_ce_closure) != SUCCESS) {
-				uopz_refuse_parameters(
-					"unexpected parameter combination, expected (name, closure)");
-				return;
-			}
-		} break;
-
-		default:
-			uopz_refuse_parameters(
-				"unexpected parameter combination, expected (class, name, closure [, flags]) or (name, closure)");
-			return;
+	if (uopz_parse_parameters("zO|l", &name, &closure, zend_ce_closure, &flags) != SUCCESS &&
+		uopz_parse_parameters("CzO|l", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, "
+			"expected "
+			"(class, name, closure [, flags]) or (name, closure [, flags])");
+		return;
 	}
 
 	if (!uopz_make_key(name, &uname)) {
