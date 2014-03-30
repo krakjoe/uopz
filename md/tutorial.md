@@ -2,7 +2,7 @@ Mocking classes with uopz
 =========================
 *The problem ...*
 
-Unit testing methods that tightly coupled to, and or dependant on, other classes is difficult; take for example the following code:
+Unit testing methods that are tightly coupled to, and or dependant on, other classes is difficult; take for example the following code:
 
 ```
 <?php
@@ -36,7 +36,7 @@ class Test {
 ?>
 ```
 
-The code above allows the programmer to mock Something, however, the unit testing process will become polluted with code that will never execute if we go at it with a hammer like that.
+The code above allows the programmer to mock ```Something```, however, the unit testing process will become polluted with code that will never execute if we go at it with a hammer like that.
 
 A more elegant solution would be to declare those classes which are required at test time in a more intelligent way.
 
@@ -44,7 +44,7 @@ Declare what you need
 =====================
 *A more elegant solution ...*
 
-```uopz``` allows the programmer to overload VM opcodes with a user functions, this provides many opportunities to compose classes on the fly in testing.
+```uopz``` allows the programmer to overload VM opcodes with a user functions, this provides many opportunities to compose classes, interfaces and traits on the fly.
 
 Following is a simple example of doing this:
 
@@ -93,6 +93,7 @@ uopz_overload(ZEND_FETCH_CLASS, function(&$class){
 					return true;
 				}
 			]); break;
+	
 			case "Father": uopz_compose($class, [], [
 				"something" => function() {}
 			]); break;
