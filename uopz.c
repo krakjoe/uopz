@@ -1073,7 +1073,7 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, uopz_key_t *name, u
 				"failed to find the functions %s and %s", 
 				name->string, rename->string);
 		}
-		return 0;		
+		return 0;
 	}
 
 	if (tuple[0] && tuple[1]) {
@@ -1637,10 +1637,6 @@ PHP_FUNCTION(uopz_function) {
 				uopz_refuse_parameters(
 					"unexpected parameter combination, expected (name, closure)");
 				return;
-			}
-			
-			if (EG(scope)) {
-				flags |= ZEND_ACC_STATIC;
 			}
 		} break;
 
