@@ -220,10 +220,11 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 			memcmp(lower.string, bucket->arKey, lower.length) == SUCCESS) {
 			if (function) {
 				*function = (zend_function*) bucket->pData;
-				if (lower.copied == 3)
-					uopz_free_key(&lower);
-				return SUCCESS;
 			}
+			
+			if (lower.copied == 3)
+				uopz_free_key(&lower);
+			return SUCCESS;
 		}
 		bucket = bucket->pListNext;
 	}
