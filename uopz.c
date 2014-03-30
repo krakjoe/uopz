@@ -1692,6 +1692,14 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, HashT
 	uopz_key_t ukey;
 	zval **member = NULL;
 
+	if ((flags & ZEND_ACC_INTERFACE)) {
+		if ((properties && zend_hash_num_elements(properties))) {
+			uopz_exception(
+				"interfaces can not have properties");
+			return 0;
+		}
+	}
+
 	uname.string = zend_str_tolower_dup(name->string, name->length);
 	uname.hash   = zend_inline_hash_func(uname.string, uname.length);
 	uname.copied = 1;
