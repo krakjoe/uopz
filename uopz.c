@@ -1189,10 +1189,13 @@ PHP_FUNCTION(uopz_rename) {
 /* {{{ */
 static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-
+	uopz_magic_t *magic = umagic;
+	
 	if (!name->string) {
 		return 0;
 	}
+	
+	uopz_backup(clazz, name TSRMLS_CC);
 
 	if (!zend_hash_quick_exists(table, name->string, name->length, name->hash)) {
 		if (clazz) {
@@ -1214,6 +1217,33 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TS
 				"failed to find the function %s, delete failed", name->string);
 		}
 		return 0;
+	}
+
+	if (clazz) {
+		while (magic && magic->name) {
+			if ((name->length-1) == magic->length &&
+				strncasecmp(name->string, magic->name, magic->length) == SUCCESS) {
+
+				switch (magic->id) {
+					case 0: clazz->constructor = NULL; break;
+					case 1: clazz->destructor = NULL; break;
+					case 2: clazz->clone = NULL; break;
+					case 3: clazz->__get = NULL; break;
+					case 4: clazz->__set = NULL; break;
+					case 5: clazz->__unset = NULL; break;
+					case 6: clazz->__isset = NULL; break;
+					case 7: clazz->__call = NULL; break;
+					case 8: clazz->__callstatic = NULL; break;
+					case 9: clazz->__tostring = NULL; break;
+					case 10: clazz->serialize_func = NULL; break;
+					case 11: clazz->unserialize_func = NULL; break;
+#ifdef ZEND_DEBUGINFO_FUNC_NAME
+					case 12: clazz->__debugInfo = NULL; break;
+#endif
+				}
+			}
+			magic++;
+		}	
 	}
 
 	return 1;
