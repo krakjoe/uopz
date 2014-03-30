@@ -86,20 +86,47 @@ typedef struct _uopz_opcode_t {
 	zend_uchar   code;
 	const char  *name;
 	size_t       length;
+	zend_uint    arguments;
+	const char  *expected;
 } uopz_opcode_t;
 
-#define UOPZ_CODE(n)   {n, #n, sizeof(#n)-1}
-#define UOPZ_CODE_END  {ZEND_NOP, NULL, 0L}
+#define UOPZ_CODE(n, a, e)   {n, #n, sizeof(#n)-1, a, e}
+#define UOPZ_CODE_END  		 {ZEND_NOP, NULL, 0L, 0, NULL}
 
 uopz_opcode_t uoverrides[] = {
-	UOPZ_CODE(ZEND_NEW),
-	UOPZ_CODE(ZEND_THROW),
-	UOPZ_CODE(ZEND_FETCH_CLASS),
-	UOPZ_CODE(ZEND_ADD_TRAIT),
-	UOPZ_CODE(ZEND_ADD_INTERFACE),
-	UOPZ_CODE(ZEND_INSTANCEOF),
+	UOPZ_CODE(ZEND_NEW, 1, "function(class)"),
+	UOPZ_CODE(ZEND_THROW, 1, "function(exception)"),
+	UOPZ_CODE(ZEND_FETCH_CLASS, 1, "function(class)"),
+	UOPZ_CODE(ZEND_ADD_TRAIT, 2, "function(class, trait)"),
+	UOPZ_CODE(ZEND_ADD_INTERFACE, 2, "function(class, interface)"),
+	UOPZ_CODE(ZEND_INSTANCEOF, 2, "function(object, class)"),
+	UOPZ_CODE(ZEND_EXIT, 0, "function(void)"),
 	UOPZ_CODE_END
 }; /* }}} */
+
+/* {{{ */
+static inline const uopz_opcode_t* uopz_opcode_find(zend_uchar opcode) {
+	uopz_opcode_t *uop = uoverrides;
+	
+	while (uop->code != ZEND_NOP) {
+		if (uop->code == opcode)
+			return uop;
+		uop++;
+	}
+	
+	return NULL;
+} /* }}} */
+
+/* {{{ */
+static inline const char* uopz_opcode_name(zend_uchar opcode) {
+	const uopz_opcode_t *uop = uopz_opcode_find(opcode);
+	
+	if (!uop) {
+		return "unknown";
+	}
+	
+	return uop->name;
+} /* }}} */
 
 /* {{{ */
 typedef struct _uopz_magic_t {
@@ -357,6 +384,11 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						fci.param_count = 1;
 						fci.params[0] = &op1;
 					} break;
+					
+					case ZEND_THROW: {
+						GET_OP1(BP_VAR_RW);
+						fci.param_count = 1;
+					} break;
 
 					default: {
 						GET_OP1(BP_VAR_RW);
@@ -434,6 +466,10 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						}
 
 						zval_ptr_dtor(&op1);
+					} break;
+					
+					case ZEND_THROW: {
+						
 					} break;
 				}
 			}
@@ -514,14 +550,15 @@ static PHP_MINIT_FUNCTION(uopz)
 
 		uopz_opcode_t *uop = uoverrides;
 
-		REGISTER_ZEND_OPCODE("ZEND_EXIT", sizeof("ZEND_EXIT"), ZEND_EXIT);
-
 		while (uop->code != ZEND_NOP) {
 			zval constant;
 
-			ohandlers[uop->code] = 
-				zend_get_user_opcode_handler(uop->code);
-			zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+			if (uop->code != ZEND_EXIT) {
+				ohandlers[uop->code] = 
+					zend_get_user_opcode_handler(uop->code);
+				zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+			}
+			
 			if (!zend_get_constant(uop->name, uop->length+1, &constant TSRMLS_CC)) {
 				REGISTER_ZEND_OPCODE(uop->name, uop->length+1, uop->code);
 			} else zval_dtor(&constant);
@@ -690,12 +727,16 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 
 /* {{{ */
 static inline zend_bool uopz_verify_overload(zval *handler, zend_fcall_info_cache *fcc, long opcode, char **expected TSRMLS_DC) {
-	switch (opcode) {
-		case ZEND_EXIT: {
-			if (fcc->function_handler) {
-				
-			}
-		} break;
+	const uopz_opcode_t *uop = uopz_opcode_find(opcode);
+	
+	if (!uop) {
+		*expected = "a supported opcode";
+		return 0;
+	}
+	
+	if (fcc->function_handler->common.num_args != uop->arguments) {
+		*expected = (char*) uop->expected;
+		return 0;
 	}
 	
 	return 1;
@@ -711,7 +752,7 @@ static PHP_FUNCTION(uopz_overload)
 
 	if (uopz_parse_parameters("l|z", &opcode, &handler) != SUCCESS) {
 		uopz_refuse_parameters(
-				"unexpected parameter combination, (int [, Callable])");
+				"unexpected parameter combination, expected (int [, Callable])");
 		return;
 	}
 
@@ -737,7 +778,7 @@ static PHP_FUNCTION(uopz_overload)
 
 	if (!uopz_verify_overload(handler, &fcc, opcode, &cerror TSRMLS_CC)) {
 		uopz_refuse_parameters(
-			"invalid handler for opcode, expected %s", cerror);
+			"invalid handler for %s, expected %s", uopz_opcode_name(opcode), cerror);
 		return;
 	}
 
@@ -829,19 +870,19 @@ PHP_FUNCTION(uopz_backup) {
 	switch (ZEND_NUM_ARGS()) {
 		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
 			uopz_refuse_parameters(
-				"unexpected parameter combination, (class, function)");
+				"unexpected parameter combination, expected (class, function)");
 			return;
 		} break;
 
 		case 1: if (uopz_parse_parameters("z", &name) != SUCCESS) {
 			uopz_refuse_parameters(
-				"unexpected parameter combination, (function)");
+				"unexpected parameter combination, expected (function)");
 			return;
 		} break;
 
 		default:
 			uopz_refuse_parameters(
-				"unexpected parameter combination, (class, function) or (function)");
+				"unexpected parameter combination, expected (class, function) or (function)");
 			return;
 	}
 
@@ -920,19 +961,19 @@ PHP_FUNCTION(uopz_restore) {
 	switch (ZEND_NUM_ARGS()) {
 		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
 			uopz_refuse_parameters(
-				"unexpected parameter combination, (class, function)");
+				"unexpected parameter combination, expected (class, function)");
 			return;
 		} break;
 
 		case 1: if (uopz_parse_parameters("z", &name) != SUCCESS) {
 			uopz_refuse_parameters(
-				"unexpected parameter combination, (function)");
+				"unexpected parameter combination, expected (function)");
 			return;
 		} break;
 
 		default:
 			uopz_refuse_parameters(
-				"unexpected parameter combination, (class, function) or (function) expected");
+				"unexpected parameter combination, expected (class, function) or (function) expected");
 			return;
 	}
 
@@ -1616,7 +1657,6 @@ PHP_FUNCTION(uopz_function) {
 static inline zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface TSRMLS_DC) {
 	zend_bool is_final = 
 		(clazz->ce_flags & ZEND_ACC_FINAL);
-	zend_class_entry *interfaced = clazz->interfaces;
 	
 	if (!interface->ce_flags & ZEND_ACC_INTERFACE) {
 		uopz_exception(

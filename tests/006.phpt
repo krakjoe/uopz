@@ -20,7 +20,7 @@ Stack trace:
 
 Next exception 'RuntimeException' with message 'additional' in %s:%d
 Stack trace:
-#0 %s(%d): {closure}(Object(RuntimeException), NULL)
+#0 %s(%d): {closure}(Object(RuntimeException))
 #1 {main}
   thrown in %s on line %d
 
