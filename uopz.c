@@ -688,6 +688,19 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 	}
 } /* }}} */
 
+/* {{{ */
+static inline zend_bool uopz_verify_overload(zval *handler, zend_fcall_info_cache *fcc, long opcode, char **expected TSRMLS_DC) {
+	switch (opcode) {
+		case ZEND_EXIT: {
+			if (fcc->function_handler) {
+				
+			}
+		} break;
+	}
+	
+	return 1;
+} /* }}} */
+
 /* {{{ proto bool uopz_overload(int opcode, Callable handler) */
 static PHP_FUNCTION(uopz_overload)
 {
@@ -716,27 +729,35 @@ static PHP_FUNCTION(uopz_overload)
 		RETURN_TRUE;
 	}
 
-	if (zend_is_callable_ex(handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
-		if (opcode == ZEND_EXIT) {
-			if (UOPZ(overload)._exit) {
-				zval_ptr_dtor(&UOPZ(overload)._exit);
-			}
+	if (!zend_is_callable_ex(handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, expected (int, callable)");
+		return;
+	}
 
-			MAKE_STD_ZVAL(UOPZ(overload)._exit);
-			ZVAL_ZVAL(UOPZ(overload)._exit, handler, 1, 0);
-		} else {
-			uopz_handler_t uhandler;
+	if (!uopz_verify_overload(handler, &fcc, opcode, &cerror TSRMLS_CC)) {
+		uopz_refuse_parameters(
+			"invalid handler for opcode, expected %s", cerror);
+		return;
+	}
 
-			MAKE_STD_ZVAL(uhandler.handler);
-			ZVAL_ZVAL(uhandler.handler, handler, 1, 0);
-			zend_hash_index_update(
-				&UOPZ(overload).table, opcode, (void**) &uhandler, sizeof(uopz_handler_t), NULL);
+	if (opcode == ZEND_EXIT) {
+		if (UOPZ(overload)._exit) {
+			zval_ptr_dtor(&UOPZ(overload)._exit);
 		}
 
-		RETURN_TRUE;
+		MAKE_STD_ZVAL(UOPZ(overload)._exit);
+		ZVAL_ZVAL(UOPZ(overload)._exit, handler, 1, 0);
 	} else {
-		RETURN_FALSE;
+		uopz_handler_t uhandler;
+
+		MAKE_STD_ZVAL(uhandler.handler);
+		ZVAL_ZVAL(uhandler.handler, handler, 1, 0);
+		zend_hash_index_update(
+			&UOPZ(overload).table, opcode, (void**) &uhandler, sizeof(uopz_handler_t), NULL);
 	}
+
+	RETURN_TRUE;
 }
 /* }}} */
 
