@@ -530,23 +530,14 @@ static inline void php_uopz_backup(TSRMLS_D) {
 	}
 } /* }}} */
 
-/* {{{ PHP_MINIT_FUNCTION
- */
-static PHP_MINIT_FUNCTION(uopz)
-{
-	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
-
-	UOPZ(copts) = CG(compiler_options);
-
-	CG(compiler_options) |= 
-		(ZEND_COMPILE_HANDLE_OP_ARRAY);
-
+/* {{{ */
+static inline void php_uopz_init_handlers(int module TSRMLS_DC) {
 	memset(ohandlers, 0, sizeof(user_opcode_handler_t) * MAX_OPCODE);
 
 	{
-#define REGISTER_ZEND_OPCODE(name, len, op) \
+#define REGISTER_ZEND_UOPCODE(u) \
 	zend_register_long_constant\
-		(name, len, op, CONST_CS|CONST_PERSISTENT, module_number TSRMLS_CC)
+		((u)->name, (u)->length+1, (u)->code, CONST_CS|CONST_PERSISTENT, module TSRMLS_CC)
 
 		uopz_opcode_t *uop = uoverrides;
 
@@ -560,14 +551,26 @@ static PHP_MINIT_FUNCTION(uopz)
 			}
 			
 			if (!zend_get_constant(uop->name, uop->length+1, &constant TSRMLS_CC)) {
-				REGISTER_ZEND_OPCODE(uop->name, uop->length+1, uop->code);
+				REGISTER_ZEND_UOPCODE(uop);
 			} else zval_dtor(&constant);
 
 			uop++;
 		}
 
-#undef REGISTER_ZEND_OPCODE
+#undef REGISTER_ZEND_UOPCODE
 	}
+} /* }}} */
+
+/* {{{ PHP_MINIT_FUNCTION
+ */
+static PHP_MINIT_FUNCTION(uopz)
+{
+	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
+
+	UOPZ(copts) = CG(compiler_options);
+
+	CG(compiler_options) |= 
+		(ZEND_COMPILE_HANDLE_OP_ARRAY);
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
@@ -590,6 +593,8 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_TRAIT",    			ZEND_ACC_TRAIT,     			CONST_CS|CONST_PERSISTENT);
 
 	REGISTER_INI_ENTRIES();
+
+	php_uopz_init_handlers(module_number TSRMLS_CC);
 
 	if (UOPZ(ini).fixup) {
 		CG(class_table)->pDestructor = NULL;

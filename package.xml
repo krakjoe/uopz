@@ -25,6 +25,7 @@
   API finalized, no moar changes
   fix logical error in uopz_extend
   fix logical errors in uopz_compose
+  enforce using correct handlers (stability++)
  </notes>
  <contents>
   <dir name="/">
