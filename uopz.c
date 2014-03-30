@@ -1211,10 +1211,10 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TS
 	if (zend_hash_quick_del(table, name->string, name->length, name->hash) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
-				"failed to find the function %s::%s, delete failed", clazz->name, name->string);
+				"failed to delete the function %s::%s, delete failed", clazz->name, name->string);
 		} else {
 			uopz_exception(
-				"failed to find the function %s, delete failed", name->string);
+				"failed to delete the function %s, delete failed", name->string);
 		}
 		return 0;
 	}
@@ -1241,6 +1241,7 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, uopz_key_t *name TS
 					case 12: clazz->__debugInfo = NULL; break;
 #endif
 				}
+				break;
 			}
 			magic++;
 		}	
