@@ -343,10 +343,12 @@ void uopz_extend(string class, string parent);
 * @param string name
 * @param array classes
 * @param array methods
+* @param array properties
 * @param int flags
-* Note: methods are in the form ```[name => function()]``` or ```[name => [flags => function]]```
+* Note: methods are in the form ```name => function()``` or ```name => [flags => function]```
+* Note: properties are in the form ```name => modifiers```, and declared null
 **/
-void uopz_compose(string name, array classes [, array methods [, int flags = ZEND_ACC_CLASS]]);
+void uopz_compose(string name, array classes [, array methods [, array properties [, int flags = ZEND_ACC_CLASS]]]);
 ```
 
 *Note: For a look at what is possible, see /tests.*
