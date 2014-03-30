@@ -2,7 +2,7 @@ Mocking classes with uopz
 =========================
 *The problem ...*
 
-Unit testing methods that are tightly coupled to, and or dependant on, other classes is difficult; take for example the following code:
+Unit testing methods that are tightly coupled is difficult; take for example the following code:
 
 ```php
 <?php
