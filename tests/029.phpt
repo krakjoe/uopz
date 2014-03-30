@@ -6,7 +6,7 @@ Test compose trait
 <?php
 if (uopz_compose("myTrait", [], [
 	"method" => function(){}
-], ZEND_ACC_TRAIT)) {
+], [], ZEND_ACC_TRAIT)) {
 	var_dump
 		(trait_exists("myTrait"));	
 }

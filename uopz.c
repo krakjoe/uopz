@@ -1698,7 +1698,7 @@ PHP_FUNCTION(uopz_extend)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval *methods, long flags TSRMLS_DC) {
+static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval *methods, zval *properties, long flags TSRMLS_DC) {
 	HashPosition position;
 	zend_class_entry *entry = NULL;
 	uopz_key_t uname = *name;
@@ -1858,22 +1858,47 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, zval 
 		}
 	}
 
+	if (properties) {
+		HashPosition position;
+		zval **member = NULL;
+		uopz_key_t ukey;
+
+		for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(properties), &position);
+			 zend_hash_get_current_data_ex(Z_ARRVAL_P(properties), (void**) &member, &position) == SUCCESS;
+			 zend_hash_move_forward_ex(Z_ARRVAL_P(properties), &position)) {
+			 memset(&ukey, 0, sizeof(uopz_key_t));
+
+			 if ((Z_TYPE_PP(member) != IS_LONG) || 
+			 	 (zend_hash_get_current_key_ex(Z_ARRVAL_P(properties), &ukey.string, &ukey.length, &ukey.hash, 0, &position) != HASH_KEY_IS_STRING)) {
+			 	uopz_compose_bail(
+			 		"invalid member found in properties array, expects [string => int]");
+			 }
+
+			 ukey.length--;
+			 if (zend_declare_property_null(entry, ukey.string, ukey.length, Z_LVAL_PP(member) TSRMLS_CC) != SUCCESS) {
+			 	uopz_compose_bail(
+			 		"failed to declare property %s::$%s, engine failure", entry->name, ukey.string);
+			 }
+		}
+	}
+
 	zend_do_bind_traits(entry TSRMLS_CC);
 	uopz_free_key(&uname);
 
 	return 1;
 } /* }}} */
 
-/* {{{ proto bool uopz_compose(string name, array classes [, array methods [, int flags = ZEND_ACC_CLASS]]) */
+/* {{{ proto bool uopz_compose(string name, array classes [, array methods [, array properties [, int flags = ZEND_ACC_CLASS]]]) */
 PHP_FUNCTION(uopz_compose)
 {
 	uopz_key_t uname;
 	zval *name = NULL;
 	HashTable *classes = NULL;
 	zval *methods = NULL;
+	zval *properties = NULL;
 	long flags = 0;
 	
-	if (uopz_parse_parameters("zh|al", &name, &classes, &methods, &flags) != SUCCESS) {
+	if (uopz_parse_parameters("zh|aal", &name, &classes, &methods, &properties, &flags) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (name, classes [, array methods [, int flags]])");
 		return;
@@ -1883,7 +1908,7 @@ PHP_FUNCTION(uopz_compose)
 		return;
 	}
 
-	RETURN_BOOL(uopz_compose(&uname, classes, methods, flags TSRMLS_CC));
+	RETURN_BOOL(uopz_compose(&uname, classes, methods, properties, flags TSRMLS_CC));
 } /* }}} */
 
 /* {{{ uopz */
@@ -1925,7 +1950,7 @@ ZEND_BEGIN_ARG_INFO(uopz_function_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, handler)
-	ZEND_ARG_INFO(0, static)
+	ZEND_ARG_INFO(0, modifiers)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_implement_arginfo, 2)
 	ZEND_ARG_INFO(0, class)

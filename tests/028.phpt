@@ -6,7 +6,7 @@ Test compose interface
 <?php
 if (uopz_compose("IFace", [], [
 	"method" => function($test){}
-], ZEND_ACC_INTERFACE)) {
+], [], ZEND_ACC_INTERFACE)) {
 	var_dump
 		(interface_exists("IFace"));	
 }

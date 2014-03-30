@@ -8,7 +8,7 @@ trait Base {}
 trait Other {}
 
 uopz_compose("Concrete",
-	["Base", "Other"], [], ZEND_ACC_TRAIT);
+	["Base", "Other"], [], [], ZEND_ACC_TRAIT);
 
 var_dump(class_uses("Concrete"));
 
