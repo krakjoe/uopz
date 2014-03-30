@@ -11,10 +11,10 @@
   <active>yes</active>
  </lead>
  <date>2014-03-30</date>
- <time>10:00:00</time>
+ <time>14:00:00</time>
  <version>
-  <release>1.0.10</release>
-  <api>1.0.10</api>
+  <release>1.0.11</release>
+  <api>1.0.11</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  take properties to compose
+  <!-- put things here -->
  </notes>
  <contents>
   <dir name="/">
