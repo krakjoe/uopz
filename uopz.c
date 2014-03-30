@@ -1588,10 +1588,6 @@ PHP_FUNCTION(uopz_function) {
 					"unexpected parameter combination, expected (name, closure)");
 				return;
 			}
-			
-			if (EG(scope)) {
-				flags |= ZEND_ACC_STATIC;
-			}
 		} break;
 
 		default:
