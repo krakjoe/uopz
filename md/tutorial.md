@@ -4,7 +4,7 @@ Mocking classes with uopz
 
 Unit testing methods that are tightly coupled to, and or dependant on, other classes is difficult; take for example the following code:
 
-```
+```php
 <?php
 class Test {
 	public function doSomething() {
@@ -20,7 +20,7 @@ Declare all the things
 ======================
 *The first solution ...*
 
-```
+```php
 <?php
 uopz_compose('Something', [], [
 	"do" => function() {
@@ -48,7 +48,7 @@ Declare what you need
 
 Following is a simple example of doing this:
 
-```
+```php
 <?php
 uopz_overload(ZEND_FETCH_CLASS, function($class){
 	if (!class_exists($class, false)) {
@@ -83,7 +83,7 @@ In the real world, we don't use classes in such a simple way; we ```implement```
 
 So, in a real codebase something more along the lines the following example is more appropriate:
 
-```
+```php
 <?php
 uopz_overload(ZEND_FETCH_CLASS, function(&$class){
 	if (!class_exists($class, false)) {
