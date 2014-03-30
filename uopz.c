@@ -203,7 +203,7 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 	zend_function *entry;
 	Bucket *bucket = table ? table->pListHead : NULL;
 	uopz_key_t lower = *name;
-	
+
 	if (!bucket) {
 		return;
 	}
@@ -213,7 +213,7 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 		lower.string = zend_str_tolower_dup(lower.string, lower.length);
 		lower.hash = zend_inline_hash_func(lower.string, lower.length);
 	}
-	
+
 	while (bucket) {
 		if (lower.length == bucket->nKeyLength &&
 			lower.hash   == bucket->h &&
@@ -221,17 +221,17 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 			if (function) {
 				*function = (zend_function*) bucket->pData;
 			}
-			
+
 			if (lower.copied == 3)
 				uopz_free_key(&lower);
 			return SUCCESS;
 		}
 		bucket = bucket->pListNext;
 	}
-	
+
 	if (lower.copied == 3)	
 		uopz_free_key(&lower);
-	
+
 	return FAILURE;
 } /* }}} */
 
