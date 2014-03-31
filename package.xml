@@ -11,10 +11,10 @@
   <active>yes</active>
  </lead>
  <date>2014-03-31</date>
- <time>07:00:00</time>
+ <time>20:00:00</time>
  <version>
-  <release>2.0.0</release>
-  <api>2.0.0</api>
+  <release>2.0.1</release>
+  <api>2.0.1</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,13 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  API finalized, no moar changes
-  fix logical error in uopz_extend
-  fix logical errors in uopz_compose
-  enforce using correct handlers (stability++)
-  fix scope issue in global functions created with uopz_function
-  take modifiers to uopz_function for global functions
-  fix bug in uopz_delete on magic methods
+  fix build error in some setups
  </notes>
  <contents>
   <dir name="/">
