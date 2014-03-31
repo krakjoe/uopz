@@ -4,7 +4,7 @@ Test compose error conditions (interface with properties)
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_compose(A::class, [], [], ["property" => ZEND_ACC_PUBLIC], ZEND_ACC_INTERFACE);
+uopz_compose("A", [], [], ["property" => ZEND_ACC_PUBLIC], ZEND_ACC_INTERFACE);
 ?>
 --EXPECTF--
 Fatal error: Uncaught exception '%s' with message 'interfaces can not have properties' in %s:%d
