@@ -232,7 +232,7 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 	uopz_key_t lower = *name;
 
 	if (!bucket) {
-		return;
+		return FAILURE;
 	}
 
 	if (!lower.copied) {
@@ -284,7 +284,7 @@ static void php_uopz_backup_dtor(void *pData) {
 	
 	TSRMLS_FETCH();
 
-	if ((backup->internal.type == ZEND_INTERNAL_FUNCTION)) {
+	if (backup->internal.type == ZEND_INTERNAL_FUNCTION) {
 		HashTable *table = backup->scope ?
 			&backup->scope->function_table :
 			CG(function_table);
