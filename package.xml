@@ -13,8 +13,8 @@
  <date>2014-03-31</date>
  <time>20:00:00</time>
  <version>
-  <release>2.0.1</release>
-  <api>2.0.1</api>
+  <release>2.0.2</release>
+  <api>2.0.2</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix build error in some setups
+  disable overloads by configuration
  </notes>
  <contents>
   <dir name="/">

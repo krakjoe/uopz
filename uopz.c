@@ -74,6 +74,7 @@ static zend_bool uopz_backup(zend_class_entry *scope, uopz_key_t *key TSRMLS_DC)
 
 /* {{{ */
 PHP_INI_BEGIN()
+	 STD_PHP_INI_ENTRY("uopz.overloads",  "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.overloads,          zend_uopz_globals,        uopz_globals)
 	 STD_PHP_INI_ENTRY("uopz.backup",     "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.backup,             zend_uopz_globals,        uopz_globals)
 	 STD_PHP_INI_ENTRY("uopz.fixup",      "0",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.fixup,              zend_uopz_globals,        uopz_globals)
 PHP_INI_END() /* }}} */
@@ -266,6 +267,8 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 	ng->overload._exit = NULL;
 	ng->ini.backup = 1;
+	ng->ini.overloads = 1;
+	ng->ini.fixup = 0;
 } /* }}} */
 
 /* {{{ */
@@ -544,10 +547,12 @@ static inline void php_uopz_init_handlers(int module TSRMLS_DC) {
 		while (uop->code != ZEND_NOP) {
 			zval constant;
 
-			if (uop->code != ZEND_EXIT) {
-				ohandlers[uop->code] = 
-					zend_get_user_opcode_handler(uop->code);
-				zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+			if (UOPZ(ini).overloads) {
+				if (uop->code != ZEND_EXIT) {
+					ohandlers[uop->code] = 
+						zend_get_user_opcode_handler(uop->code);
+					zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+				}
 			}
 			
 			if (!zend_get_constant(uop->name, uop->length+1, &constant TSRMLS_CC)) {
@@ -763,6 +768,11 @@ static PHP_FUNCTION(uopz_overload)
 	if (uopz_parse_parameters("l|z", &opcode, &handler) != SUCCESS) {
 		uopz_refuse_parameters(
 				"unexpected parameter combination, expected (int [, Callable])");
+		return;
+	}
+	
+	if (!UOPZ(ini).overloads) {
+		uopz_exception("overloads are disabled by configuration");
 		return;
 	}
 

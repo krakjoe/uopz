@@ -32,8 +32,9 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	} overload;
 	
 	struct {
+		zend_bool          overloads;
 		zend_bool          backup;
-		/* this is horrible */
+		/* this is horrible, and not normally necessary */
 		zend_bool          fixup;
 	} ini;
 	
