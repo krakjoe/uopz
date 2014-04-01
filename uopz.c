@@ -596,7 +596,8 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_CLASS",     			0,  							CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_INTERFACE", 			ZEND_ACC_INTERFACE, 			CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_TRAIT",    			ZEND_ACC_TRAIT,     			CONST_CS|CONST_PERSISTENT);
-
+	REGISTER_LONG_CONSTANT("ZEND_ACC_FETCH",				LONG_MAX,						CONST_CS|CONST_PERSISTENT);
+	
 	REGISTER_INI_ENTRIES();
 
 	php_uopz_init_handlers(module_number TSRMLS_CC);
@@ -1972,7 +1973,7 @@ PHP_FUNCTION(uopz_compose)
 	
 	if (uopz_parse_parameters("zh|hhl", &name, &classes, &methods, &properties, &flags) != SUCCESS) {
 		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (name, classes [, array methods [, int flags]])");
+			"unexpected parameter combination, expected (string name, array classes [, array methods [, int flags]])");
 		return;
 	}
 
@@ -1981,6 +1982,99 @@ PHP_FUNCTION(uopz_compose)
 	}
 
 	RETURN_BOOL(uopz_compose(&uname, classes, methods, properties, flags TSRMLS_CC));
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_flags(zend_class_entry *clazz, uopz_key_t *name, long flags, zval *return_value TSRMLS_DC) {
+	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
+	zend_function *function = NULL;
+	long current = 0;
+	
+	if (!name->length) {
+		if (flags == LONG_MAX) {
+			RETURN_LONG(clazz->ce_flags);
+		}
+		
+		if (flags & ZEND_ACC_PPP_MASK) {
+			uopz_exception(
+				"attempt to set public, private or protected on class entry, not allowed");
+			return;	
+		}
+		
+		if (flags & ZEND_ACC_STATIC) {
+			uopz_exception(
+				"attempt to set static on class entry, not allowed");
+			return;
+		}
+		
+		current = clazz->ce_flags;
+		clazz->ce_flags = flags;
+		RETURN_LONG(current);
+	}
+	
+	if (uopz_find_function(table, name, &function TSRMLS_CC) != SUCCESS) {
+		if (clazz) {
+			uopz_exception(
+			"failed to set or get flags of %s::%s, function does not exist", 
+			clazz->name, name->string);
+		} else {
+			uopz_exception(
+				"failed to set or get flags of %s, function does not exist", 
+				name->string);
+		}
+		return;
+	}
+	
+	if (flags == LONG_MAX) {
+		RETURN_LONG(function->common.fn_flags);
+	}
+	
+	current = function->common.fn_flags;
+	function->common.fn_flags = flags;
+	RETURN_LONG(current);	
+} /* }}} */
+
+/* {{{ proto int uopz_flags(string function, int flags)
+       proto int uopz_flags(string class, string function, int flags) */
+PHP_FUNCTION(uopz_flags) 
+{
+	zval *name = NULL;
+	zend_class_entry *clazz = NULL;
+	long flags = LONG_MAX;
+	uopz_key_t uname;
+	
+	memset(&uname, 0, sizeof(uopz_key_t));
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 3: if (uopz_parse_parameters("Czl", &clazz, &name, &flags) != SUCCESS) {
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected "
+				"(string class, string function, int flags)");
+			return;
+		} break;
+		
+		case 2: if (uopz_parse_parameters("zl", &name, &flags) != SUCCESS) {
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected "
+				"(string function, int flags)");
+			return;
+		} break;
+		
+		default:	
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected "
+				"(string class, string function, int flags) or (string function, int flags)");
+			return;
+	}
+	
+	if (name && Z_TYPE_P(name) != IS_NULL) {
+		if (!uopz_make_key(name, &uname)) {
+			return;
+		}
+	}
+
+	uopz_flags(clazz, &uname, flags, return_value TSRMLS_CC);
+	uopz_free_key(&uname);
 } /* }}} */
 
 /* {{{ uopz */
@@ -2036,6 +2130,11 @@ ZEND_BEGIN_ARG_INFO(uopz_compose_arginfo, 2)
 	ZEND_ARG_INFO(0, name)
 	ZEND_ARG_INFO(0, classes)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_flags_arginfo, 2)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+	ZEND_ARG_INFO(0, flags)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(__uopz_exit_overload_arginfo, 0)
 ZEND_END_ARG_INFO()
 /* }}} */
@@ -2052,6 +2151,7 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_redefine, uopz_redefine_arginfo)
 	PHP_FE(uopz_undefine, uopz_undefine_arginfo)
 	PHP_FE(uopz_function, uopz_function_arginfo)
+	PHP_FE(uopz_flags, uopz_flags_arginfo)
 	PHP_FE(uopz_implement, uopz_implement_arginfo)
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)
