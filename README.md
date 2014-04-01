@@ -341,6 +341,23 @@ void uopz_implement(string class, string interface);
 void uopz_extend(string class, string parent);
 
 /**
+ * Get or set flags on $class::$method()
+ * @param string class
+ * @param string method
+ * @param int flags
+ * Note: use ZEND_ACC_FETCH as flags to get flags
+ */
+int uopz_flags(string class, string method, int flags);
+
+/**
+ * Get or set flags on $method()
+ * @param string method
+ * @param int flags
+ * Note: use ZEND_ACC_FETCH as flags to get flags
+ */
+int uopz_flags(string function, int flags);
+
+/**
 * Composes new class $name using the list of classes that follow, applying all methods provided
 * @param string name
 * @param array classes
