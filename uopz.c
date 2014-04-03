@@ -364,7 +364,9 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 							}
 						}
 						
-						GET_OP2_IN(BP_VAR_RW, 0);
+						MAKE_STD_ZVAL(op1);
+						ZVAL_STRINGL(op1, Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 1);
+						fci.params[0] = &op1;
 						fci.param_count = 1;
 					} break;
 
@@ -376,7 +378,9 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						ZVAL_STRINGL(op1, oce->name, oce->name_length, 1);
 						fci.params[0] = &op1;
 						
-						GET_OP2(BP_VAR_RW);
+						MAKE_STD_ZVAL(op2);
+						ZVAL_STRINGL(op2, Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 1);
+						fci.params[1] = &op2;
 					} break;
 
 					case ZEND_NEW: {
@@ -433,11 +437,13 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					/* note: fetch requires us to continue explicitly; nobody else gets a shot, caches are ignored
 						note: you get what you pay for, but you must pay !! */
 					case ZEND_FETCH_CLASS: {
-						if (Z_TYPE_P(op2) == IS_OBJECT) {
+						if (Z_TYPE_P(op1) == IS_OBJECT) {
 							EX_T(OPLINE->result.var).class_entry = Z_OBJCE_P(op2);
-						} else if (Z_TYPE_P(op2) == IS_STRING) {
-							EX_T(OPLINE->result.var).class_entry =  zend_fetch_class(Z_STRVAL_P(op2), Z_STRLEN_P(op2), OPLINE->extended_value TSRMLS_CC);
+						} else if (Z_TYPE_P(op1) == IS_STRING) {
+							EX_T(OPLINE->result.var).class_entry =  zend_fetch_class(Z_STRVAL_P(op1), Z_STRLEN_P(op1), OPLINE->extended_value TSRMLS_CC);
 						} else return (ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS);
+						
+						zval_ptr_dtor(&op1);
 						
 						if (EX_T(OPLINE->result.var).class_entry) {
 							OPLINE++;
