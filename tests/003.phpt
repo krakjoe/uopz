@@ -1,5 +1,7 @@
 --TEST--
 Test add trait
+--INI--
+uopz.overloads=1
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--

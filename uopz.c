@@ -74,7 +74,7 @@ static zend_bool uopz_backup(zend_class_entry *scope, uopz_key_t *key TSRMLS_DC)
 
 /* {{{ */
 PHP_INI_BEGIN()
-	 STD_PHP_INI_ENTRY("uopz.overloads",  "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.overloads,          zend_uopz_globals,        uopz_globals)
+	 STD_PHP_INI_ENTRY("uopz.overloads",  "0",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.overloads,          zend_uopz_globals,        uopz_globals)
 	 STD_PHP_INI_ENTRY("uopz.backup",     "1",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.backup,             zend_uopz_globals,        uopz_globals)
 	 STD_PHP_INI_ENTRY("uopz.fixup",      "0",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.fixup,              zend_uopz_globals,        uopz_globals)
 PHP_INI_END() /* }}} */
@@ -267,7 +267,7 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 	ng->overload._exit = NULL;
 	ng->ini.backup = 1;
-	ng->ini.overloads = 1;
+	ng->ini.overloads = 0;
 	ng->ini.fixup = 0;
 } /* }}} */
 

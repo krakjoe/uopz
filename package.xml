@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-04-01</date>
- <time>19:00:00</time>
+ <date>2014-04-04</date>
+ <time>07:00:00</time>
  <version>
-  <release>2.0.3</release>
-  <api>2.0.3</api>
+  <release>2.0.4</release>
+  <api>2.0.4</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix leaks in FETCH_CLASS ADD_TRAIT and ADD_INTERFACE overloads
+  set overloads to 0 by default
  </notes>
  <contents>
   <dir name="/">

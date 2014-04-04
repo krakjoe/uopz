@@ -1,5 +1,7 @@
 --TEST--
 Test throw
+--INI--
+uopz.overloads=1
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
