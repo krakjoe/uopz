@@ -22,7 +22,7 @@
 extern zend_module_entry uopz_module_entry;
 #define phpext_uopz_ptr &uopz_module_entry
 
-#define PHP_UOPZ_VERSION "2.0.3"
+#define PHP_UOPZ_VERSION "2.0.4"
 #define PHP_UOPZ_EXTNAME "uopz"
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
