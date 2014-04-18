@@ -684,11 +684,11 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 		zval_ptr_dtor(&UOPZ(overload)._exit);
 	}
 
-	zend_hash_apply(CG(function_table), php_uopz_clean_user_function TSRMLS_CC);
-	zend_hash_apply(CG(class_table), php_uopz_clean_user_class TSRMLS_CC);
-
 	zend_hash_destroy(&UOPZ(overload).table);
 	zend_hash_destroy(&UOPZ(backup));
+
+	zend_hash_apply(CG(function_table), php_uopz_clean_user_function TSRMLS_CC);
+	zend_hash_apply(CG(class_table), php_uopz_clean_user_class TSRMLS_CC);
 
 	return SUCCESS;
 }
