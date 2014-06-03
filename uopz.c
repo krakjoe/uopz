@@ -1008,9 +1008,10 @@ PHP_FUNCTION(uopz_restore) {
 /* {{{ */
 static inline void uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **return_value, zval *this_ptr TSRMLS_DC) {
 	HashTable *table = (clazz) ? &clazz->function_table : CG(function_table);
-	zend_function *function = NULL;
+	zend_function *function = NULL, *closure = NULL;
 	zend_class_entry *scope = EG(scope);
-
+	zend_bool staticify = 0;
+	
 	if (!name->string) {
 		return;
 	}
@@ -1026,11 +1027,18 @@ static inline void uopz_copy(zend_class_entry *clazz, uopz_key_t *name, zval **r
 		return;
 	}
 
+	staticify = function->common.fn_flags & ZEND_ACC_STATIC;
 	EG(scope)=function->common.scope; 
 	zend_create_closure(
 	    *return_value,
 	    function, function->common.scope,
 	    this_ptr TSRMLS_CC);
+	{
+		closure = zend_get_closure_method_def(*return_value TSRMLS_CC);
+		if (staticify) {
+			closure->common.fn_flags |= ZEND_ACC_STATIC;
+		} else closure->common.fn_flags &= ~ZEND_ACC_STATIC;
+	}
 	EG(scope)=scope;
 } /* }}} */
 

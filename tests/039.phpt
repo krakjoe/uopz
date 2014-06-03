@@ -17,7 +17,7 @@ uopz_compose("A", [], [
 			return new self();
 		}
 	],
-	"test" => [ZEND_ACC_PUBLIC => function() {
+	"test" => [ZEND_ACC_PUBLIC|ZEND_ACC_STATIC => function() {
 		return 5;
 	}]
 ]);
