@@ -1334,7 +1334,7 @@ PHP_FUNCTION(__uopz_exit_overload) {
 				} zend_end_try();
 
 				if (retval) {
-#if PHP_VERSION_ID > 50600
+#if PHP_VERSION_ID >= 50700
 					leave = zend_is_true(retval TSRMLS_CC);
 #else
 					leave = zend_is_true(retval);

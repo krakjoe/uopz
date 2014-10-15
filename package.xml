@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-04-04</date>
- <time>07:00:00</time>
+ <date>2014-10-15</date>
+ <time>13:00:00</time>
  <version>
-  <release>2.0.4</release>
-  <api>2.0.4</api>
+  <release>2.0.5</release>
+  <api>2.0.5</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  set overloads to 0 by default
+  fix builds with >= 50600 (zend_is_true changes)
  </notes>
  <contents>
   <dir name="/">
