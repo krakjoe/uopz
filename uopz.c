@@ -1694,12 +1694,12 @@ PHP_FUNCTION(uopz_function) {
 	long flags = 0;
 	zend_bool ancestors = 1;
 
-	if (uopz_parse_parameters("zO|lb", &name, &closure, zend_ce_closure, &flags, &ancestors) != SUCCESS &&
+	if (uopz_parse_parameters("zO|l", &name, &closure, zend_ce_closure, &flags) != SUCCESS &&
 		uopz_parse_parameters("CzO|lb", &clazz, &name, &closure, zend_ce_closure, &flags, &ancestors) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, "
 			"expected "
-			"(class, name, closure [, flags]) or (name, closure [, flags [, ancestors]])");
+			"(class, name, closure [, flags [, ancestors]]) or (name, closure [, flags])");
 		return;
 	}
 
