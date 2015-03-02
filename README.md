@@ -251,8 +251,9 @@ void uopz_backup(string function);
 * Restores previously backed up $class::$method
 * @param string class
 * @param string method
+* @param bool ancestry
 **/
-void uopz_restore(string class, string method);
+void uopz_restore(string class, string method [, bool ancestry = true]);
 
 /**
 * Restores previously backed up $function

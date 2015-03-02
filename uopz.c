@@ -915,7 +915,7 @@ PHP_FUNCTION(uopz_backup) {
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name TSRMLS_DC) {
+static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name, zend_bool ancestry TSRMLS_DC) {
 	zend_function *function = NULL;
 	HashTable     *backup = NULL;
 	uopz_backup_t *ubackup = NULL;
@@ -955,8 +955,23 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 		table, 
 		ubackup->name.string, ubackup->name.length, ubackup->name.hash,
 		(void**)&ubackup->internal, sizeof(zend_function), (void**)&function) == SUCCESS) {
-		function->common.prototype = function;
+		function->common.prototype = function;		
 		function_add_ref(function);
+		
+		if (clazz && ancestry) {
+			zend_class_entry **pce, *ce;
+			HashPosition position;
+			for (zend_hash_internal_pointer_reset_ex(EG(class_table), &position);
+			     zend_hash_get_current_data_ex(EG(class_table), (void**)&pce, &position) == SUCCESS;
+			     zend_hash_move_forward_ex(EG(class_table), &position)) {
+				zend_class_entry *ce = (*pce);
+				do {
+					if (ce->parent == clazz) {
+						uopz_restore(ce, name, ancestry TSRMLS_CC);	
+					}
+				} while (ce = ce->parent);
+			}
+		}
 	} else {
 		if (clazz) {
 			uopz_exception(
@@ -973,15 +988,17 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, uopz_key_t *name T
 	return 1;
 } /* }}} */
 
-/* {{{ proto bool uopz_restore(string class, string function)
+/* {{{ proto bool uopz_restore(string class, string function [, bool ancestry = true])
 	   proto bool uopz_restore(string function) */
 PHP_FUNCTION(uopz_restore) {
 	zval *name = NULL;
 	zend_class_entry *clazz = NULL;
 	uopz_key_t uname;
+	zend_bool ancestry = 1;
 
 	switch (ZEND_NUM_ARGS()) {
-		case 2: if (uopz_parse_parameters("Cz", &clazz, &name) != SUCCESS) {
+		case 3:		
+		case 2: if (uopz_parse_parameters("Cz|b", &clazz, &name, &ancestry) != SUCCESS) {
 			uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function)");
 			return;
@@ -995,12 +1012,12 @@ PHP_FUNCTION(uopz_restore) {
 
 		default:
 			uopz_refuse_parameters(
-				"unexpected parameter combination, expected (class, function) or (function) expected");
+				"unexpected parameter combination, expected (class, function [, ancestry]) or (function) expected");
 			return;
 	}
 
 	if (uopz_make_key(name, &uname)) {
-		RETVAL_BOOL(uopz_restore(clazz, &uname TSRMLS_CC));
+		RETVAL_BOOL(uopz_restore(clazz, &uname, ancestry TSRMLS_CC));
 		uopz_free_key(&uname);
 	}
 } /* }}} */
