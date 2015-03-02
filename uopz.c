@@ -1582,7 +1582,7 @@ PHP_FUNCTION(uopz_undefine)
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zval *closure, long flags TSRMLS_DC) {
+static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name, zval *closure, long flags, zend_bool ancestry TSRMLS_DC) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
 	uopz_key_t lower = *name;
@@ -1666,24 +1666,40 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, uopz_key_t *name,
 		destination->common.scope = clazz;
 	} else destination->common.scope = NULL;
 
+	if (clazz && ancestry) {
+		zend_class_entry **pce, *ce;
+		HashPosition position;
+		for (zend_hash_internal_pointer_reset_ex(EG(class_table), &position);
+		     zend_hash_get_current_data_ex(EG(class_table), (void**)&pce, &position) == SUCCESS;
+		     zend_hash_move_forward_ex(EG(class_table), &position)) {
+			zend_class_entry *ce = (*pce);
+			do {
+				if (ce->parent == clazz) {
+					uopz_function(ce, name, closure, flags, ancestry TSRMLS_CC);	
+				}
+			} while (ce = ce->parent);
+		}
+	}
+
 	return 1;
 } /* }}} */
 
 /* {{{ proto bool uopz_function(string function, Closure handler [, int flags = 0])
-	   proto bool uopz_function(string class, string method, Closure handler [, int flags = 0]) */
+	   proto bool uopz_function(string class, string method, Closure handler [, int flags = 0 [, bool ancestors = true]]) */
 PHP_FUNCTION(uopz_function) {
 	zval *name = NULL;
 	uopz_key_t uname;
 	zval *closure = NULL;
 	zend_class_entry *clazz = NULL;
 	long flags = 0;
+	zend_bool ancestors = 1;
 
-	if (uopz_parse_parameters("zO|l", &name, &closure, zend_ce_closure, &flags) != SUCCESS &&
-		uopz_parse_parameters("CzO|l", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
+	if (uopz_parse_parameters("zO|lb", &name, &closure, zend_ce_closure, &flags, &ancestors) != SUCCESS &&
+		uopz_parse_parameters("CzO|lb", &clazz, &name, &closure, zend_ce_closure, &flags, &ancestors) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, "
 			"expected "
-			"(class, name, closure [, flags]) or (name, closure [, flags])");
+			"(class, name, closure [, flags]) or (name, closure [, flags [, ancestors]])");
 		return;
 	}
 
@@ -1691,7 +1707,8 @@ PHP_FUNCTION(uopz_function) {
 		return;
 	}
 
-	RETVAL_BOOL(uopz_function(clazz, &uname, closure, flags TSRMLS_CC));
+	RETVAL_BOOL(uopz_function(clazz, &uname, closure, flags, ancestors TSRMLS_CC));
+
 	uopz_free_key(&uname);
 } /* }}} */
 
@@ -1941,7 +1958,7 @@ static inline zend_bool uopz_compose(uopz_key_t *name, HashTable *classes, HashT
 			 	closure = member;
 			 }
 			 
-			 if (!uopz_function(entry, &ukey, *closure, flags TSRMLS_CC)) {
+			 if (!uopz_function(entry, &ukey, *closure, flags, 0 TSRMLS_CC)) {
 			 	uopz_compose_bail(
 			 		"failed to add method %s to class %s, "
 			 		"previous exceptions occured", ukey.string, uname.string);

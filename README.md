@@ -279,9 +279,10 @@ void uopz_delete(string function);
 * @param string function
 * @param Closure handler
 * @param int modifiers
+* @param bool ancestry
 * Note: if the method does not exist it will be created
 **/
-void uopz_function(string class, string method, Closure handler [, int modifiers = false]);
+void uopz_function(string class, string method, Closure handler [, int modifiers = false [, bool ancestry = true]]);
 
 /**
 * Declare $function as $handler
