@@ -377,16 +377,15 @@ void uopz_compose(string name, array classes [, array methods [, array propertie
 Installation
 ============
 
- - ```uopz``` is a Zend Extension, and so should be loaded with the ```zend_extension``` INI directive. - 
  - ```uopz``` should be loaded *before* opcache.
  
 Testing
 =======
 *Running the test suite*
 
-Running tests with the normal ```make test``` wigs out because this is a ```zend_extension```; use (a sensible variation of) the following command to run tests:
+After ``make`` has executed, run:
 
-    TEST_PHP_EXECUTABLE=/usr/local/bin/php php run-tests.php
+	``make test``
 
 You are done reading
 ====================

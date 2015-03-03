@@ -80,6 +80,46 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0 TSRMLS_CC, message, ##__VA_ARGS__)
 
+
+static int uopz_zend_startup(zend_extension *extension) /* {{{ */
+{	
+#if PHP_VERSION_ID >= 50700
+	TSRMLS_FETCH();
+	
+	return zend_startup_module(&uopz_module_entry TSRMLS_CC);
+#else
+	return zend_startup_module(&uopz_module_entry);
+#endif
+}
+/* }}} */
+
+#ifndef ZEND_EXT_API
+#define ZEND_EXT_API    ZEND_DLEXPORT
+#endif
+ZEND_EXTENSION();
+
+static inline void php_uopz_overload_exit(zend_op_array *op_array);
+
+ZEND_EXT_API zend_extension zend_extension_entry = {
+	PHP_UOPZ_EXTNAME,
+	PHP_UOPZ_VERSION,
+	"Joe Watkins <krakjoe@php.net>",
+	"https://github.com/krakjoe/uopz",
+	"Copyright (c) 2014",
+	uopz_zend_startup,
+	NULL,           	    /* shutdown_func_t */
+	NULL,                   /* activate_func_t */
+	NULL,                   /* deactivate_func_t */
+	NULL,           	    /* message_handler_func_t */
+	php_uopz_overload_exit, /* op_array_handler_func_t */
+	NULL, 				    /* statement_handler_func_t */
+	NULL,             	    /* fcall_begin_handler_func_t */
+	NULL,           	    /* fcall_end_handler_func_t */
+	NULL,      			    /* op_array_ctor_func_t */
+	NULL,      			    /* op_array_dtor_func_t */
+	STANDARD_ZEND_EXTENSION_PROPERTIES
+};
+
 /* {{{ */
 typedef struct _uopz_key_t {
 	char       *string;
@@ -603,6 +643,12 @@ static inline void php_uopz_init_handlers(int module TSRMLS_DC) {
  */
 static PHP_MINIT_FUNCTION(uopz)
 {
+	if (!zend_get_extension("strict")) {
+        	zend_extension_entry.startup = NULL;
+		zend_register_extension(
+            		&zend_extension_entry, NULL);
+    	}
+
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
 	UOPZ(copts) = CG(compiler_options);
@@ -739,33 +785,36 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 	zend_op  *opline = NULL;
 	TSRMLS_FETCH();
 
-	while (it < end) {
-		opline = &op_array->opcodes[it];
+	if (UOPZ(ini).overloads) {
+		while (it < end) {
+			opline = &op_array->opcodes[it];
 
-		switch (opline->opcode) {
-			case ZEND_EXIT: {
-				znode     result;
-				zval      call;
+			switch (opline->opcode) {
+				case ZEND_EXIT: {
+					znode     result;
+					zval      call;
 
-				ZVAL_STRINGL(&call,
-					"__uopz_exit_overload", 
-					sizeof("__uopz_exit_overload")-1, 1);
+					ZVAL_STRINGL(&call,
+						"__uopz_exit_overload", 
+						sizeof("__uopz_exit_overload")-1, 1);
 
-				opline->opcode = ZEND_DO_FCALL;
-				SET_NODE(op_array, opline->op1, call);
-				SET_UNUSED(opline->op2);
+					opline->opcode = ZEND_DO_FCALL;
+					SET_NODE(op_array, opline->op1, call);
+					SET_UNUSED(opline->op2);
+				
 #if PHP_VERSION_ID > 50500
-				opline->op2.num = CG(context).nested_calls;
+					opline->op2.num = CG(context).nested_calls;
 #endif
-				opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
-				opline->result_type = IS_TMP_VAR;
-				GET_NODE(op_array, &result, opline->result);		
-				CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
-				GET_CACHE_SLOT(op_array, opline->op1.constant);
-			} break;
-		}
+					opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
+					opline->result_type = IS_TMP_VAR;
+					GET_NODE(op_array, &result, opline->result);		
+					CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
+					GET_CACHE_SLOT(op_array, opline->op1.constant);
+				} break;
+			}
 
-		it++;
+			it++;
+		}
 	}
 } /* }}} */
 
@@ -1383,6 +1432,11 @@ PHP_FUNCTION(__uopz_exit_overload) {
 #else
 					leave = zend_is_true(retval);
 #endif
+
+					if (Z_TYPE_P(retval) == IS_LONG) {
+						EG(exit_status) = Z_LVAL_P(retval);
+					}
+					
 					zval_ptr_dtor(&retval);
 				}
 			}
@@ -2251,43 +2305,6 @@ zend_module_entry uopz_module_entry = {
 	STANDARD_MODULE_PROPERTIES
 };
 /* }}} */
-
-static int uopz_zend_startup(zend_extension *extension) /* {{{ */
-{	
-#if PHP_VERSION_ID >= 50700
-	TSRMLS_FETCH();
-	
-	return zend_startup_module(&uopz_module_entry TSRMLS_CC);
-#else
-	return zend_startup_module(&uopz_module_entry);
-#endif
-}
-/* }}} */
-
-#ifndef ZEND_EXT_API
-#define ZEND_EXT_API    ZEND_DLEXPORT
-#endif
-ZEND_EXTENSION();
-
-ZEND_EXT_API zend_extension zend_extension_entry = {
-	PHP_UOPZ_EXTNAME,
-	PHP_UOPZ_VERSION,
-	"Joe Watkins <krakjoe@php.net>",
-	"https://github.com/krakjoe/uopz",
-	"Copyright (c) 2014",
-	uopz_zend_startup,
-	NULL,           	    /* shutdown_func_t */
-	NULL,                   /* activate_func_t */
-	NULL,                   /* deactivate_func_t */
-	NULL,           	    /* message_handler_func_t */
-	php_uopz_overload_exit, /* op_array_handler_func_t */
-	NULL, 				    /* statement_handler_func_t */
-	NULL,             	    /* fcall_begin_handler_func_t */
-	NULL,           	    /* fcall_end_handler_func_t */
-	NULL,      			    /* op_array_ctor_func_t */
-	NULL,      			    /* op_array_dtor_func_t */
-	STANDARD_ZEND_EXTENSION_PROPERTIES
-};
 
 #ifdef COMPILE_DL_UOPZ
 ZEND_GET_MODULE(uopz)
