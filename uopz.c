@@ -159,7 +159,7 @@ uopz_opcode_t uoverrides[] = {
 	UOPZ_CODE(ZEND_ADD_TRAIT, 2, "function(class, trait)"),
 	UOPZ_CODE(ZEND_ADD_INTERFACE, 2, "function(class, interface)"),
 	UOPZ_CODE(ZEND_INSTANCEOF, 2, "function(object, class)"),
-	UOPZ_CODE(ZEND_EXIT, 0, "function(void)"),
+	UOPZ_CODE(ZEND_EXIT, 1, "function(status)"),
 	UOPZ_CODE_END
 }; /* }}} */
 
@@ -793,23 +793,76 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 				case ZEND_EXIT: {
 					znode     result;
 					zval      call;
+					zend_uchar otype = opline->op1_type;
 
 					ZVAL_STRINGL(&call,
 						"__uopz_exit_overload", 
 						sizeof("__uopz_exit_overload")-1, 1);
+					
+					if (otype != IS_UNUSED) {
+						zend_uint target = op_array->last;
+						znode_op  operand = opline->op1;
 
-					opline->opcode = ZEND_DO_FCALL;
-					SET_NODE(op_array, opline->op1, call);
-					SET_UNUSED(opline->op2);
+						/* reallocate opcodes */
+						op_array->last += 3;
+						op_array->opcodes = (zend_op*)
+							erealloc(op_array->opcodes,
+								 op_array->last * sizeof(zend_op));
+						CG(context).opcodes_size = op_array->last;
+					
+						/* jump to fcall */
+						opline->opcode = ZEND_JMP;
+						SET_UNUSED(opline->op1);
+						SET_UNUSED(opline->op2);
+						opline->op1.opline_num = target;
+						
+						/* send parameter */
+						opline = &op_array->opcodes[target];
+						memset(opline, 0, sizeof(zend_op));
+						opline->opcode = ZEND_SEND_VAL;
+						opline->op1 = operand;
+						opline->op1_type = otype;
+						SET_UNUSED(opline->op2);
+
+						/* do fcall */
+						opline = &op_array->opcodes[target + 1];
+						memset(opline, 0, sizeof(zend_op));
+						opline->opcode = ZEND_DO_FCALL;
+						opline->extended_value = otype != IS_UNUSED ? 1 : 0;
+						SET_NODE(op_array, opline->op1, call);
+						SET_UNUSED(opline->op2);
+
+#if PHP_VERSION_ID > 50500
+						opline->op2.num = CG(context).nested_calls;
+#endif
+						opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
+						opline->result_type = IS_TMP_VAR;
+						GET_NODE(op_array, &result, opline->result);		
+						CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
+						GET_CACHE_SLOT(op_array, opline->op1.constant);
+					
+						/* jump back to next statement */
+						opline = &op_array->opcodes[target+2];
+						memset(opline, 0, sizeof(zend_op));
+						opline->opcode = ZEND_JMP;
+						opline->op1.opline_num = it + 1;
+						SET_UNUSED(opline->op1);
+						SET_UNUSED(opline->op2);
+					} else {
+						/* do fcall (no parameter) */
+						opline->opcode = ZEND_DO_FCALL;
+						SET_NODE(op_array, opline->op1, call);
+						SET_UNUSED(opline->op2);
 				
 #if PHP_VERSION_ID > 50500
-					opline->op2.num = CG(context).nested_calls;
+						opline->op2.num = CG(context).nested_calls;
 #endif
-					opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
-					opline->result_type = IS_TMP_VAR;
-					GET_NODE(op_array, &result, opline->result);		
-					CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
-					GET_CACHE_SLOT(op_array, opline->op1.constant);
+						opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
+						opline->result_type = IS_TMP_VAR;
+						GET_NODE(op_array, &result, opline->result);		
+						CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
+						GET_CACHE_SLOT(op_array, opline->op1.constant);
+					}
 				} break;
 			}
 
@@ -1405,26 +1458,35 @@ PHP_FUNCTION(uopz_delete) {
 /* {{{ proto void __uopz_exit_overload() */
 PHP_FUNCTION(__uopz_exit_overload) {
 	zend_bool  leave = 1;
-
-	if(UOPZ(overload)._exit) {
+	zval       *status = NULL;
+	
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z", &status) == SUCCESS && UOPZ(overload)._exit) {
 		zend_fcall_info fci;
 		zend_fcall_info_cache fcc;
 		char *cerror = NULL;
 		zval *retval = NULL;
 
-		memset(
-			&fci, 0, sizeof(zend_fcall_info));
+		memset(&fci, 0, sizeof(zend_fcall_info));
+
 		if (zend_is_callable_ex(UOPZ(overload)._exit, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
+
 			if (zend_fcall_info_init(UOPZ(overload)._exit, 
 					IS_CALLABLE_CHECK_SILENT, 
 					&fci, &fcc, 
 					NULL, &cerror TSRMLS_CC) == SUCCESS) {
 
 				fci.retval_ptr_ptr = &retval;
+				if (ZEND_NUM_ARGS()) {
+					zend_fcall_info_argn(&fci TSRMLS_CC, 1, &status);
+				}
 
 				zend_try {
 					zend_call_function(&fci, &fcc TSRMLS_CC);
 				} zend_end_try();
+
+				if (ZEND_NUM_ARGS()) {
+					zend_fcall_info_args_clear(&fci, 1);
+				}
 
 				if (retval) {
 #if PHP_VERSION_ID >= 50700
@@ -1432,15 +1494,18 @@ PHP_FUNCTION(__uopz_exit_overload) {
 #else
 					leave = zend_is_true(retval);
 #endif
-
 					if (Z_TYPE_P(retval) == IS_LONG) {
 						EG(exit_status) = Z_LVAL_P(retval);
-					}
-					
+					} else zend_print_variable(retval);
+
 					zval_ptr_dtor(&retval);
 				}
 			}
 		}
+	} else if(status != NULL) {
+		if (Z_TYPE_P(status) == IS_LONG) {
+			EG(exit_status) = Z_LVAL_P(status);
+		} else zend_print_variable(status);
 	}
 
 	zval_ptr_dtor(&return_value);
@@ -2264,7 +2329,9 @@ ZEND_BEGIN_ARG_INFO(uopz_flags_arginfo, 2)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, flags)
 ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO(__uopz_exit_overload_arginfo, 0)
+	ZEND_ARG_INFO(0, status)
 ZEND_END_ARG_INFO()
 /* }}} */
 

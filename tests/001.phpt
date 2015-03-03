@@ -6,7 +6,7 @@ uopz.overloads=1
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_overload(ZEND_EXIT, function(){ return false; });
+uopz_overload(ZEND_EXIT, function($status = null){ return false; });
 
 exit();
 echo "ok";

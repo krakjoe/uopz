@@ -13,7 +13,7 @@ try {
 }
 
 try {
-	uopz_overload(ZEND_EXIT, function($op1){});
+	uopz_overload(ZEND_EXIT, function($op1, $op2){});
 } catch (InvalidArgumentException $ex) {
 		printf("%s\n\n", (string)$ex);
 }
@@ -54,7 +54,7 @@ Stack trace:
 #0 %s(3): uopz_overload(68, Object(Closure))
 #1 {main}
 
-exception '%s' with message 'invalid handler for ZEND_EXIT, expected function(void)' in %s:%d
+exception '%s' with message 'invalid handler for ZEND_EXIT, expected function(status)' in %s:%d
 Stack trace:
 #0 %s(9): uopz_overload(79, Object(Closure))
 #1 {main}
