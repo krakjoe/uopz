@@ -639,7 +639,7 @@ static inline void php_uopz_init_handlers(int module TSRMLS_DC) {
  */
 static PHP_MINIT_FUNCTION(uopz)
 {
-	if (!zend_get_extension("strict")) {
+	if (!zend_get_extension("uopz")) {
 		zend_extension_entry.startup = NULL;
 		zend_register_extension(&zend_extension_entry, NULL);
 	}
