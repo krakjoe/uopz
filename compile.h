@@ -112,7 +112,6 @@ static inline void zend_insert_literal(zend_op_array *op_array, const zval *zv, 
 /* }}} */
 
 #if PHP_VERSION_ID > 50599
-/* {{{ */
 static inline void zend_push_function_call_entry(zend_function *fbc TSRMLS_DC) /* {{{ */
 {
     zend_function_call_entry fcall = { fbc };
@@ -120,7 +119,6 @@ static inline void zend_push_function_call_entry(zend_function *fbc TSRMLS_DC) /
 }
 /* }}} */
 #else
-/* {{{ */
 static inline void zend_push_function_call_entry(zend_function *fbc TSRMLS_DC) /* {{{ */
 {
     zend_stack_push(&CG(function_call_stack), &fbc, sizeof(zend_function*));
@@ -128,7 +126,7 @@ static inline void zend_push_function_call_entry(zend_function *fbc TSRMLS_DC) /
 /* }}} */
 #endif
 
-/* {{{ */
+#ifdef COMPILE_DL_UOPZ
 int zend_add_literal(zend_op_array *op_array, const zval *zv TSRMLS_DC) /* {{{ */
 {
 	int i = op_array->last_literal;
@@ -142,6 +140,7 @@ int zend_add_literal(zend_op_array *op_array, const zval *zv TSRMLS_DC) /* {{{ *
 	zend_insert_literal(op_array, zv, i TSRMLS_CC);
 	return i;
 }
+#endif
 /* }}} */
 
 /* {{{ */
