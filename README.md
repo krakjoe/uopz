@@ -2,6 +2,8 @@ UOPZ
 ====
 *User Operations for Zend*
 
+[![Build Status](https://travis-ci.org/krakjoe/uopz.svg?branch=master)](https://travis-ci.org/krakjoe/uopz)
+
 The ```uopz``` extension exposes Zend engine functionality normally used at compilation and execution time in order to allow modification of the internal structures that represent PHP code.
 
 It supports the following activities:
