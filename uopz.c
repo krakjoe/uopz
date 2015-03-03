@@ -55,6 +55,24 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 # define EX_T(offset) (*(temp_variable *)((char*)execute_data->Ts + offset))
 #endif
 
+#define AI_SET_PTR(t, val) do {				\
+	temp_variable *__t = (t);			\
+	__t->var.ptr = (val);				\
+	__t->var.ptr_ptr = &__t->var.ptr;		\
+} while (0)
+
+#define RETURN_VALUE_USED(opline) (!((opline)->result_type & EXT_TYPE_UNUSED))
+#define ZEND_VM_CONTINUE()         return 0
+
+#define ZEND_VM_SET_OPCODE(new_op) \
+	OPLINE = new_op
+
+#define ZEND_VM_JMP(new_op) \
+	if (EXPECTED(!EG(exception))) { \
+		ZEND_VM_SET_OPCODE(new_op); \
+	} \
+	ZEND_VM_CONTINUE()
+
 #define uopz_parse_parameters(spec, ...) zend_parse_parameters_ex\
 	(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, spec, ##__VA_ARGS__)
 #define uopz_refuse_parameters(message, ...) zend_throw_exception_ex\
@@ -466,15 +484,24 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					} break;
 
 					case ZEND_NEW: {
-						convert_to_string(op1);
-
-						if (zend_lookup_class(Z_STRVAL_P(op1), Z_STRLEN_P(op1), &nce TSRMLS_CC) == SUCCESS) {
-							if (*nce != oce) {
-								EX_T(OPLINE->op1.var).class_entry = *nce;
+						if (Z_TYPE_P(op1) == IS_OBJECT) {
+							if (RETURN_VALUE_USED(OPLINE)) {
+								AI_SET_PTR(&EX_T(OPLINE->result.var), op1);						
+							} else {
+								zval_ptr_dtor(&op1);
 							}
-						}
+							ZEND_VM_JMP(EX(op_array)->opcodes + OPLINE->op2.opline_num);
+						} else {
+							convert_to_string(op1);
 
-						zval_ptr_dtor(&op1);
+							if (zend_lookup_class(Z_STRVAL_P(op1), Z_STRLEN_P(op1), &nce TSRMLS_CC) == SUCCESS) {
+								if (*nce != oce) {
+									EX_T(OPLINE->op1.var).class_entry = *nce;
+								}
+							}
+
+							zval_ptr_dtor(&op1);
+						}
 					} break;
 					
 					case ZEND_THROW: {
