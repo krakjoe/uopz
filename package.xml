@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-10-15</date>
+ <date>2015-03-04</date>
  <time>13:00:00</time>
  <version>
-  <release>2.0.6</release>
-  <api>2.0.6</api>
+  <release>2.0.7</release>
+  <api>2.0.7</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,11 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix builds with >= 50600 (zend_is_true changes)
+  fix bug in overriding methods in classes loaded prior to override
+  add ability to send object from ZEND_NEW handler
+  send exit parameter to overload function
+  fix bug in handling exit status code when overloading disabled
+  set exit status code when overloading enabled from return value
  </notes>
  <contents>
   <dir name="/">
@@ -72,6 +76,9 @@
    <file name="tests/045.phpt" role="test" />
    <file name="tests/046.phpt" role="test" />
    <file name="tests/047.phpt" role="test" />
+   <file name="tests/048.phpt" role="test" />
+   <file name="tests/049.phpt" role="test" />
+   <file name="tests/050.phpt" role="test" />
    <file name="tests/skipif.inc" role="test" />
    <file name="uopz.h" role="src" />
    <file name="uopz.c" role="src" />
