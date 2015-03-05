@@ -793,7 +793,7 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 					ZVAL_STRINGL(&call,
 						"__uopz_exit_overload",
 						sizeof("__uopz_exit_overload")-1, 1);
-					
+
 					if (otype != IS_UNUSED) {
 						zend_uint target = op_array->last;
 						znode_op  operand = opline->op1;
@@ -804,8 +804,9 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 							erealloc(op_array->opcodes,
 								 op_array->last * sizeof(zend_op));
 						CG(context).opcodes_size = op_array->last;
-					
+
 						/* jump to fcall */
+						memset(opline, 0, sizeof(zend_op));
 						opline->opcode = ZEND_JMP;
 						SET_UNUSED(opline->op1);
 						SET_UNUSED(opline->op2);
@@ -814,7 +815,15 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 						/* send parameter */
 						opline = &op_array->opcodes[target];
 						memset(opline, 0, sizeof(zend_op));
-						opline->opcode = ZEND_SEND_VAL;
+						switch (otype) {
+							case IS_CV:
+							case IS_VAR:
+								opline->opcode = ZEND_SEND_VAR;
+							break;
+							
+							default:
+								opline->opcode = ZEND_SEND_VAL;
+						}
 						opline->op1 = operand;
 						opline->op1_type = otype;
 						SET_UNUSED(opline->op2);
