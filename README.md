@@ -77,7 +77,7 @@ The following example code shows how to overload ```ZEND_EXIT``` with ```uopz```
 
 ```php
 <?php
-uopz_overload(ZEND_EXIT, function(){});
+uopz_overload(ZEND_EXIT, function($status = 0){});
 
 exit();
 echo "I will be displayed\n";
