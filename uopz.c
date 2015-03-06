@@ -798,20 +798,23 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 						zend_uint target = op_array->last;
 						znode_op  operand = opline->op1;
 
-						/* reallocate opcodes */
-						op_array->last += 3;
+						/* reallocate opcodes */						
+						if (it < end) {
+							op_array->last += 3;
+						} else op_array->last += 2;
+
 						op_array->opcodes = (zend_op*)
 							erealloc(op_array->opcodes,
 								 op_array->last * sizeof(zend_op));
 						CG(context).opcodes_size = op_array->last;
 
-						/* jump to fcall */
+						/* jump to send */
 						memset(opline, 0, sizeof(zend_op));
 						opline->opcode = ZEND_JMP;
+						opline->op1.opline_num = target;
 						SET_UNUSED(opline->op1);
 						SET_UNUSED(opline->op2);
-						opline->op1.opline_num = target;
-						
+
 						/* send parameter */
 						opline = &op_array->opcodes[target];
 						memset(opline, 0, sizeof(zend_op));
@@ -825,14 +828,16 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 								opline->opcode = ZEND_SEND_VAL;
 						}
 						opline->op1 = operand;
-						opline->op1_type = otype;
+						opline->op1_type = otype;	
+						opline->op2.opline_num = 1;
+						opline->extended_value = ZEND_DO_FCALL;
 						SET_UNUSED(opline->op2);
 
-						/* do fcall */
+						/* call */
 						opline = &op_array->opcodes[target + 1];
 						memset(opline, 0, sizeof(zend_op));
 						opline->opcode = ZEND_DO_FCALL;
-						opline->extended_value = otype != IS_UNUSED ? 1 : 0;
+						opline->extended_value = 1;
 						SET_NODE(op_array, opline->op1, call);
 						SET_UNUSED(opline->op2);
 #if PHP_VERSION_ID > 50500
@@ -843,16 +848,19 @@ static inline void php_uopz_overload_exit(zend_op_array *op_array) {
 						GET_NODE(op_array, &result, opline->result);		
 						CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
 						GET_CACHE_SLOT(op_array, opline->op1.constant);
-					
-						/* jump back to next statement */
-						opline = &op_array->opcodes[target+2];
-						memset(opline, 0, sizeof(zend_op));
-						opline->opcode = ZEND_JMP;
-						opline->op1.opline_num = it + 1;
-						SET_UNUSED(opline->op1);
-						SET_UNUSED(opline->op2);
+
+						if (it < end) {
+							/* jmp back */
+							opline = &op_array->opcodes[target+2];
+							memset(opline, 0, sizeof(zend_op));
+							opline->opcode = ZEND_JMP;
+							opline->op1.opline_num = it + 1;
+							SET_UNUSED(opline->op1);
+							SET_UNUSED(opline->op2);
+						}
 					} else {
 						/* do fcall (no parameter) */
+						memset(opline, 0, sizeof(zend_op));
 						opline->opcode = ZEND_DO_FCALL;
 						SET_NODE(op_array, opline->op1, call);
 						SET_UNUSED(opline->op2);
