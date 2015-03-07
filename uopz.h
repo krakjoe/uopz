@@ -22,24 +22,21 @@
 extern zend_module_entry uopz_module_entry;
 #define phpext_uopz_ptr &uopz_module_entry
 
-#define PHP_UOPZ_VERSION "2.0.7"
+#define PHP_UOPZ_VERSION "2.1.0"
 #define PHP_UOPZ_EXTNAME "uopz"
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
-	struct {
-		zval			  *_exit;
-		HashTable         table;
-	} overload;
+	HashTable	overload;
 	
 	struct {
-		zend_bool          overloads;
-		zend_bool          backup;
+		zend_bool	overloads;
+		zend_bool	backup;
 		/* this is horrible, and not normally necessary */
-		zend_bool          fixup;
+		zend_bool	fixup;
 	} ini;
 	
-	zend_ulong			   copts;
-	HashTable              backup;
+	zend_ulong	copts;
+	HashTable	backup;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS

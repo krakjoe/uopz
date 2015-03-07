@@ -46,9 +46,9 @@ Overloading Exit
 
 We have to treat ```ZEND_EXIT``` differently, opcache will, by default, optimize away the dead code after an unconditional ```ZEND_EXIT```, during test execution and hackery this is less than optimal. You don't want to disable CFG based optimization in opcache ! 
 
-So ```uopz``` changes ```ZEND_EXIT``` opcodes into opcodes that result in the invokation of the user overload function. These will not be optimized or changed by opcache, and so you can run tests using fully optimized code as you do in production.
+Returning ```ZEND_USER_OPCODE_RETURN``` from a ```ZEND_EXIT``` overload will result in execution in the outer context continuing, which is all that is required for testing.
 
-Returning ```true``` from a ```ZEND_EXIT``` overload will result in exiting, doing anything else, or nothing, results in continuing with executing normally.
+*See ```tests/001.phpt``` for detail.*
 
 Returning from Overload
 =======================
@@ -75,21 +75,35 @@ The following example code shows how to overload ```ZEND_EXIT``` with ```uopz```
 
 ```php
 <?php
-uopz_overload(ZEND_EXIT, function(){});
+uopz_overload(ZEND_EXIT, function($status = null){
+	return ZEND_USER_OPCODE_RETURN;
+});
 
-exit();
-echo "I will be displayed\n";
+class Test {
+	public function method() {
+		exit();
+	}
+}
 
+class Unit {
+	public function test() {
+		$test = new Test();
+		$test->method();
+		
+		return true;
+	} 
+}
+$unit = new Unit();
+var_dump($unit->test());
 uopz_overload(ZEND_EXIT, null);
-
-exit();
-echo "I will not be displayed\n";
+var_dump($unit->test());
+echo "failed";
 ?>
 ```
 
 Will produce the following:
     
-    I will be displayed
+    bool(true)
 
 *Note: Setting an overload to ```null``` effectively removes the overload.*
 

@@ -6,13 +6,29 @@ uopz.overloads=1
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_overload(ZEND_EXIT, function($status = null){ return false; });
+uopz_overload(ZEND_EXIT, function($status = null){
+	return ZEND_USER_OPCODE_RETURN;
+});
 
-exit();
-echo "ok";
+class Test {
+	public function method() {
+		exit(10);
+	}
+}
+
+class Unit {
+	public function test() {
+		$test = new Test();
+		$test->method();
+		
+		return true;
+	} 
+}
+$unit = new Unit();
+var_dump($unit->test());
 uopz_overload(ZEND_EXIT, null);
-exit();
+var_dump($unit->test());
 echo "failed";
 ?>
 --EXPECT--
-ok
+bool(true)

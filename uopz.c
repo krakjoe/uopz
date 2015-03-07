@@ -80,46 +80,6 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0 TSRMLS_CC, message, ##__VA_ARGS__)
 
-
-static int uopz_zend_startup(zend_extension *extension) /* {{{ */
-{
-#if PHP_VERSION_ID >= 50700
-	TSRMLS_FETCH();
-
-	return zend_startup_module(&uopz_module_entry TSRMLS_CC);
-#else
-	return zend_startup_module(&uopz_module_entry);
-#endif
-}
-/* }}} */
-
-#ifndef ZEND_EXT_API
-#define ZEND_EXT_API    ZEND_DLEXPORT
-#endif
-ZEND_EXTENSION();
-
-static inline void php_uopz_overload_exit(zend_op_array *op_array);
-
-ZEND_EXT_API zend_extension zend_extension_entry = {
-	PHP_UOPZ_EXTNAME,
-	PHP_UOPZ_VERSION,
-	"Joe Watkins <krakjoe@php.net>",
-	"https://github.com/krakjoe/uopz",
-	"Copyright (c) 2014",
-	uopz_zend_startup,
-	NULL,           	    /* shutdown_func_t */
-	NULL,                   /* activate_func_t */
-	NULL,                   /* deactivate_func_t */
-	NULL,           	    /* message_handler_func_t */
-	php_uopz_overload_exit, /* op_array_handler_func_t */
-	NULL, 				    /* statement_handler_func_t */
-	NULL,             	    /* fcall_begin_handler_func_t */
-	NULL,           	    /* fcall_end_handler_func_t */
-	NULL,      			    /* op_array_ctor_func_t */
-	NULL,      			    /* op_array_dtor_func_t */
-	STANDARD_ZEND_EXTENSION_PROPERTIES
-};
-
 /* {{{ */
 typedef struct _uopz_key_t {
 	char       *string;
@@ -321,7 +281,6 @@ static int uopz_find_function(HashTable *table, uopz_key_t *name, zend_function 
 
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
-	ng->overload._exit = NULL;
 	ng->ini.backup = 1;
 	ng->ini.overloads = 0;
 	ng->ini.fixup = 0;
@@ -371,7 +330,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 	uopz_handler_t *uhandler = NULL;
 	int dispatching = 0;
 
-	if (zend_hash_index_find(&UOPZ(overload).table, OPCODE, (void**)&uhandler) == SUCCESS) {
+	if (zend_hash_index_find(&UOPZ(overload), OPCODE, (void**)&uhandler) == SUCCESS) {
 		zend_fcall_info fci;
 		zend_fcall_info_cache fcc;
 		char *cerror = NULL;
@@ -617,11 +576,9 @@ static inline void php_uopz_init_handlers(int module TSRMLS_DC) {
 			zval constant;
 
 			if (UOPZ(ini).overloads) {
-				if (uop->code != ZEND_EXIT) {
-					ohandlers[uop->code] =
-						zend_get_user_opcode_handler(uop->code);
-					zend_set_user_opcode_handler(uop->code, php_uopz_handler);
-				}
+				ohandlers[uop->code] =
+					zend_get_user_opcode_handler(uop->code);
+				zend_set_user_opcode_handler(uop->code, php_uopz_handler);
 			}
 
 			if (!zend_get_constant(uop->name, uop->length+1, &constant TSRMLS_CC)) {
@@ -639,11 +596,6 @@ static inline void php_uopz_init_handlers(int module TSRMLS_DC) {
  */
 static PHP_MINIT_FUNCTION(uopz)
 {
-	if (!zend_get_extension("uopz")) {
-		zend_extension_entry.startup = NULL;
-		zend_register_extension(&zend_extension_entry, NULL);
-	}
-
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
 	UOPZ(copts) = CG(compiler_options);
@@ -710,7 +662,7 @@ static PHP_RINIT_FUNCTION(uopz)
 				*ce : zend_exception_get_default(TSRMLS_C);
 
 	zend_hash_init(
-		&UOPZ(overload).table, 8, NULL,
+		&UOPZ(overload), 8, NULL,
 		(dtor_func_t) php_uopz_handler_dtor, 0);
 	zend_hash_init(
 		&UOPZ(backup), 8, NULL,
@@ -748,11 +700,7 @@ static inline int php_uopz_clean_user_class(void *pData TSRMLS_DC) {
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
 {
-	if (UOPZ(overload)._exit) {
-		zval_ptr_dtor(&UOPZ(overload)._exit);
-	}
-
-	zend_hash_destroy(&UOPZ(overload).table);
+	zend_hash_destroy(&UOPZ(overload));
 	zend_hash_destroy(&UOPZ(backup));
 
 	zend_hash_apply(CG(function_table), php_uopz_clean_user_function TSRMLS_CC);
@@ -771,115 +719,6 @@ static PHP_MINFO_FUNCTION(uopz)
 	php_info_print_table_end();
 }
 /* }}} */
-
-/* {{{ */
-static inline void php_uopz_overload_exit(zend_op_array *op_array) {
-
-	zend_uint it = 0;
-	zend_uint end = op_array->last;
-	zend_op  *opline = NULL;
-	TSRMLS_FETCH();
-
-	if (UOPZ(ini).overloads) {
-		while (it < end) {
-			opline = &op_array->opcodes[it];
-
-			switch (opline->opcode) {
-				case ZEND_EXIT: {
-					znode     result;
-					zval      call;
-					zend_uchar otype = opline->op1_type;
-
-					ZVAL_STRINGL(&call,
-						"__uopz_exit_overload",
-						sizeof("__uopz_exit_overload")-1, 1);
-
-					if (otype != IS_UNUSED) {
-						zend_uint target = op_array->last;
-						znode_op  operand = opline->op1;
-
-						/* reallocate opcodes */						
-						if (it < end) {
-							op_array->last += 3;
-						} else op_array->last += 2;
-
-						op_array->opcodes = (zend_op*)
-							erealloc(op_array->opcodes,
-								 op_array->last * sizeof(zend_op));
-						CG(context).opcodes_size = op_array->last;
-
-						/* jump to send */
-						memset(opline, 0, sizeof(zend_op));
-						opline->opcode = ZEND_JMP;
-						opline->op1.opline_num = target;
-						SET_UNUSED(opline->op1);
-						SET_UNUSED(opline->op2);
-
-						/* send parameter */
-						opline = &op_array->opcodes[target];
-						memset(opline, 0, sizeof(zend_op));
-						switch (otype) {
-							case IS_CV:
-							case IS_VAR:
-								opline->opcode = ZEND_SEND_VAR;
-							break;
-							
-							default:
-								opline->opcode = ZEND_SEND_VAL;
-						}
-						opline->op1 = operand;
-						opline->op1_type = otype;	
-						opline->op2.opline_num = 1;
-						opline->extended_value = ZEND_DO_FCALL;
-						SET_UNUSED(opline->op2);
-
-						/* call */
-						opline = &op_array->opcodes[target + 1];
-						memset(opline, 0, sizeof(zend_op));
-						opline->opcode = ZEND_DO_FCALL;
-						opline->extended_value = 1;
-						SET_NODE(op_array, opline->op1, call);
-						SET_UNUSED(opline->op2);
-#if PHP_VERSION_ID > 50500
-						opline->op2.num = CG(context).nested_calls;
-#endif
-						opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
-						opline->result_type = IS_TMP_VAR;
-						GET_NODE(op_array, &result, opline->result);		
-						CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
-						GET_CACHE_SLOT(op_array, opline->op1.constant);
-
-						if (it < end) {
-							/* jmp back */
-							opline = &op_array->opcodes[target+2];
-							memset(opline, 0, sizeof(zend_op));
-							opline->opcode = ZEND_JMP;
-							opline->op1.opline_num = it + 1;
-							SET_UNUSED(opline->op1);
-							SET_UNUSED(opline->op2);
-						}
-					} else {
-						/* do fcall (no parameter) */
-						memset(opline, 0, sizeof(zend_op));
-						opline->opcode = ZEND_DO_FCALL;
-						SET_NODE(op_array, opline->op1, call);
-						SET_UNUSED(opline->op2);
-#if PHP_VERSION_ID > 50500
-						opline->op2.num = CG(context).nested_calls;
-#endif
-						opline->result.var = php_uopz_temp_var(op_array TSRMLS_CC);
-						opline->result_type = IS_TMP_VAR;
-						GET_NODE(op_array, &result, opline->result);		
-						CALCULATE_LITERAL_HASH(op_array, opline->op1.constant);
-						GET_CACHE_SLOT(op_array, opline->op1.constant);
-					}
-				} break;
-			}
-
-			it++;
-		}
-	}
-} /* }}} */
 
 /* {{{ */
 static inline zend_bool uopz_verify_overload(zval *handler, long opcode, char **expected TSRMLS_DC) {
@@ -910,6 +749,7 @@ static PHP_FUNCTION(uopz_overload)
 	zval *handler = NULL;
 	long  opcode = ZEND_NOP;
 	char *expected = NULL;
+	uopz_handler_t uhandler;
 
 	if (uopz_parse_parameters("l|z", &opcode, &handler) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -923,16 +763,8 @@ static PHP_FUNCTION(uopz_overload)
 	}
 
 	if (!handler || Z_TYPE_P(handler) == IS_NULL) {
-		if (opcode == ZEND_EXIT) {
-			if (UOPZ(overload)._exit) {
-				zval_ptr_dtor(&UOPZ(overload)._exit);
-
-				UOPZ(overload)._exit = NULL;
-			}
-		} else {
-			zend_hash_index_del(&UOPZ(overload).table, opcode);
-		}
-
+		zend_hash_index_del(
+			&UOPZ(overload), opcode);
 		RETURN_TRUE;
 	}
 
@@ -943,21 +775,10 @@ static PHP_FUNCTION(uopz_overload)
 		return;
 	}
 
-	if (opcode == ZEND_EXIT) {
-		if (UOPZ(overload)._exit) {
-			zval_ptr_dtor(&UOPZ(overload)._exit);
-		}
-
-		MAKE_STD_ZVAL(UOPZ(overload)._exit);
-		ZVAL_ZVAL(UOPZ(overload)._exit, handler, 1, 0);
-	} else {
-		uopz_handler_t uhandler;
-
-		MAKE_STD_ZVAL(uhandler.handler);
-		ZVAL_ZVAL(uhandler.handler, handler, 1, 0);
-		zend_hash_index_update(
-			&UOPZ(overload).table, opcode, (void**) &uhandler, sizeof(uopz_handler_t), NULL);
-	}
+	MAKE_STD_ZVAL(uhandler.handler);
+	ZVAL_ZVAL(uhandler.handler, handler, 1, 0);
+	zend_hash_index_update(
+		&UOPZ(overload), opcode, (void**) &uhandler, sizeof(uopz_handler_t), NULL);
 
 	RETURN_TRUE;
 }
@@ -1460,65 +1281,6 @@ PHP_FUNCTION(uopz_delete) {
 
 	RETVAL_BOOL(uopz_delete(clazz, &uname TSRMLS_CC));
 	uopz_free_key(&uname);
-} /* }}} */
-
-/* {{{ proto void __uopz_exit_overload() */
-PHP_FUNCTION(__uopz_exit_overload) {
-	zend_bool  leave = 1;
-	zval       *status = NULL;
-	
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z", &status) == SUCCESS && UOPZ(overload)._exit) {
-		zend_fcall_info fci;
-		zend_fcall_info_cache fcc;
-		char *cerror = NULL;
-		zval *retval = NULL;
-
-		memset(&fci, 0, sizeof(zend_fcall_info));
-
-		if (zend_is_callable_ex(UOPZ(overload)._exit, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror TSRMLS_CC)) {
-			if (zend_fcall_info_init(UOPZ(overload)._exit,
-					IS_CALLABLE_CHECK_SILENT,
-					&fci, &fcc,
-					NULL, &cerror TSRMLS_CC) == SUCCESS) {
-
-				fci.retval_ptr_ptr = &retval;
-				if (ZEND_NUM_ARGS()) {
-					zend_fcall_info_argn(&fci TSRMLS_CC, 1, &status);
-				}
-
-				zend_try {
-					zend_call_function(&fci, &fcc TSRMLS_CC);
-				} zend_end_try();
-
-				if (ZEND_NUM_ARGS()) {
-					zend_fcall_info_args_clear(&fci, 1);
-				}
-
-				if (retval) {
-#if PHP_VERSION_ID >= 50700
-					leave = zend_is_true(retval TSRMLS_CC);
-#else
-					leave = zend_is_true(retval);
-#endif
-					if (Z_TYPE_P(retval) == IS_LONG) {
-						EG(exit_status) = Z_LVAL_P(retval);
-					} else zend_print_variable(retval);
-
-					zval_ptr_dtor(&retval);
-				}
-			}
-		}
-	} else if(status != NULL) {
-		if (Z_TYPE_P(status) == IS_LONG) {
-			EG(exit_status) = Z_LVAL_P(status);
-		} else zend_print_variable(status);
-	}
-
-	zval_ptr_dtor(&return_value);
-
-	if (leave) {
-		zend_bailout();
-	}
 } /* }}} */
 
 /* {{{ */
@@ -2357,8 +2119,6 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_implement, uopz_implement_arginfo)
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)
-	/* private function */
-	PHP_FE(__uopz_exit_overload, __uopz_exit_overload_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */
