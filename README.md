@@ -40,6 +40,8 @@ integer function (&$op1 = null, &$op2 = null)
 
 Any modifications to ```op1``` and ```op2``` by the handler will effect Zend's behaviour.
 
+**Note:** You must set `uopz.overloads=1` in your `php.ini` in order to be able to overload opcodes. Failing to do so will result in a `Fatal error: Uncaught exception 'RuntimeException' with message 'overloads are disabled by configuration'`.
+
 Overloading Exit
 ================
 *ZEND_EXIT is a little different ...*
@@ -75,7 +77,7 @@ The following example code shows how to overload ```ZEND_EXIT``` with ```uopz```
 
 ```php
 <?php
-uopz_overload(ZEND_EXIT, function(){});
+uopz_overload(ZEND_EXIT, function($status = 0){});
 
 exit();
 echo "I will be displayed\n";
