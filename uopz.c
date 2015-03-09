@@ -499,6 +499,14 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						}
 					} break;
 
+					case ZEND_EXIT: {
+						if (dispatching == ZEND_USER_OPCODE_CONTINUE) {
+							if (EX(opline) < &EX(op_array)->opcodes[EX(op_array)->last - 1]) {
+								ZEND_VM_JMP(OPLINE + 1);
+							} else return ZEND_USER_OPCODE_RETURN;
+						}
+					} break;
+					
 					case ZEND_THROW: {
 
 					} break;
@@ -507,13 +515,8 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 		}
 	}
 
-	if (dispatching) switch(dispatching) {
-		case ZEND_USER_OPCODE_CONTINUE:
-			EX(opline)++;
-
-		default:
-			return dispatching;
-	}
+	if (dispatching)
+		return dispatching;
 
 	if (ohandlers[OPCODE]) {
 		return ohandlers[OPCODE]
