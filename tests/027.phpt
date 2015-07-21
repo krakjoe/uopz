@@ -10,7 +10,6 @@ function mystrlen(string $string) {
 
 $mystrlen = uopz_copy('mystrlen');
 uopz_function('mystrlen', function ($string) use($mystrlen) {
-	echo $string . "\n";
 	return $mystrlen($string) * 2;
 });
 var_dump(mystrlen("Hello World"));
