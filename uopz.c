@@ -622,15 +622,14 @@ static inline int php_uopz_clean_user_function(zval *zv) {
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 
-	return ZEND_HASH_APPLY_KEEP | ZEND_HASH_APPLY_STOP;
+	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
 /* {{{ */
 static inline int php_uopz_clean_user_class(zval *zv) {
 	zend_class_entry *ce = (zend_class_entry*) Z_PTR_P(zv);
 
-	zend_hash_apply(
-		&ce->function_table, php_uopz_clean_user_function);
+	zend_hash_apply(&ce->function_table, php_uopz_clean_user_function);
 
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
@@ -964,6 +963,10 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 		return 0;
 	}
 
+	if (zend_string_equals_ci(name, rename)) {
+		return 0;
+	}
+
 	uopz_find_function(table, name, &tuple[0]);
 	uopz_find_function(table, rename, &tuple[1]);
 
@@ -982,7 +985,7 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 
 	if (tuple[0] && tuple[1]) {
 		dtor_func_t dtor_backup = table->pDestructor;
-		table->pDestructor = NULL;
+		table->pDestructor = NULL; /* do not free the pointers */
 
 		size[0] = tuple[0]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
 		size[1] = tuple[1]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
