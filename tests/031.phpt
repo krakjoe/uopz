@@ -10,7 +10,7 @@ interface Other {}
 uopz_compose("Concrete", ["Base", "Other"], [], [], ZEND_ACC_INTERFACE);
 ?>
 --EXPECTF--
-Fatal error: Uncaught exception '%s' with message 'interface Concrete may not extend Other, parent of Concrete already set to Base' in %s:%d
+Fatal error: Uncaught %s interface Concrete may not extend Other, parent of Concrete already set to Base in %s:%d
 Stack trace:
 #0 %s(%d): uopz_compose('Concrete', Array, Array, Array, %d)
 #1 {main}

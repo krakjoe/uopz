@@ -21,10 +21,12 @@ uopz_compose("A", ["Hood"], [
 			return new self();
 		}
 	],
-	"abstracted" => [ZEND_ACC_ABSTRACT => function() {
+	"abstracted" => [
+		ZEND_ACC_ABSTRACT => function() {
 		/* you can declare abstracts in this way 
 			function body will be ignored, still cannot call it ... */
-	}],
+		}
+	],
 	/* all of [this isn't required] all the time ... */
 	"implement" => function(){}
 ]);
@@ -33,7 +35,11 @@ $a = A::getInstance();
 $a->abstracted();
 ?>
 --EXPECTF--
-object(A)#%d (0) {
+object(A)#4 (0) {
 }
 
-Fatal error: Cannot call abstract method %s() in %s on line %d
+Fatal error: Uncaught Error: Cannot call abstract method A::{closure}() in %s:30
+Stack trace:
+#0 {main}
+  thrown in %s on line 30
+

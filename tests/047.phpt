@@ -38,12 +38,12 @@ bool(false)
 int(%d)
 bool(true)
 bool(true)
-exception 'RuntimeException' with message 'attempt to set static on class entry, not allowed' in %s:%d
+RuntimeException: failed to set or get flags of Test::, function does not exist in %s:19
 Stack trace:
-#0 %s(%d): uopz_flags('Test', NULL, %d)
+#0 %s(19): uopz_flags('Test', '', 1)
 #1 {main}
-exception 'RuntimeException' with message 'attempt to set public, private or protected on class entry, not allowed' in %s:%d
+RuntimeException: failed to set or get flags of Test::, function does not exist in %s:25
 Stack trace:
-#0 %s(%d): uopz_flags('Test', NULL, %d)
+#0 %s(25): uopz_flags('Test', '', 1024)
 #1 {main}
 

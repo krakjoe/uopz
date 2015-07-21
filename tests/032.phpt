@@ -22,6 +22,9 @@ array(2) {
   string(5) "Other"
 }
 
-Fatal error: Cannot instantiate trait Concrete in %s on line %d
+Fatal error: Uncaught Error: Cannot instantiate trait Concrete in %s:10
+Stack trace:
+#0 {main}
+  thrown in %s on line 10
 
 

@@ -10,7 +10,7 @@ class B {}
 uopz_extend("A", "B");
 ?>
 --EXPECTF--
-Fatal error: Uncaught exception '%s' with message 'class A already extends B' in %s:%d
+Fatal error: Uncaught %s class A already extends B in %s:%d
 Stack trace:
 #0 %s(%d): uopz_extend('A', 'B')
 #1 {main}

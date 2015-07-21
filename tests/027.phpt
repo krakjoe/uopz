@@ -4,13 +4,17 @@ Test use original function
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-$strlen = uopz_copy('strlen');
-uopz_function('strlen', function ($string) use($strlen) {
-	return $strlen($string) * 2;
+function mystrlen(string $string) {
+	return strlen($string);
+}
+
+$mystrlen = uopz_copy('mystrlen');
+uopz_function('mystrlen', function ($string) use($mystrlen) {
+	echo $string . "\n";
+	return $mystrlen($string) * 2;
 });
-var_dump(strlen("Hello World"));
-uopz_restore('strlen');
-var_dump(strlen("Hello World"));
+var_dump(mystrlen("Hello World"));
+
 ?>
 --EXPECTF--
 int(22)

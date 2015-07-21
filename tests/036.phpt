@@ -19,7 +19,11 @@ uopz_function("Test", 'isProtected', function(){
 var_dump(Test::isProtected());
 ?>
 --EXPECTF--
-Fatal error: Call to protected method Test::isProtected() from context '' in %s on line %d
+Fatal error: Uncaught Error: Call to protected method Test::isProtected() from context '' in %s:14
+Stack trace:
+#0 {main}
+  thrown in %s on line 14
+
 
 
 

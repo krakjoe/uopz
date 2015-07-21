@@ -9,9 +9,11 @@ interface Other {}
 
 uopz_compose("Concrete",
 	["Base", "Other"], [], [], ZEND_ACC_TRAIT);
+
+var_dump(new Concrete());
 ?>
 --EXPECTF--
-Fatal error: Uncaught exception '%s' with message 'trait Concrete can not implement interface Other, not allowed' in %s:%d
+Fatal error: Uncaught %s: trait Concrete can not implement interface Other, not allowed in %s:%d
 Stack trace:
 #0 %s(%d): uopz_compose('Concrete', Array, Array, Array, %d)
 #1 {main}

@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | uopz                                                                 |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2012 - 2014                                |
+  | Copyright (c) Joe Watkins 2015                                       |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -22,7 +22,7 @@
 extern zend_module_entry uopz_module_entry;
 #define phpext_uopz_ptr &uopz_module_entry
 
-#define PHP_UOPZ_VERSION "2.1.0"
+#define PHP_UOPZ_VERSION "3.1.0"
 #define PHP_UOPZ_EXTNAME "uopz"
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
