@@ -1024,7 +1024,7 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 	{
 		zend_function *lone;
 
-		if ((lone = zend_hash_update_mem(table, rename, (void**) &locals[0], sizeof(zend_function)))) {
+		if (!(lone = zend_hash_update_mem(table, rename, (void**) &locals[0], sizeof(zend_function)))) {
 			if (clazz) {
 				uopz_exception(
 					"failed to rename the function %s::%s to %s::%s, update failed",
