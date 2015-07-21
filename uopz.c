@@ -957,7 +957,7 @@ PHP_FUNCTION(uopz_copy) {
 /* {{{ */
 static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, zend_string *rename) {
 	zend_function *tuple[2] = {NULL, NULL};
-	zend_function locals[2];
+	size_t size[2];
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 
 	if (!name->val && !rename->val) {
@@ -981,52 +981,41 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 	}
 
 	if (tuple[0] && tuple[1]) {
-		locals[0] = *tuple[0];
-		locals[1] = *tuple[1];
+		dtor_func_t dtor_backup = table->pDestructor;
+		table->pDestructor = NULL;
 
-		if (tuple[0]->type == ZEND_INTERNAL_FUNCTION &&
-			tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
-			/* both internal */
+		size[0] = tuple[0]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
+		size[1] = tuple[1]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
+
+		if ((tuple[1] = zend_hash_update_mem(table, name, tuple[1], size[1])) &&
+		    (tuple[0] = zend_hash_update_mem(table, rename, tuple[0], size[0]))) {
+			table->pDestructor = dtor_backup;
+			return 1;
+		}
+
+		if (clazz) {
+			uopz_exception(
+				"failed to rename the functions %s::%s and %s::%s, switch failed",
+				clazz->name->val, name->val, clazz->name->val, rename->val);
 		} else {
-			if (tuple[0]->type == ZEND_INTERNAL_FUNCTION ||
-				tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
-				/* one internal */
-				if (tuple[0]->type == ZEND_INTERNAL_FUNCTION) {
-					function_add_ref(&locals[1]);
-				} else if (tuple[1]->type == ZEND_INTERNAL_FUNCTION) {
-					function_add_ref(&locals[0]);
-				}
-			} else {
-				/* both user */
-				function_add_ref(&locals[0]);
-				function_add_ref(&locals[1]);
-			}
+			uopz_exception(
+				"failed to rename the functions %s and %s, switch failed",
+				name->val, rename->val);
 		}
 
-		if (!zend_hash_update_mem(table, name, &locals[1], sizeof(zend_function)) ||
-		    !zend_hash_update_mem(table, rename, &locals[0], sizeof(zend_function))) {
-			if (clazz) {
-				uopz_exception(
-					"failed to rename the functions %s::%s and %s::%s, switch failed",
-					clazz->name->val, name->val, clazz->name->val, rename->val);
-			} else {
-				uopz_exception(
-					"failed to rename the functions %s and %s, switch failed",
-					name->val, rename->val);
-			}
-		}
-
-		return 1;
+		table->pDestructor = dtor_backup;
+		return 0;
 
 	}
 
 	/* only one existing function */
-	locals[0] = tuple[0] ? *tuple[0] : *tuple[1];
+	if (tuple[1]) {
+		tuple[0] = tuple[1];
+	}
+	size[0] = tuple[0]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
 	
 	{
-		zend_function *lone;
-
-		if (!(lone = zend_hash_update_mem(table, rename, (void**) &locals[0], sizeof(zend_function)))) {
+		if (!(tuple[0] = zend_hash_update_mem(table, rename, (void**) tuple[0], size[0]))) {
 			if (clazz) {
 				uopz_exception(
 					"failed to rename the function %s::%s to %s::%s, update failed",
@@ -1039,7 +1028,7 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 			return 0;
 		}
 
-		function_add_ref(lone);
+		function_add_ref(tuple[0]);
 	}
 
 	return 1;
