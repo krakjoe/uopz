@@ -12,10 +12,8 @@ $mystrlen = uopz_copy('mystrlen');
 uopz_function('mystrlen', function ($string) use($mystrlen) {
 	return $mystrlen($string) * 2;
 });
-var_dump(mystrlen("Hello World"));
-
+mystrlen("Hello World");
 ?>
 --EXPECTF--
 int(22)
-int(11)
 
