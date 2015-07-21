@@ -203,15 +203,17 @@ static void php_uopz_init_globals(zend_uopz_globals *ng) {
 static void php_uopz_backup_dtor(zval *el) {
 	zval container;
 	uopz_backup_t *backup = (uopz_backup_t *) Z_PTR_P(el);
+	HashTable *table = backup->scope ?
+		&backup->scope->function_table :
+		CG(function_table);
 
 	if (backup->internal->type == ZEND_INTERNAL_FUNCTION) {
-		HashTable *table = backup->scope ?
-			&backup->scope->function_table :
-			CG(function_table);
-
 		zend_hash_update_mem(
 			table, backup->name, backup->internal, sizeof(zend_internal_function));
-	} else destroy_zend_function(backup->internal);
+	} else {
+		zend_hash_del(table, backup->name);
+		destroy_zend_function(backup->internal);
+	}
 	if (backup->scope) {
 		backup->scope->refcount--;
 	}
