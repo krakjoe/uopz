@@ -31,6 +31,10 @@
 
 #ifdef HAVE_SPL
 #include "ext/spl/spl_exceptions.h"
+#else
+/* {{{ */
+zend_class_entry *spl_ce_RuntimeException;
+zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #endif
 
 #include "uopz.h"
@@ -38,10 +42,6 @@
 #include "copy.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
-
-/* {{{ */
-zend_class_entry *spl_ce_RuntimeException;
-zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 
 #define MAX_OPCODE 163
 #undef EX
