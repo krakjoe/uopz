@@ -37,6 +37,28 @@
 		} \
 	} while (0)
 
+#define GET_OP1_IN(as, i) do {\
+	if ((OPLINE->op1_type != IS_UNUSED) &&\
+		(op1 = zend_get_zval_ptr(\
+			OPLINE->op1_type, &OPLINE->op1, execute_data, &free_op1, as TSRMLS_CC))) {\
+		ZVAL_COPY(&fci.params[i], op1); \
+	} else { \
+		ZVAL_COPY(&fci.params[i], &EG(uninitialized_zval)); \
+	}\
+} while(0)
+#define GET_OP1(as) GET_OP1_IN(as, 0)
+
+#define GET_OP2_IN(as, i) do {\
+	if ((OPLINE->op2_type != IS_UNUSED) &&\
+		(op2 = zend_get_zval_ptr(\
+			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
+		fci.params[i] = &op2;\
+	} else {\
+		fci.params[i] = &EG(uninitialized_zval_ptr);\
+	}\
+} while(0)
+#define GET_OP2(as) GET_OP2_IN(as, 1)
+
 static inline void zend_alloc_cache_slot(uint32_t literal) {
     zend_op_array *op_array = CG(active_op_array);
     Z_CACHE_SLOT(op_array->literals[literal]) = op_array->cache_size;

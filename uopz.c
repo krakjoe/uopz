@@ -229,75 +229,52 @@ static void php_uopz_backup_table_dtor(zval *zv) {
 	efree(Z_PTR_P(zv));
 } /* }}} */
 
-/*
 static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
-	uopz_handler_t *uhandler = NULL;
+	zval *uhandler = NULL;
 	int dispatching = 0;
+	zend_execute_data *execute_data = EG(current_execute_data);
 
-	if ((uhandler = zend_hash_index_find_ptr(&UOPZ(overload), OPCODE))) {
+	if ((uhandler = zend_hash_index_find(&UOPZ(overload), OPCODE))) {
 		
 		zend_fcall_info fci;
 		zend_fcall_info_cache fcc;
 		char *cerror = NULL;
 		zval retval;
-		zval op1,
-		     op2;
+		zval *op1 = &EG(uninitialized_zval),
+		     *op2 = &EG(uninitialized_zval);
 		zend_free_op free_op1, free_op2;
 		zend_class_entry *oce = NULL, *nce = NULL;
 
-		ZVAL_UNDEF(&op1);
-		ZVAL_UNDEF(&op2);
 		ZVAL_UNDEF(&retval);
 
 		memset(
 			&fci, 0, sizeof(zend_fcall_info));
 
-		if (zend_is_callable_ex(uhandler->handler, NULL, IS_CALLABLE_CHECK_SILENT, NULL, NULL, &fcc, &cerror)) {
-			if (zend_fcall_info_init(uhandler->handler,
+		if (zend_is_callable_ex(uhandler, Z_OBJ_P(uhandler), IS_CALLABLE_CHECK_SILENT, NULL, &fcc, &cerror)) {
+			if (zend_fcall_info_init(uhandler,
 					IS_CALLABLE_CHECK_SILENT,
 					&fci, &fcc,
 					NULL, &cerror) == SUCCESS) {
 
 				fci.params = (zval*) emalloc(2 * sizeof(zval));
+				ZVAL_UNDEF(&fci.params[0]);
+				ZVAL_UNDEF(&fci.params[1]);
 				fci.param_count = 2;
 
 				switch (OPCODE) {
-					case ZEND_INSTANCEOF: {
-						GET_OP1(BP_VAR_R);
-
-						oce = EX_T(OPLINE->op2.var).class_entry;
-
-						ZVAL_STRINGL(&fci.params[1], oce->name, oce->name_length, 1);
-					} break;
-
-					case ZEND_FETCH_CLASS: {
-						switch(OPLINE->op2_type) {
-							case IS_UNUSED:
-								return ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS;
-
-							default: {
-								if (UNEXPECTED(EG(exception) != NULL)) {
-									return ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS;
+					case ZEND_NEW: {
+						if (OPLINE->op1_type == IS_CONST){
+							oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)));
+							if (!oce) {
+								oce = zend_fetch_class_by_name(
+									Z_STR_P(EX_CONSTANT(OPLINE->op1)), 
+									EX_CONSTANT(OPLINE->op1) + 1, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+								if (!oce) {
+									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();							
 								}
 							}
-						}
-
-						ZVAL_STRINGL(&fci.params[0], Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 1);
-						fci.param_count = 1;
-					} break;
-
-					case ZEND_ADD_INTERFACE:
-					case ZEND_ADD_TRAIT: {
-						oce = EX_T(OPLINE->op1.var).class_entry;
-
-						ZVAL_STRINGL(&fci.params[0], oce->name, oce->name_length, 1);
-						ZVAL_STRINGL(&fci.params[1], Z_STRVAL_P(OPLINE->op2.zv), Z_STRLEN_P(OPLINE->op2.zv), 1);
-					} break;
-
-					case ZEND_NEW: {
-						oce = EX_T(OPLINE->op1.var).class_entry;
-
-						ZVAL_STRINGL(&fci.params[0], oce->name, oce->name_length, 1);
+						} else oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
+						ZVAL_STR(&fci.params[0], oce->name);
 						fci.param_count = 1;
 					} break;
 
@@ -306,11 +283,6 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						GET_OP1(BP_VAR_RW);
 						fci.param_count = 1;
 					} break;
-
-					default: {
-						GET_OP1(BP_VAR_RW);
-						GET_OP2(BP_VAR_RW);
-					}
 				}
 
 				fci.retval = &retval;
@@ -319,89 +291,47 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					zend_call_function(&fci, &fcc);
 				} zend_end_try();
 
-				if (retval) {
-					if (Z_TYPE(retval) != IS_UNDEF) {
-						convert_to_long(retval);
-						dispatching =
-							Z_LVAL_P(retval);
-					}
-					zval_dtor(&retval);
+				if (Z_TYPE(retval) != IS_UNDEF) {
+					convert_to_long(&retval);
+					dispatching =
+						Z_LVAL(retval);
+					zval_ptr_dtor(&retval);
 				}
 
 				switch (OPCODE) {
-					case ZEND_INSTANCEOF: {
-						convert_to_string(&fci.params[1]);
-
-						if ((nce = zend_lookup_class(Z_STR(fci.params[1])))) {
-							if (nce != oce) {
-								EX_T(OPLINE->op2.var).class_entry = nce;
-							}
-						}
-
-						zval_dtor(&fci.params[1]);
-					} break;
-
-					case ZEND_FETCH_CLASS: {
-						if (Z_TYPE(fci.params[0]) == IS_OBJECT) {
-							EX_T(OPLINE->result.var).class_entry = Z_OBJCE(fci.params[0]);
-						} else if (Z_TYPE(fci.params[0]) == IS_STRING) {
-							EX_T(OPLINE->result.var).class_entry =  zend_fetch_class(Z_STR(fci.params[0]), OPLINE->extended_value);
-						} else return (ZEND_USER_OPCODE_DISPATCH_TO | ZEND_FETCH_CLASS);
-
-						zval_dtor(&fci.params[0]);
-
-						if (EX_T(OPLINE->result.var).class_entry) {
-							OPLINE++;
-							return ZEND_USER_OPCODE_CONTINUE;
-						}
-					} break;
-
-					case ZEND_ADD_INTERFACE:
-					case ZEND_ADD_TRAIT: {
-						convert_to_string(&fci.params[1]);
-
-						if ((nce = zend_lookup_class(Z_STR(fci.params[1])))) {
-							if (nce != oce) {
-								CACHE_PTR(OPLINE->op2.literal->cache_slot, nce);
-							}
-						}
-
-						zval_ptr_dtor(&op1);
-						zval_ptr_dtor(&op2);
-					} break;
-
-					case ZEND_NEW: {
-						if (Z_TYPE_P(op1) == IS_OBJECT) {
-							if (RETURN_VALUE_USED(OPLINE)) {
-								AI_SET_PTR(&EX_T(OPLINE->result.var), op1);
-							} else {
-								zval_ptr_dtor(&op1);
-							}
-							ZEND_VM_JMP(EX(op_array)->opcodes + OPLINE->op2.opline_num);
-						} else {
-							convert_to_string(op1);
-
-							if (zend_lookup_class(Z_STRVAL_P(op1), Z_STRLEN_P(op1), &nce) == SUCCESS) {
-								if (*nce != oce) {
-									EX_T(OPLINE->op1.var).class_entry = *nce;
-								}
-							}
-
-							zval_ptr_dtor(&op1);
-						}
-					} break;
-
 					case ZEND_EXIT: {
 						if (dispatching == ZEND_USER_OPCODE_CONTINUE) {
-							if (EX(opline) < &EX(op_array)->opcodes[EX(op_array)->last - 1]) {
+							if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
 								ZEND_VM_JMP(OPLINE + 1);
+								if (Z_TYPE(fci.params[0]) != IS_UNDEF)
+									zval_ptr_dtor(&fci.params[0]);
+								if (Z_TYPE(fci.params[1]) != IS_UNDEF)
+									zval_ptr_dtor(&fci.params[1]);
+				
+								if (fci.params)
+									efree(fci.params);
+
 								return ZEND_USER_OPCODE_CONTINUE;
 							}
 						}
+
+						if (Z_TYPE(fci.params[0]) != IS_UNDEF)
+							zval_ptr_dtor(&fci.params[0]);
+						if (Z_TYPE(fci.params[1]) != IS_UNDEF)
+							zval_ptr_dtor(&fci.params[1]);
+				
+						if (fci.params)
+							efree(fci.params);
+
 						return ZEND_USER_OPCODE_RETURN;
 					} break;
 				}
 
+				if (Z_TYPE(fci.params[0]) != IS_UNDEF)
+					zval_ptr_dtor(&fci.params[0]);
+				if (Z_TYPE(fci.params[1]) != IS_UNDEF)
+					zval_ptr_dtor(&fci.params[1]);
+				
 				if (fci.params)
 					efree(fci.params);
 			}
@@ -409,12 +339,12 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 	}
 
 	if (ohandlers[OPCODE]) {
-		return ohandlers[OPCODE]
-			(ZEND_OPCODE_HANDLER_ARGS_PASSTHRU);
+		//return ohandlers[OPCODE]
+		//	(ZEND_OPCODE_HANDLER_ARGS_PASSTHRU);
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
-} */
+}
 
 /* {{{ */
 static inline void php_uopz_backup() {
@@ -438,33 +368,32 @@ static inline void php_uopz_backup() {
 /* {{{ */
 static inline void php_uopz_init_handlers(int module) {
 	memset(ohandlers, 0, sizeof(user_opcode_handler_t) * MAX_OPCODE);
-	/*
-	{
+	
 #define REGISTER_ZEND_UOPCODE(u) \
 	zend_register_long_constant\
-		((u)->name, (u)->length+1, (u)->code, CONST_CS|CONST_PERSISTENT, module)
+		((u)->name, (u)->length, (u)->code, CONST_CS|CONST_PERSISTENT, module)
 
-		uopz_opcode_t *uop = uoverrides;
+	uopz_opcode_t *uop = uoverrides;
 
-		while (uop->code != ZEND_NOP) {
-			zval constant;
+	while (uop->code != ZEND_NOP) {
+		zval *constant;
+		zend_string *name = zend_string_init(uop->name, uop->length, 0);
 
-			if (UOPZ(ini).overloads) {
-				ohandlers[uop->code] =
-					zend_get_user_opcode_handler(uop->code);
-				zend_set_user_opcode_handler(uop->code, php_uopz_handler);
-			}
-
-			if (!zend_get_constant(uop->name, uop->length+1, &constant)) {
-				REGISTER_ZEND_UOPCODE(uop);
-			} else zval_dtor(&constant);
-
-			uop++;
+		if (UOPZ(ini).overloads) {
+			ohandlers[uop->code] =
+				zend_get_user_opcode_handler(uop->code);
+			zend_set_user_opcode_handler(uop->code, php_uopz_handler);
 		}
 
-#undef REGISTER_ZEND_UOPCODE
+		if (!(constant = zend_get_constant(name))) {
+			REGISTER_ZEND_UOPCODE(uop);
+		} else zval_ptr_dtor(constant);
+
+		zend_string_release(name);
+		uop++;
 	}
-	*/
+
+#undef REGISTER_ZEND_UOPCODE
 } /* }}} */
 
 static int uopz_zend_startup(zend_extension *extension) /* {{{ */
