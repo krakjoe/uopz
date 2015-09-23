@@ -27,6 +27,7 @@
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_extensions.h"
 #include "Zend/zend_string.h"
+#include "Zend/zend_compile.h"
 #include "Zend/zend_vm_opcodes.h"
 
 #ifdef HAVE_SPL
@@ -529,9 +530,9 @@ static PHP_MINIT_FUNCTION(uopz)
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
 	UOPZ(copts) = CG(compiler_options);
-
+	
 	/* do not generate INIT_FCALL as these have a fixed vm_stack frame size */
-	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | ZEND_COMPILE_IGNORE_USER_FUNCTIONS;
+	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | ZEND_COMPILE_IGNORE_USER_FUNCTIONS | ZEND_COMPILE_GUARDS;
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
@@ -607,9 +608,7 @@ static PHP_RINIT_FUNCTION(uopz)
 		&UOPZ(backup), 8, NULL,
 		(dtor_func_t) php_uopz_backup_table_dtor, 0);
 
-	if (UOPZ(ini).backup) {
-		php_uopz_backup();
-	}
+	
 
 	return SUCCESS;
 } /* }}} */
