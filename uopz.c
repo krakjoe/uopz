@@ -1005,7 +1005,7 @@ PHP_FUNCTION(uopz_copy) {
 
 #define UOPZ_ACC_FUNCTION 0x10
 
-static uopz_function_dtor(zval *zv) {
+static void uopz_function_dtor(zval *zv) {
 	zend_function *fn = Z_PTR_P(zv);
 	zend_bool do_free = !!(fn->common.fn_flags & UOPZ_ACC_FUNCTION);
 
