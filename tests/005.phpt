@@ -8,6 +8,9 @@ uopz.overloads=1
 <?php
 uopz_overload(ZEND_INSTANCEOF, function($object, &$class){
 	var_dump($object, $class);
+	if ($class = "First") {
+		$class = "Second";
+	}
 });
 
 interface First {
@@ -25,9 +28,15 @@ class My implements Second {
 $my = new My();
 
 var_dump($my instanceof Second);
+
+var_dump($my instanceof First);
 ?>
 --EXPECTF--
 object(My)#%d (0) {
 }
 string(6) "Second"
+bool(true)
+object(My)#%d (0) {
+}
+string(5) "First"
 bool(true)

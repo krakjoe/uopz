@@ -369,6 +369,15 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 				}
 
 				switch (OPCODE) {
+					case ZEND_INSTANCEOF: {
+						convert_to_string(&fci.params[1]);
+
+						nce = zend_lookup_class(Z_STR(fci.params[1]));
+
+						if (nce != oce) {
+							CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), nce);
+						}
+					} break;
 
 					case ZEND_ADD_INTERFACE:
 					case ZEND_ADD_TRAIT: {
