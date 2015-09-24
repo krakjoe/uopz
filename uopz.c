@@ -323,11 +323,15 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						fci.param_count = 1;
 					} break;
 
-					case ZEND_EXIT:
-					case ZEND_THROW: {
+					case ZEND_EXIT: {
 						GET_OP1(BP_VAR_RW);
 						fci.param_count = 1;
 					} break;
+
+					default: {
+						GET_OP1(BP_VAR_RW);
+						GET_OP2(BP_VAR_RW);
+					}
 				}
 
 				fci.retval = &retval;

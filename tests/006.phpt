@@ -6,9 +6,10 @@ uopz.overloads=1
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_overload(ZEND_THROW, function(&$exception){
+uopz_overload(ZEND_THROW, function($exception){
 	if (!$exception instanceof RuntimeException) {
-		$exception = new RuntimeException(
+		/* we can throw from here now */
+		throw new RuntimeException(
 			"additional", ZEND_THROW, $exception);
 	}
 });
@@ -16,13 +17,13 @@ uopz_overload(ZEND_THROW, function(&$exception){
 throw new Exception("basic");
 ?>
 --EXPECTF--
-Fatal error: Uncaught exception 'Exception' with message 'basic' in %s:%d
+Fatal error: Uncaught Exception: basic in %s:%d
 Stack trace:
 #0 {main}
 
-Next exception 'RuntimeException' with message 'additional' in %s:%d
+Next RuntimeException: additional in %s:%d
 Stack trace:
-#0 %s(%d): {closure}(Object(RuntimeException))
+#0 %s(%d): {closure}(Object(Exception), NULL)
 #1 {main}
   thrown in %s on line %d
 

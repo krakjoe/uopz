@@ -52,9 +52,9 @@
 	if ((OPLINE->op2_type != IS_UNUSED) &&\
 		(op2 = zend_get_zval_ptr(\
 			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
-		fci.params[i] = &op2;\
+		ZVAL_COPY(&fci.params[i], op1); \
 	} else {\
-		fci.params[i] = &EG(uninitialized_zval_ptr);\
+		ZVAL_COPY(&fci.params[i], &EG(uninitialized_zval)); \
 	}\
 } while(0)
 #define GET_OP2(as) GET_OP2_IN(as, 1)
