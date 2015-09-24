@@ -25,7 +25,7 @@ static HashTable* uopz_copy_statics(HashTable *old) {
 	if (old) {
 		ALLOC_HASHTABLE(statics);
 		zend_hash_init(statics,
-			zend_hash_num_elements(old), 
+			zend_hash_num_elements(old),
 			NULL, ZVAL_PTR_DTOR, 0);
 		zend_hash_copy(
 			statics, 

@@ -648,7 +648,9 @@ static PHP_RINIT_FUNCTION(uopz)
 		&UOPZ(backup), 8, NULL,
 		(dtor_func_t) php_uopz_backup_table_dtor, 0);
 
-	
+	if (UOPZ(ini).backup) {
+		php_uopz_backup();
+	}
 
 	return SUCCESS;
 } /* }}} */
@@ -1023,15 +1025,11 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 	}
 
 	if (tuple[0] && tuple[1]) {
-		dtor_func_t dtor_backup = table->pDestructor;
-		table->pDestructor = NULL; /* do not free the pointers */
-
 		size[0] = tuple[0]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
 		size[1] = tuple[1]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
 
 		if ((tuple[1] = zend_hash_update_mem(table, name, tuple[1], size[1])) &&
 		    (tuple[0] = zend_hash_update_mem(table, rename, tuple[0], size[0]))) {
-			table->pDestructor = dtor_backup;
 			return 1;
 		}
 
@@ -1044,8 +1042,6 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 				"failed to rename the functions %s and %s, switch failed",
 				name->val, rename->val);
 		}
-
-		table->pDestructor = dtor_backup;
 		return 0;
 
 	}
