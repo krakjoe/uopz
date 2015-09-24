@@ -307,19 +307,12 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 					case ZEND_NEW: {
 						if (OPLINE->op1_type == IS_CONST) {
-							oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)));
-							if (!oce) {
-								oce = zend_fetch_class_by_name(
-									Z_STR_P(EX_CONSTANT(OPLINE->op1)), 
-									EX_CONSTANT(OPLINE->op1) + 1, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
-								if (!oce) {
-									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
-								}
-							}
+							ZVAL_COPY(&fci.params[0], EX_CONSTANT(OPLINE->op1));
 						} else {
 							oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
+							ZVAL_STR(&fci.params[0], oce->name);
 						}
-						ZVAL_STR(&fci.params[0], oce->name);
+						
 						fci.param_count = 1;
 					} break;
 

@@ -17,7 +17,7 @@ class TestBundle {
 }
 
 /* tiny amount of voodoo ... */
-uopz_overload(ZEND_FETCH_CLASS, function(&$class) {
+uopz_overload(ZEND_NEW, function(&$class) {
 	switch ($class) {
 		case "test": {
 			uopz_compose($class, ["TestBundle"], [
