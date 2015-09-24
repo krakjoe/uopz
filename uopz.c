@@ -27,6 +27,7 @@
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_extensions.h"
 #include "Zend/zend_string.h"
+#include "Zend/zend_inheritance.h"
 #include "Zend/zend_compile.h"
 #include "Zend/zend_vm_opcodes.h"
 
@@ -60,6 +61,14 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
 #define RETURN_VALUE_USED(opline) (!((opline)->result_type & EXT_TYPE_UNUSED))
 #define ZEND_VM_CONTINUE()         return 0
+
+#define HANDLE_EXCEPTION() \
+	EX(opline) = OPLINE; \
+	ZEND_VM_CONTINUE()
+
+#define ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION() \
+	OPLINE = EX(opline) + 1; \
+	ZEND_VM_CONTINUE()
 
 #define ZEND_VM_SET_OPCODE(new_op) \
 	OPLINE = new_op
@@ -999,10 +1008,6 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 	zend_function *tuple[2] = {NULL, NULL};
 	size_t size[2];
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-
-	if (!name->val && !rename->val) {
-		return 0;
-	}
 
 	if (zend_string_equals_ci(name, rename)) {
 		return 0;
