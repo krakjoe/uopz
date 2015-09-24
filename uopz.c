@@ -1440,16 +1440,16 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 			magic++;
 		}
 		destination->common.scope = clazz;
-	} else destination->common.scope = NULL;
+	} else {
+		destination->common.scope = NULL;
+	}
 
 	if (clazz && ancestry) {
 		zend_class_entry *ce;
 		ZEND_HASH_FOREACH_PTR(EG(class_table), ce) {
-			do {
-				if (ce->parent == clazz) {
-					uopz_function(ce, name, closure, flags, ancestry);
-				}
-			} while ((ce = ce->parent));
+			if (ce->parent == clazz) {
+				uopz_function(ce, name, closure, flags, ancestry);
+			}
 		} ZEND_HASH_FOREACH_END();
 	}
 
