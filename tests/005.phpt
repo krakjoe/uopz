@@ -1,5 +1,5 @@
 --TEST--
-Test instancoef
+Test instanceof
 --INI--
 uopz.overloads=1
 --SKIPIF--
@@ -29,5 +29,5 @@ var_dump($my instanceof Second);
 --EXPECTF--
 object(My)#%d (0) {
 }
-string(%d) "%s"
+string(6) "Second"
 bool(true)

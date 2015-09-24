@@ -247,8 +247,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 		ZVAL_UNDEF(&retval);
 
-		memset(
-			&fci, 0, sizeof(zend_fcall_info));
+		memset(&fci, 0, sizeof(zend_fcall_info));
 
 		if (zend_is_callable_ex(uhandler, Z_OBJ_P(uhandler), IS_CALLABLE_CHECK_SILENT, NULL, &fcc, &cerror)) {
 			if (zend_fcall_info_init(uhandler,
@@ -260,20 +259,44 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 				ZVAL_UNDEF(&fci.params[0]);
 				ZVAL_UNDEF(&fci.params[1]);
 				fci.param_count = 2;
+				fci.no_separation = 0;
 
 				switch (OPCODE) {
+					case ZEND_INSTANCEOF: {
+						GET_OP1(BP_VAR_R);
+
+						if (OPLINE->op2_type == IS_CONST) {
+							oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)));
+							if (!oce) {
+								oce = zend_fetch_class_by_name(
+									Z_STR_P(EX_CONSTANT(OPLINE->op2)),
+									EX_CONSTANT(OPLINE->op2) + 1,
+									ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION
+								);
+								if (!oce) {
+									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+								}
+							}
+						} else {
+							oce = Z_CE_P(EX_VAR(OPLINE->op2.var));
+						}
+						ZVAL_STR(&fci.params[1], oce->name);
+					} break;
+
 					case ZEND_NEW: {
-						if (OPLINE->op1_type == IS_CONST){
+						if (OPLINE->op1_type == IS_CONST) {
 							oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)));
 							if (!oce) {
 								oce = zend_fetch_class_by_name(
 									Z_STR_P(EX_CONSTANT(OPLINE->op1)), 
 									EX_CONSTANT(OPLINE->op1) + 1, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
 								if (!oce) {
-									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();							
+									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 								}
 							}
-						} else oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
+						} else {
+							oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
+						}
 						ZVAL_STR(&fci.params[0], oce->name);
 						fci.param_count = 1;
 					} break;
@@ -293,8 +316,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 				if (Z_TYPE(retval) != IS_UNDEF) {
 					convert_to_long(&retval);
-					dispatching =
-						Z_LVAL(retval);
+					dispatching = Z_LVAL(retval);
 					zval_ptr_dtor(&retval);
 				}
 
