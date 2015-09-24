@@ -784,7 +784,7 @@ static zend_bool uopz_backup(zend_class_entry *clazz, zend_string *name) {
 		backup.internal = uopz_copy_function(function);
 
 		if (backup.internal->type == ZEND_INTERNAL_FUNCTION) {
-			backup.name = zend_new_interned_string(name);
+			backup.name = zend_string_dup(name, 1);
 		} else backup.name = zend_string_copy(name);
 
 		if (!zend_hash_add_mem(
