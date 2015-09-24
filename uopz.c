@@ -323,6 +323,35 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						fci.param_count = 1;
 					} break;
 
+					case ZEND_FETCH_CLASS: {
+						if (OPLINE->op2_type == IS_UNUSED) {
+							oce = zend_fetch_class(NULL, OPLINE->extended_value);
+
+							if (!oce) {
+								ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+							}
+						} else {
+							zval *name = EX_CONSTANT(OPLINE->op2);
+							if (OPLINE->op2_type == IS_CONST) {
+								ZVAL_COPY(&fci.params[0], name);
+							} else if (Z_TYPE_P(name) == IS_OBJECT) {
+								oce = Z_OBJCE_P(name);
+								ZVAL_STR(&fci.params[0], oce->name);
+							} else if (Z_TYPE_P(name) == IS_STRING) {
+								oce = zend_fetch_class_by_name(Z_STR_P(name), name+1, 
+									ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+								if (!oce) {
+									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+								}
+								ZVAL_STR(&fci.params[0], oce->name);
+							} else {
+								if (EG(exception)) {
+									HANDLE_EXCEPTION();
+								}
+							}
+						}
+					} break;
+
 					case ZEND_EXIT: {
 						GET_OP1(BP_VAR_RW);
 						fci.param_count = 1;
@@ -366,6 +395,16 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 						if (nce != oce) {
 							CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), nce);
+						}
+					} break;
+
+					case ZEND_FETCH_CLASS: {
+						convert_to_string(&fci.params[0]);
+						
+						nce = zend_lookup_class(Z_STR(fci.params[0]));
+	
+						if (nce != oce) {
+							CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), nce);
 						}
 					} break;
 
