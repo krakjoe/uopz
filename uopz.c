@@ -283,6 +283,28 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						ZVAL_STR(&fci.params[1], oce->name);
 					} break;
 
+					case ZEND_ADD_INTERFACE:
+					case ZEND_ADD_TRAIT: {
+						oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
+						
+						if (oce) {
+							ZVAL_STR(&fci.params[0], oce->name);
+						}
+						oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)));
+						
+						if (!oce) {
+							oce = zend_fetch_class_by_name(Z_STR_P(EX_CONSTANT(OPLINE->op2)),
+                                 EX_CONSTANT(OPLINE->op2) + 1,
+                                 ZEND_FETCH_CLASS_TRAIT);
+
+							if (!oce) {
+								ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+							}
+						}
+
+						ZVAL_STR(&fci.params[1], oce->name);
+					} break;
+
 					case ZEND_NEW: {
 						if (OPLINE->op1_type == IS_CONST) {
 							oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)));
@@ -321,6 +343,18 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 				}
 
 				switch (OPCODE) {
+
+					case ZEND_ADD_INTERFACE:
+					case ZEND_ADD_TRAIT: {
+						convert_to_string(&fci.params[1]);
+
+						nce = zend_lookup_class(Z_STR(fci.params[1]));
+	
+						if (nce != oce) {
+							CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), nce);
+						}
+					} break;
+
 					case ZEND_EXIT: {
 						if (dispatching == ZEND_USER_OPCODE_CONTINUE) {
 							if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
