@@ -369,6 +369,15 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 				}
 
 				switch (OPCODE) {
+					case ZEND_INSTANCEOF: {
+						convert_to_string(&fci.params[1]);
+
+						nce = zend_lookup_class(Z_STR(fci.params[1]));
+
+						if (nce != oce) {
+							CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), nce);
+						}
+					} break;
 
 					case ZEND_ADD_INTERFACE:
 					case ZEND_ADD_TRAIT: {
@@ -1440,16 +1449,16 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 			magic++;
 		}
 		destination->common.scope = clazz;
-	} else destination->common.scope = NULL;
+	} else {
+		destination->common.scope = NULL;
+	}
 
 	if (clazz && ancestry) {
 		zend_class_entry *ce;
 		ZEND_HASH_FOREACH_PTR(EG(class_table), ce) {
-			do {
-				if (ce->parent == clazz) {
-					uopz_function(ce, name, closure, flags, ancestry);
-				}
-			} while ((ce = ce->parent));
+			if (ce->parent == clazz) {
+				uopz_function(ce, name, closure, flags, ancestry);
+			}
 		} ZEND_HASH_FOREACH_END();
 	}
 
