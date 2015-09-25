@@ -221,11 +221,13 @@ static void php_uopz_backup_dtor(zval *el) {
 
 	if (backup->internal->type == ZEND_INTERNAL_FUNCTION) {
 		zend_hash_update_mem(
-			table, backup->name, backup->internal, sizeof(zend_internal_function));
+			table, 
+			backup->name, backup->internal, 
+			UOPZ_FUNCTION_SIZE(backup->internal));
 	} else {
-		zend_hash_del(table, backup->name);
 		destroy_zend_function(backup->internal);
 	}
+
 	if (backup->scope) {
 		backup->scope->refcount--;
 	}
