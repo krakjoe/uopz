@@ -86,6 +86,8 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
 
+#define UOPZ_FUNCTION_SIZE(f) (((f)->type == ZEND_INTERNAL_FUNCTION) ? sizeof(zend_internal_function) : sizeof(zend_op_array))
+
 static zend_bool uopz_backup(zend_class_entry *scope, zend_string *key);
 
 /* {{{ */
@@ -1008,23 +1010,6 @@ PHP_FUNCTION(uopz_copy) {
 	uopz_copy(clazz, name, &return_value, getThis());
 } /* }}} */
 
-#define UOPZ_ACC_FUNCTION 0x10
-
-static void uopz_function_dtor(zval *zv) {
-	zend_function *fn = Z_PTR_P(zv);
-	zend_bool do_free = !!(fn->common.fn_flags & UOPZ_ACC_FUNCTION);
-
-	if (do_free) {
-		fn->common.fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
-	}
-
-	zend_function_dtor(zv);
-
-	if (do_free) {
-		free(fn);
-	}
-}
-
 /* {{{ */
 static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, zend_string *rename) {
 	zend_function *tuple[2] = {NULL, NULL}, *copy;
@@ -1033,10 +1018,6 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 
 	if (zend_string_equals_ci(name, rename)) {
 		return 0;
-	}
-
-	if (table->pDestructor == zend_function_dtor) {
-		table->pDestructor = uopz_function_dtor;
 	}
 
 	uopz_find_function(table, name, &tuple[0]);
@@ -1056,24 +1037,14 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 	}
 
 	if (tuple[0] && tuple[1]) {
-		function_add_ref(tuple[0]);
-		size = tuple[0]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
-		copy = malloc(size);
-		memcpy(copy, tuple[0], size);
-		copy->common.fn_flags |= UOPZ_ACC_FUNCTION;
-		tuple[0] = copy;
+		tuple[0] = uopz_copy_function(tuple[0]);
+		tuple[1] = uopz_copy_function(tuple[1]);
 
-		function_add_ref(tuple[1]);
-		size = tuple[1]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
-		copy = malloc(size);
-		memcpy(copy, tuple[1], size);
-		copy->common.fn_flags |= UOPZ_ACC_FUNCTION;
-		tuple[1] = copy;
-
-		if (zend_hash_update_ptr(table, name, tuple[1]) && zend_hash_update_ptr(table, rename, tuple[0])) {
+		if (zend_hash_update_mem(table, tuple[0]->common.function_name, tuple[1], UOPZ_FUNCTION_SIZE(tuple[1])) && 
+			zend_hash_update_mem(table, tuple[1]->common.function_name, tuple[0], UOPZ_FUNCTION_SIZE(tuple[0]))) {
 			return 1;
 		}
-
+		
 		if (clazz) {
 			uopz_exception(
 				"failed to rename the functions %s::%s and %s::%s, switch failed",
@@ -1084,21 +1055,14 @@ static inline zend_bool uopz_rename(zend_class_entry *clazz, zend_string *name, 
 				name->val, rename->val);
 		}
 		return 0;
-
 	}
 
 	/* only one existing function */
 	if (tuple[1]) {
-		tuple[0] = tuple[1];
+		tuple[0] = uopz_copy_function(tuple[1]);
 	}
-
-	function_add_ref(tuple[0]);
-	size = tuple[0]->type == ZEND_INTERNAL_FUNCTION ? sizeof(zend_internal_function) : sizeof(zend_op_array);
-	copy = malloc(size);
-	memcpy(copy, tuple[0], size);
-	copy->common.fn_flags |= UOPZ_ACC_FUNCTION;
 	
-	if (!zend_hash_update_ptr(table, rename, copy)) {
+	if (!zend_hash_update_mem(table, rename, tuple[0], UOPZ_FUNCTION_SIZE(tuple[0]))) {
 		if (clazz) {
 			uopz_exception(
 				"failed to rename the function %s::%s to %s::%s, update failed",

@@ -16,9 +16,9 @@ function original() {
 	var_dump($vars);
 }
 
-uopz_backup("original");
+//uopz_backup("original");
 uopz_rename("original", "copied");
-uopz_restore("original");
+//uopz_restore("original");
 
 original();
 copied();
