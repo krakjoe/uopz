@@ -578,11 +578,6 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
-	UOPZ(copts) = CG(compiler_options);
-	
-	/* do not generate INIT_FCALL as these have a fixed vm_stack frame size */
-	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | ZEND_COMPILE_IGNORE_USER_FUNCTIONS | ZEND_COMPILE_GUARDS;
-
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_LEAVE", 		ZEND_USER_OPCODE_LEAVE,			CONST_CS|CONST_PERSISTENT);
@@ -625,8 +620,6 @@ static PHP_MINIT_FUNCTION(uopz)
 /* {{{ */
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
-	CG(compiler_options) = UOPZ(copts);
-
 	UNREGISTER_INI_ENTRIES();
 
 	return SUCCESS;
@@ -637,8 +630,13 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 static PHP_RINIT_FUNCTION(uopz)
 {
 	zend_class_entry *ce = NULL;
+	zend_string *spl;
 
-	zend_string *spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
+#ifdef ZTS
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+
+	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
 	spl_ce_RuntimeException =
 			(ce = zend_lookup_class(spl)) ?
 				ce : zend_exception_get_default();
@@ -656,6 +654,11 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_hash_init(
 		&UOPZ(backup), 8, NULL,
 		(dtor_func_t) php_uopz_backup_table_dtor, 0);
+
+	UOPZ(copts) = CG(compiler_options);
+	
+	/* do not generate INIT_FCALL as these have a fixed vm_stack frame size */
+	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | ZEND_COMPILE_IGNORE_USER_FUNCTIONS | ZEND_COMPILE_GUARDS;
 
 	if (UOPZ(ini).backup) {
 		php_uopz_backup();
@@ -688,6 +691,8 @@ static inline int php_uopz_clean_user_class(zval *zv) {
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
 {
+	CG(compiler_options) = UOPZ(copts);
+
 	zend_hash_destroy(&UOPZ(overload));
 	zend_hash_destroy(&UOPZ(backup));
 
@@ -1981,6 +1986,9 @@ zend_module_entry uopz_module_entry = {
 
 #ifdef COMPILE_DL_UOPZ
 ZEND_GET_MODULE(uopz)
+#ifdef ZTS
+	ZEND_TSRMLS_CACHE_DEFINE();
+#endif
 #endif
 
 /*
