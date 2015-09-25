@@ -16,14 +16,16 @@ function original() {
 	var_dump($vars);
 }
 
-//uopz_backup("original");
+var_dump(uopz_backup("original"));
 uopz_rename("original", "copied");
-//uopz_restore("original");
 
 original();
 copied();
+
+var_dump(uopz_restore("original"));
 ?>
 --EXPECTF--
+bool(true)
 array(3) {
   [0]=>
   string(3) "one"
@@ -40,4 +42,4 @@ array(3) {
   [2]=>
   int(%d)
 }
-
+bool(true)

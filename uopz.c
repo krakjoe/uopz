@@ -881,7 +881,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, zend_string *name,
 
 	if (!(ubackup = zend_hash_find_ptr(backup, name))) {
 		/* nothing to restore */
-		return 1;
+		return 0;
 	}
 
 	table = ubackup->scope ?
