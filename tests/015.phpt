@@ -30,12 +30,8 @@ uopz_compose("B", ["A"], [
 	]
 ]);
 
-uopz_function("whatever", function(){
-	return "whatever";
-});
-
 $b = new B();
-var_dump($b->foo(), whatever(), $b->fof(), B::myClosure());
+var_dump($b->foo(), $b->fof(), B::myClosure());
 
 --EXPECTF--
 object(B)#%d (1) {
@@ -44,6 +40,5 @@ object(B)#%d (1) {
 }
 string(9) "protected"
 string(9) "overriden"
-string(8) "whatever"
 bool(true)
 string(9) "{closure}"
