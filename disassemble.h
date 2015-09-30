@@ -48,7 +48,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
 } /* }}} */
 
-#define UOPZ_ZVAL_NUM(c) (c > 0 ? c / sizeof(zval) : c)
+#define UOPZ_ZVAL_NUM(c) (c > 0 ? (c - sizeof(zend_execute_data)) / sizeof(zval) : c)
 #define UOPZ_VAR_NUM(c) (c > 0 ? c / sizeof(zend_string) : c)
 
 /* {{{ */
