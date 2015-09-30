@@ -45,13 +45,13 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
+#include "disassemble.h"
+
 #define MAX_OPCODE 163
 #undef EX
 #define EX(element) EG(current_execute_data)->element
 #define OPLINE EX(opline)
 #define OPCODE OPLINE->opcode
-
-# define EX_T(offset) (*EX_TMP_VAR(EG(current_execute_data), offset))
 
 #define AI_SET_PTR(t, val) do {				\
 	temp_variable *__t = (t);			\
@@ -603,6 +603,9 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_TRAIT",    			ZEND_ACC_TRAIT,     			CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_FETCH",				LONG_MAX,						CONST_CS|CONST_PERSISTENT);
 
+	REGISTER_LONG_CONSTANT("ZEND_USER_FUNCTION",			ZEND_USER_FUNCTION,				CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ZEND_INTERNAL_FUNCTION",		ZEND_INTERNAL_FUNCTION,			CONST_CS|CONST_PERSISTENT);
+
 	REGISTER_INI_ENTRIES();
 
 	php_uopz_init_handlers(module_number);
@@ -628,6 +631,31 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 
 	return SUCCESS;
 } /* }}} */
+
+static inline void uopz_destroy_opcodes(zval *zv) {
+	zend_string_release(Z_PTR_P(zv));
+}
+
+static inline void uopz_init_opcodes(HashTable *hash) {
+	uint32_t it = 1, 
+			  end = 159;
+	
+	zend_hash_init(hash, end, NULL, uopz_destroy_opcodes, 0);
+	while (it < end) {
+		zend_string  *name;
+		const char *opcode = zend_get_opcode_name(it);
+
+		if (!opcode) {
+			it++;
+			continue;
+		}
+
+		name  = zend_string_init(
+			opcode, strlen(opcode), 0);
+		zend_hash_index_add_ptr(hash, it, name);
+		it++;
+	}
+}
 
 /* {{{ PHP_RINIT_FUNCTION
  */
@@ -658,6 +686,7 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_hash_init(
 		&UOPZ(backup), 8, NULL,
 		(dtor_func_t) php_uopz_backup_table_dtor, 0);
+	uopz_init_opcodes(&UOPZ(opcodes));
 
 	UOPZ(copts) = CG(compiler_options);
 	
@@ -699,6 +728,7 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 
 	zend_hash_destroy(&UOPZ(overload));
 	zend_hash_destroy(&UOPZ(backup));
+	zend_hash_destroy(&UOPZ(opcodes));
 
 	zend_hash_apply(CG(function_table), php_uopz_clean_user_function);
 	zend_hash_apply(CG(class_table), php_uopz_clean_user_class);
@@ -716,6 +746,48 @@ static PHP_MINFO_FUNCTION(uopz)
 	php_info_print_table_end();
 }
 /* }}} */
+
+/* {{{ */
+static inline void uopz_disassemble(const zend_function *function, zval *disassembly) {
+	array_init(disassembly);
+	
+	switch (function->type) {
+		case ZEND_INTERNAL_FUNCTION:
+			uopz_disassemble_internal_function((zend_internal_function*) function, disassembly);
+		break;
+
+		case ZEND_USER_FUNCTION:
+			uopz_disassemble_function((zend_op_array*) function, disassembly);
+		break;
+	}
+} /* }}} */
+
+/* {{{ */
+static PHP_FUNCTION(uopz_disassemble) 
+{
+	zend_class_entry *clazz = NULL;
+	zend_string *method = NULL;
+	zend_function *function;
+	zval *zclosure = NULL;
+	
+	if (uopz_parse_parameters("S", &method) != SUCCESS &&
+		uopz_parse_parameters("CS", &clazz, &method) != SUCCESS &&
+		uopz_parse_parameters("O", &zclosure,zend_ce_closure)) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, "
+			"expected "
+			"(class, method) or (function) or (Closure)");
+		return;
+	}
+
+	if (zclosure) {
+		function = (zend_function*) zend_get_closure_method_def(zclosure);
+	} else if (uopz_find_function(clazz ? &clazz->function_table : CG(function_table), method, &function) != SUCCESS) {
+		return;
+	}
+
+	uopz_disassemble(function, return_value);
+} /* }}} */
 
 /* {{{ */
 static inline zend_bool uopz_verify_overload(zval *handler, zend_long opcode, char **expected) {
@@ -1855,6 +1927,10 @@ ZEND_BEGIN_ARG_INFO(uopz_overload_arginfo, 1)
 	ZEND_ARG_INFO(0, opcode)
 	ZEND_ARG_INFO(0, callable)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz__disassemble_arginfo, 1)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_rename_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
@@ -1917,6 +1993,7 @@ ZEND_END_ARG_INFO()
 /* {{{ uopz_functions[]
  */
 static const zend_function_entry uopz_functions[] = {
+	PHP_FE(uopz_disassemble, uopz__disassemble_arginfo)
 	PHP_FE(uopz_overload, uopz_overload_arginfo)
 	PHP_FE(uopz_backup, uopz_backup_arginfo)
 	PHP_FE(uopz_restore, uopz_restore_arginfo)

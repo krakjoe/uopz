@@ -37,6 +37,7 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	
 	zend_ulong	copts;
 	HashTable	backup;
+	HashTable   opcodes;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS
