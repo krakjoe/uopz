@@ -48,7 +48,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
 } /* }}} */
 
-#define UOPZ_CONSTANT_NUM(c) (c > 0 ? c / sizeof(zval) : c)
+#define UOPZ_ZVAL_NUM(c) (c > 0 ? c / sizeof(zval) : c)
 #define UOPZ_VAR_NUM(c) (c > 0 ? c / sizeof(zend_string) : c)
 
 /* {{{ */
@@ -60,20 +60,20 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_uchar 
 
 	array_init(&result);
 	switch (op_type) {
+		case IS_TMP_VAR:
+			add_assoc_long(&result, "tmp", UOPZ_ZVAL_NUM(op->var));		
+		break;
+
+		case IS_CV:
+			add_assoc_long(&result, "cv", UOPZ_ZVAL_NUM(op->num));
+		break;
+
 		case IS_CONST:
-			add_assoc_long(&result, "constant", UOPZ_CONSTANT_NUM(op->constant));
+			add_assoc_long(&result, "constant", UOPZ_ZVAL_NUM(op->constant));
 		break;
 
 		case IS_VAR:
 			add_assoc_long(&result, "var",      UOPZ_VAR_NUM(op->var));
-		break;
-
-		case IS_TMP_VAR:
-			add_assoc_long(&result, "tmp",      op->num);
-		break;
-
-		case IS_CV:
-			add_assoc_long(&result, "cv",      op->num);
 		break;
 	}
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), name, nlen, &result);
