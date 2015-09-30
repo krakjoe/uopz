@@ -19,8 +19,8 @@
 #define HAVE_UOPZ_DISASSEMBLE
 
 #define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
-#define UOPZ_ZVAL_NUM(c) (c > 0 ? (c - sizeof(zend_execute_data)) / sizeof(zval) : c)
-#define UOPZ_VAR_NUM(c) (c > 0 ? c / sizeof(zend_string) : c)
+#define UOPZ_ZVAL_NUM(c) (c > 0L ? (c) / sizeof(zval) : c)
+#define UOPZ_VAR_NUM(c) (c > 0L ? c / sizeof(zend_string) : c)
 
 /* {{{ */
 static inline zend_string* uopz_type_name(zend_uchar type) {
@@ -65,7 +65,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 		it++;
 	}
 
-	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo") - 1, &result);
 } /* }}} */
 
 /* {{{ */
@@ -114,7 +114,7 @@ static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arg
 		it++;
 	}
 
-	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo") - 1, &result);
 } /* }}} */
 
 /* {{{ */
@@ -169,7 +169,7 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
 		it++;
 	}
-	zend_hash_str_add(Z_ARRVAL_P(disassembly), "opcodes", sizeof("opcodes"), &result);
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "opcodes", sizeof("opcodes") - 1, &result);
 } /* }}} */
 
 /* {{{ */
@@ -182,7 +182,7 @@ static inline void uopz_disassemble_vars(zend_string **vars, int end, zval *disa
 		add_index_str(&result, it, zend_string_copy(vars[it]));
 		it++;
 	}
-	zend_hash_str_add(Z_ARRVAL_P(disassembly), "vars", sizeof("vars"), &result);
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "vars", sizeof("vars") - 1, &result);
 } /* }}} */
 
 /* {{{ */
@@ -195,7 +195,7 @@ static inline void uopz_disassemble_literals(zval *literals, int end, zval *disa
 		add_index_zval(&result, it, &literals[it]);
 		it++;
 	}
-	zend_hash_str_add(Z_ARRVAL_P(disassembly), "literals", sizeof("literals"), &result);
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "literals", sizeof("literals") - 1, &result);
 } /* }}} */
 
 /* {{{ */
@@ -218,7 +218,7 @@ static inline void uopz_disassemble_flags(zend_uchar flags, zval *disassembly) {
 		add_assoc_bool(&result, "abstract", 1);
 	}
 	
-	zend_hash_str_add(Z_ARRVAL_P(disassembly), "flags", sizeof("flags"), &result);
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "flags", sizeof("flags") - 1, &result);
 } /* }}} */
 
 /* {{{ */
