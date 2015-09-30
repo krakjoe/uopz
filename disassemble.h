@@ -90,7 +90,10 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 		zend_string *name = zend_hash_index_find_ptr(&UOPZ(opcodes), opcodes[it].opcode);
 
 		array_init(&opcode);
-		add_assoc_str(&opcode, "opcode", zend_string_copy(name));
+		if (name) {
+			add_assoc_str(&opcode, "opcode", zend_string_copy(name));
+		} else add_assoc_long(&opcode, "opcode", opcodes[it].opcode);
+
 		uopz_disassemble_operand(ZEND_STRL("op1"), opcodes[it].op1_type, &opcodes[it].op1, vars, literals, &opcode);
 		uopz_disassemble_operand(ZEND_STRL("op2"), opcodes[it].op2_type, &opcodes[it].op2, vars, literals, &opcode);
 		uopz_disassemble_operand(ZEND_STRL("result"), opcodes[it].result_type, &opcodes[it].result, vars, literals, &opcode);
