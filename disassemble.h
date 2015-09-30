@@ -20,6 +20,7 @@
 
 #define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
 #define UOPZ_ZVAL_NUM(c) (c > 0L ? (c) / sizeof(zval) : c)
+#define UOPZ_CV_NUM(c) ((c - sizeof(zend_execute_data)) / sizeof(zval))
 #define UOPZ_VAR_NUM(c) (c > 0L ? c / sizeof(zend_string) : c)
 
 /* {{{ */
@@ -131,7 +132,7 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_uchar 
 		break;
 
 		case IS_CV:
-			add_assoc_long(&result, "cv", UOPZ_ZVAL_NUM(op->num));
+			add_assoc_long(&result, "cv", UOPZ_CV_NUM(op->num));
 		break;
 
 		case IS_CONST:
