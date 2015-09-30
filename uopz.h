@@ -25,6 +25,8 @@ extern zend_module_entry uopz_module_entry;
 #define PHP_UOPZ_VERSION "4.0.0"
 #define PHP_UOPZ_EXTNAME "uopz"
 
+#define UOPZ_NUM_TYPES 18
+
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	HashTable	overload;
 	
@@ -38,6 +40,7 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	zend_ulong	copts;
 	HashTable	backup;
 	HashTable   opcodes;
+	zend_string *types[UOPZ_NUM_TYPES];
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS

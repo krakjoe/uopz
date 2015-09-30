@@ -17,6 +17,11 @@
  */
 #ifndef HAVE_UOPZ_DISASSEMBLE
 #define HAVE_UOPZ_DISASSEMBLE
+
+static inline zend_string* uopz_type_name(zend_uchar type) {
+	return zend_string_copy(UOPZ(types)[type]);	
+}
+
 /* {{{ */
 static inline void uopz_disassemble_internal_function(zend_internal_function *function, zval *disassembly) {
 	add_assoc_long(disassembly, "type", ZEND_INTERNAL_FUNCTION);
@@ -30,6 +35,20 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 	uint32_t it = 0;
 
 	array_init(&result);
+	if (return_type) {
+		zval ret;
+		zend_arg_info *return_type = (arginfo - 1);
+
+		array_init(&ret);
+		if (return_type->class_name) {
+			add_assoc_str(&ret, "class", zend_string_copy(return_type->class_name));
+		} else if (return_type->type_hint != IS_UNDEF) {
+			add_assoc_str(&ret, "type", uopz_type_name(arginfo[it].type_hint));
+		}
+
+		zend_hash_index_add(Z_ARRVAL(result), -1, &ret);		
+	}
+
 	while (it < end) {
 		zval arg;
 
@@ -37,10 +56,13 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 		add_assoc_str(&arg, "name", zend_string_copy(arginfo[it].name));
 		if (arginfo[it].class_name) {
 			add_assoc_str(&arg, "class", zend_string_copy(arginfo[it].class_name));
-		} else add_assoc_long(&arg, "type", arginfo[it].type_hint);
+		} else if (arginfo[it].type_hint != IS_UNDEF) {
+			add_assoc_str(&arg, "type", uopz_type_name(arginfo[it].type_hint));
+		}
 		add_assoc_bool(&arg, "reference", arginfo[it].pass_by_reference);
 		add_assoc_bool(&arg, "null", arginfo[it].allow_null);
 		add_assoc_bool(&arg, "variadic", arginfo[it].is_variadic);
+
 		zend_hash_next_index_insert(Z_ARRVAL(result), &arg);
 		it++;
 	}
@@ -48,6 +70,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
 } /* }}} */
 
+#define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
 #define UOPZ_ZVAL_NUM(c) (c > 0 ? (c - sizeof(zend_execute_data)) / sizeof(zval) : c)
 #define UOPZ_VAR_NUM(c) (c > 0 ? c / sizeof(zend_string) : c)
 
@@ -168,7 +191,7 @@ static inline void uopz_disassemble_function(zend_op_array *function, zval *disa
 	add_assoc_long(disassembly, "rnargs", function->required_num_args);
 	
 	if (function->arg_info)
-		uopz_disassemble_arginfo(function->arg_info, function->num_args, 0, disassembly);
+		uopz_disassemble_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
 
 	uopz_disassemble_opcodes(function->opcodes, function->last, function->vars, function->literals, disassembly);
 	uopz_disassemble_vars(function->vars, function->last_var, disassembly);
