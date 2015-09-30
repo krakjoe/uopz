@@ -20,6 +20,7 @@
 
 #define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
 #define UOPZ_ZVAL_NUM(c) (c > 0L ? (c) / sizeof(zval) : c)
+#define UOPZ_JMP_NUM(n) ((n / (sizeof(znode_op) * sizeof(znode_op))) - 1)
 #define UOPZ_CV_NUM(c) ((c - sizeof(zend_execute_data)) / sizeof(zval))
 #define UOPZ_VAR_NUM(c) (c > 0L ? c / sizeof(zend_string) : c)
 
@@ -119,14 +120,17 @@ static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arg
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_uchar op_type, znode_op *op, zend_string **vars, zval *literals, zval *disassembly) {
+static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_uchar op_type, znode_op *op, zend_bool jmp, zval *disassembly) {
 	zval result;
 
-	if (op_type == IS_UNUSED)
+	if (op_type == IS_UNUSED && !jmp)
 		return;
 
 	array_init(&result);
-	switch (op_type) {
+
+	if (jmp) {
+		add_assoc_long(&result, "jmp", UOPZ_JMP_NUM(op->jmp_offset));
+	} else switch (op_type) {
 		case IS_TMP_VAR:
 			add_assoc_long(&result, "tmp", UOPZ_ZVAL_NUM(op->var));		
 		break;
@@ -143,6 +147,7 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_uchar 
 			add_assoc_long(&result, "var",      UOPZ_VAR_NUM(op->var));
 		break;
 	}
+	
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), name, nlen, &result);
 } /* }}} */
 
@@ -161,10 +166,37 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 			add_assoc_str(&opcode, "opcode", zend_string_copy(name));
 		} else add_assoc_long(&opcode, "opcode", opcodes[it].opcode);
 
-		uopz_disassemble_operand(ZEND_STRL("op1"), opcodes[it].op1_type, &opcodes[it].op1, vars, literals, &opcode);
-		uopz_disassemble_operand(ZEND_STRL("op2"), opcodes[it].op2_type, &opcodes[it].op2, vars, literals, &opcode);
-		uopz_disassemble_operand(ZEND_STRL("result"), opcodes[it].result_type, &opcodes[it].result, vars, literals, &opcode);
-		if (opcodes[it].extended_value)		
+		switch (opcodes[it].opcode) {
+			case ZEND_JMP:
+			case ZEND_FAST_CALL:
+			case ZEND_DECLARE_ANON_CLASS:
+			case ZEND_DECLARE_ANON_INHERITED_CLASS:
+				uopz_disassemble_operand(ZEND_STRL("op1"), opcodes[it].op1_type, &opcodes[it].op1, 1, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), opcodes[it].op2_type, &opcodes[it].op2, 0, &opcode);
+			break;
+
+			case ZEND_JMPZNZ:
+			case ZEND_JMPZ:
+			case ZEND_JMPNZ:
+			case ZEND_JMPZ_EX:
+			case ZEND_JMPNZ_EX:
+			case ZEND_JMP_SET:
+			case ZEND_COALESCE:
+			case ZEND_NEW:
+			case ZEND_FE_RESET_R:
+			case ZEND_FE_RESET_RW:
+			case ZEND_ASSERT_CHECK:
+				uopz_disassemble_operand(ZEND_STRL("op1"), opcodes[it].op1_type, &opcodes[it].op1, 0, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), opcodes[it].op2_type, &opcodes[it].op2, 1, &opcode);
+			break;
+
+			default:
+				uopz_disassemble_operand(ZEND_STRL("op1"), opcodes[it].op1_type, &opcodes[it].op1, 0, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), opcodes[it].op2_type, &opcodes[it].op2, 0, &opcode);
+		}
+		
+		uopz_disassemble_operand(ZEND_STRL("result"), opcodes[it].result_type, &opcodes[it].result, 0, &opcode);
+		if (opcodes[it].extended_value)
 			add_assoc_long(&opcode, "ext", opcodes[it].extended_value);
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
