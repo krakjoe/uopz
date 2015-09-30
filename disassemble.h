@@ -196,8 +196,29 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 		}
 		
 		uopz_disassemble_operand(ZEND_STRL("result"), opcodes, &opcodes[it], opcodes[it].result_type, &opcodes[it].result, 0, &opcode);
-		if (opcodes[it].extended_value > 0L)
-			add_assoc_long(&opcode, "ext", opcodes[it].extended_value);
+		if (opcodes[it].extended_value > 0L) {
+			switch (opcodes[it].opcode) {
+				/* horrible, don't keep allocing these */
+				case ZEND_FETCH_UNSET:
+				case ZEND_FETCH_RW:
+				case ZEND_FETCH_W:
+				case ZEND_FETCH_R: switch (opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK) {
+					case ZEND_FETCH_GLOBAL_LOCK:
+					case ZEND_FETCH_GLOBAL:
+						add_assoc_str(&opcode, "fetch", zend_string_init(ZEND_STRL("global"), 0));
+					break;
+
+					case ZEND_FETCH_STATIC:
+						add_assoc_str(&opcode, "fetch", zend_string_init(ZEND_STRL("static"), 0));
+					break;
+
+					case ZEND_FETCH_LOCAL:
+						add_assoc_str(&opcode, "fetch", zend_string_init(ZEND_STRL("local"), 0));
+					break;
+				} break;
+			}
+		}
+			
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
 		it++;
