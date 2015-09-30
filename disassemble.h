@@ -232,6 +232,16 @@ static inline void uopz_disassemble_literals(zval *literals, int end, zval *disa
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_disassemble_statics(HashTable *statics, zval *disassembly) {
+	if (statics) {
+		zval tmp;
+		ZVAL_ARR(&tmp, statics);
+		add_assoc_zval(disassembly, "static", &tmp);
+		Z_ADDREF(tmp);
+	}
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_disassemble_flags(zend_uchar flags, zval *disassembly) {
 	zval result;
 
@@ -286,5 +296,6 @@ static inline void uopz_disassemble_function(zend_op_array *function, zval *disa
 	uopz_disassemble_opcodes(function->opcodes, function->last, function->vars, function->literals, disassembly);
 	uopz_disassemble_vars(function->vars, function->last_var, disassembly);
 	uopz_disassemble_literals(function->literals, function->last_literal, disassembly);
+	uopz_disassemble_statics(function->static_variables, disassembly);
 } /* }}} */
 #endif
