@@ -18,15 +18,13 @@
 #ifndef HAVE_UOPZ_DISASSEMBLE
 #define HAVE_UOPZ_DISASSEMBLE
 
-static inline zend_string* uopz_type_name(zend_uchar type) {
-	return zend_string_copy(UOPZ(types)[type]);	
-}
+#define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
+#define UOPZ_ZVAL_NUM(c) (c > 0 ? (c - sizeof(zend_execute_data)) / sizeof(zval) : c)
+#define UOPZ_VAR_NUM(c) (c > 0 ? c / sizeof(zend_string) : c)
 
 /* {{{ */
-static inline void uopz_disassemble_internal_function(zend_internal_function *function, zval *disassembly) {
-	add_assoc_long(disassembly, "type", ZEND_INTERNAL_FUNCTION);
-	add_assoc_long(disassembly, "flags", function->fn_flags);
-	add_assoc_str(disassembly,   "name", zend_string_copy(function->function_name));
+static inline zend_string* uopz_type_name(zend_uchar type) {
+	return zend_string_copy(UOPZ(types)[type]);	
 } /* }}} */
 
 /* {{{ */
@@ -70,9 +68,54 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
 } /* }}} */
 
-#define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
-#define UOPZ_ZVAL_NUM(c) (c > 0 ? (c - sizeof(zend_execute_data)) / sizeof(zval) : c)
-#define UOPZ_VAR_NUM(c) (c > 0 ? c / sizeof(zend_string) : c)
+/* {{{ */
+static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arginfo, uint32_t end, zend_bool return_type, zval *disassembly) {
+	zval result;
+	uint32_t it = 0;
+
+	array_init(&result);
+	if (return_type) {
+		zval ret;
+		zend_internal_arg_info *return_type = (arginfo - 1);
+
+		array_init(&ret);
+		if (return_type->class_name) {
+			zend_string *class_name = zend_string_init(
+				return_type->class_name, strlen(return_type->class_name), 0);
+
+			add_assoc_str(&ret, "class", class_name);
+		} else if (return_type->type_hint != IS_UNDEF) {
+			add_assoc_str(&ret, "type", uopz_type_name(arginfo[it].type_hint));
+		}
+
+		zend_hash_index_add(Z_ARRVAL(result), -1, &ret);		
+	}
+
+	while (it < end) {
+		zval arg;
+		zend_string *name = zend_string_init(
+			arginfo[it].name, strlen(arginfo[it].name), 0);
+
+		array_init(&arg);
+		add_assoc_str(&arg, "name", name);
+		if (arginfo[it].class_name) {
+			zend_string *class_name = zend_string_init(
+				arginfo[it].class_name, strlen(arginfo[it].class_name), 0);
+
+			add_assoc_str(&arg, "class", class_name);
+		} else if (arginfo[it].type_hint != IS_UNDEF) {
+			add_assoc_str(&arg, "type", uopz_type_name(arginfo[it].type_hint));
+		}
+		add_assoc_bool(&arg, "reference", arginfo[it].pass_by_reference);
+		add_assoc_bool(&arg, "null", arginfo[it].allow_null);
+		add_assoc_bool(&arg, "variadic", arginfo[it].is_variadic);
+
+		zend_hash_next_index_insert(Z_ARRVAL(result), &arg);
+		it++;
+	}
+
+	zend_hash_str_add(Z_ARRVAL_P(disassembly), "arginfo", sizeof("arginfo"), &result);
+} /* }}} */
 
 /* {{{ */
 static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_uchar op_type, znode_op *op, zend_string **vars, zval *literals, zval *disassembly) {
@@ -176,6 +219,20 @@ static inline void uopz_disassemble_flags(zend_uchar flags, zval *disassembly) {
 	}
 	
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), "flags", sizeof("flags"), &result);
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassemble_internal_function(zend_internal_function *function, zval *disassembly) {
+	add_assoc_str(disassembly,   "name", zend_string_copy(function->function_name));
+	uopz_disassemble_flags(function->fn_flags, disassembly);
+	if (function->scope) {
+		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
+	}
+	add_assoc_long(disassembly, "nargs", function->num_args);
+	add_assoc_long(disassembly, "rnargs", function->required_num_args);
+	
+	if (function->arg_info)
+		uopz_disassemble_internal_internal_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
 } /* }}} */
 
 /* {{{ */
