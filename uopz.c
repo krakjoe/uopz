@@ -632,54 +632,6 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	return SUCCESS;
 } /* }}} */
 
-static inline void uopz_destroy_opcodes(zval *zv) {
-	zend_string_release(Z_PTR_P(zv));
-}
-
-static inline void uopz_init_opcodes(HashTable *hash) {
-	uint32_t it = 1, 
-			  end = 159;
-	
-	zend_hash_init(hash, end, NULL, uopz_destroy_opcodes, 0);
-	while (it < end) {
-		zend_string  *name;
-		const char *opcode = zend_get_opcode_name(it);
-
-		if (!opcode) {
-			it++;
-			continue;
-		}
-
-		name  = zend_string_init(
-			opcode, strlen(opcode), 0);
-		zend_hash_index_add_ptr(hash, it, name);
-		it++;
-	}
-}
-
-static inline void uopz_init_types(zend_string  **types) {
-	memset(types, 0, sizeof(zend_string*) * UOPZ_NUM_TYPES);
-
-	/* some of these will be unused */
-	types[IS_UNDEF] = zend_string_init(ZEND_STRL("undefined"), 0);
-	types[IS_NULL]	= zend_string_init(ZEND_STRL("null"), 0);
-	types[IS_FALSE]	= zend_string_init(ZEND_STRL("false"), 0);
-	types[IS_TRUE]	= zend_string_init(ZEND_STRL("true"), 0);
-	types[IS_LONG]	= zend_string_init(ZEND_STRL("int"), 0);
-	types[IS_DOUBLE]	= zend_string_init(ZEND_STRL("double"), 0);
-	types[IS_STRING]	= zend_string_init(ZEND_STRL("string"), 0);
-	types[IS_ARRAY]		= zend_string_init(ZEND_STRL("array"), 0);
-	types[IS_OBJECT]	= zend_string_init(ZEND_STRL("object"), 0);
-	types[IS_RESOURCE]	= zend_string_init(ZEND_STRL("resource"), 0);
-	types[IS_REFERENCE] = zend_string_init(ZEND_STRL("reference"), 0);
-	types[IS_CONSTANT]	= zend_string_init(ZEND_STRL("constant"), 0);
-	types[IS_CONSTANT_AST]	= zend_string_init(ZEND_STRL("ast"), 0);
-	types[_IS_BOOL]			= zend_string_init(ZEND_STRL("bool"), 0);
-	types[IS_CALLABLE]		= zend_string_init(ZEND_STRL("callable"), 0);
-	types[IS_INDIRECT]		= zend_string_init(ZEND_STRL("indirect"), 0);
-	types[IS_PTR]			= zend_string_init(ZEND_STRL("pointer"), 0);
-}
-
 /* {{{ PHP_RINIT_FUNCTION
  */
 static PHP_RINIT_FUNCTION(uopz)
@@ -690,6 +642,8 @@ static PHP_RINIT_FUNCTION(uopz)
 #ifdef ZTS
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
+
+	uopz_disassembler_init();
 
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
 	spl_ce_RuntimeException =
@@ -709,8 +663,6 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_hash_init(
 		&UOPZ(backup), 8, NULL,
 		(dtor_func_t) php_uopz_backup_table_dtor, 0);
-	uopz_init_opcodes(&UOPZ(opcodes));
-	uopz_init_types(UOPZ(types));
 
 	UOPZ(copts) = CG(compiler_options);
 	
@@ -748,24 +700,16 @@ static inline int php_uopz_clean_user_class(zval *zv) {
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
 {
+	uopz_disassembler_shutdown();
+
 	CG(compiler_options) = UOPZ(copts);
 
 	zend_hash_destroy(&UOPZ(overload));
 	zend_hash_destroy(&UOPZ(backup));
-	zend_hash_destroy(&UOPZ(opcodes));
 
 	zend_hash_apply(CG(function_table), php_uopz_clean_user_function);
 	zend_hash_apply(CG(class_table), php_uopz_clean_user_class);
 
-	{
-		uint32_t it = IS_UNDEF, end = IS_PTR;
-		
-		while (it <= end) {
-			if (UOPZ(types)[it])
-				zend_string_release(UOPZ(types)[it]);
-			it++;
-		}
-	}
 	return SUCCESS;
 }
 /* }}} */

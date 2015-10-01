@@ -39,7 +39,9 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	
 	zend_ulong	copts;
 	HashTable	backup;
+
 	HashTable   opcodes;
+	HashTable   fetches;
 	zend_string *types[UOPZ_NUM_TYPES];
 ZEND_END_MODULE_GLOBALS(uopz)
 

@@ -20,9 +20,98 @@
 
 #define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
 #define UOPZ_ZVAL_NUM(c) (c > 0L ? (c) / sizeof(zval) : c)
-#define UOPZ_JMP_NUM(n) ((n / (sizeof(znode_op) * sizeof(znode_op))) - 1)
 #define UOPZ_CV_NUM(c) ((c - sizeof(zend_execute_data)) / sizeof(zval))
 #define UOPZ_VAR_NUM(c) (c > 0L ? c / sizeof(zend_string) : c)
+
+/* {{{ */
+static inline void uopz_disassembler_destroy_opcodes(zval *zv) {
+	zend_string_release(Z_PTR_P(zv));
+}
+
+static inline void uopz_disassembler_init_opcodes(HashTable *hash) {
+	uint32_t it = 1, 
+			  end = 159;
+	
+	zend_hash_init(hash, end, NULL, uopz_disassembler_destroy_opcodes, 0);
+	while (it < end) {
+		zend_string  *name;
+		const char *opcode = zend_get_opcode_name(it);
+
+		if (!opcode) {
+			it++;
+			continue;
+		}
+
+		name  = zend_string_init(
+			opcode, strlen(opcode), 0);
+		zend_hash_index_add_ptr(hash, it, name);
+		it++;
+	}
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassembler_init_types(zend_string  **types) {
+	memset(types, 0, sizeof(zend_string*) * UOPZ_NUM_TYPES);
+
+	/* some of these will be unused */
+	types[IS_UNDEF] = zend_string_init(ZEND_STRL("undefined"), 0);
+	types[IS_NULL]	= zend_string_init(ZEND_STRL("null"), 0);
+	types[IS_FALSE]	= zend_string_init(ZEND_STRL("false"), 0);
+	types[IS_TRUE]	= zend_string_init(ZEND_STRL("true"), 0);
+	types[IS_LONG]	= zend_string_init(ZEND_STRL("int"), 0);
+	types[IS_DOUBLE]	= zend_string_init(ZEND_STRL("double"), 0);
+	types[IS_STRING]	= zend_string_init(ZEND_STRL("string"), 0);
+	types[IS_ARRAY]		= zend_string_init(ZEND_STRL("array"), 0);
+	types[IS_OBJECT]	= zend_string_init(ZEND_STRL("object"), 0);
+	types[IS_RESOURCE]	= zend_string_init(ZEND_STRL("resource"), 0);
+	types[IS_REFERENCE] = zend_string_init(ZEND_STRL("reference"), 0);
+	types[IS_CONSTANT]	= zend_string_init(ZEND_STRL("constant"), 0);
+	types[IS_CONSTANT_AST]	= zend_string_init(ZEND_STRL("ast"), 0);
+	types[_IS_BOOL]			= zend_string_init(ZEND_STRL("bool"), 0);
+	types[IS_CALLABLE]		= zend_string_init(ZEND_STRL("callable"), 0);
+	types[IS_INDIRECT]		= zend_string_init(ZEND_STRL("indirect"), 0);
+	types[IS_PTR]			= zend_string_init(ZEND_STRL("pointer"), 0);
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassembler_init_fetches(HashTable *hash) {
+	zval tmp;
+
+	zend_hash_init(hash, 4, NULL, ZVAL_PTR_DTOR, 0);	
+	
+	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("global"), 0));
+	zend_hash_index_add(hash, ZEND_FETCH_GLOBAL, &tmp);
+	zend_hash_index_add(hash, ZEND_FETCH_GLOBAL_LOCK, &tmp);
+	Z_ADDREF(tmp);
+
+	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("static"), 0));
+	zend_hash_index_add(hash, ZEND_FETCH_STATIC, &tmp);
+	
+	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("local"), 0));
+	zend_hash_index_add(hash, ZEND_FETCH_LOCAL, &tmp);
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassembler_init() {
+	uopz_disassembler_init_opcodes(&UOPZ(opcodes));
+	uopz_disassembler_init_types(UOPZ(types));
+	uopz_disassembler_init_fetches(&UOPZ(fetches));
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassembler_shutdown() {
+	zend_hash_destroy(&UOPZ(opcodes));
+	{
+		uint32_t it = IS_UNDEF, end = IS_PTR;
+		
+		while (it <= end) {
+			if (UOPZ(types)[it])
+				zend_string_release(UOPZ(types)[it]);
+			it++;
+		}
+	}
+	zend_hash_destroy(&UOPZ(fetches));
+} /* }}} */
 
 /* {{{ */
 static inline zend_string* uopz_type_name(zend_uchar type) {
@@ -196,8 +285,9 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 		}
 		
 		uopz_disassemble_operand(ZEND_STRL("result"), opcodes, &opcodes[it], opcodes[it].result_type, &opcodes[it].result, 0, &opcode);
+
 		if (opcodes[it].extended_value > 0L) {
-			switch (opcodes[it].opcode) {
+			switch (opcodes[it].opcode) {	
 				/* horrible, don't keep allocing these */
 				case ZEND_FETCH_UNSET:
 				case ZEND_FETCH_RW:
@@ -205,20 +295,19 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 				case ZEND_FETCH_R: switch (opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK) {
 					case ZEND_FETCH_GLOBAL_LOCK:
 					case ZEND_FETCH_GLOBAL:
-						add_assoc_str(&opcode, "fetch", zend_string_init(ZEND_STRL("global"), 0));
+						add_assoc_zval(&opcode, "fetch", zend_hash_index_find(&UOPZ(fetches), opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK));
 					break;
 
 					case ZEND_FETCH_STATIC:
-						add_assoc_str(&opcode, "fetch", zend_string_init(ZEND_STRL("static"), 0));
+						add_assoc_zval(&opcode, "fetch", zend_hash_index_find(&UOPZ(fetches), opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK));
 					break;
 
 					case ZEND_FETCH_LOCAL:
-						add_assoc_str(&opcode, "fetch", zend_string_init(ZEND_STRL("local"), 0));
+						add_assoc_zval(&opcode, "fetch", zend_hash_index_find(&UOPZ(fetches), opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK));
 					break;
 				} break;
 			}
 		}
-			
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
 		it++;
@@ -301,7 +390,6 @@ static inline void uopz_disassemble_internal_function(zend_internal_function *fu
 
 /* {{{ */
 static inline void uopz_disassemble_function(zend_op_array *function, zval *disassembly) {
-
 	add_assoc_str(disassembly, "name",  zend_string_copy(function->function_name));	
 
 	uopz_disassemble_flags(function->fn_flags, disassembly);
