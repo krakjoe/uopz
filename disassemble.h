@@ -19,9 +19,10 @@
 #define HAVE_UOPZ_DISASSEMBLE
 
 #define UOPZ_HAS_RETURN_TYPE(f) (((f)->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) == ZEND_ACC_HAS_RETURN_TYPE)
-#define UOPZ_ZVAL_NUM(c) (c > 0L ? (c) / sizeof(zval) : c)
-#define UOPZ_CV_NUM(c) ((c - sizeof(zend_execute_data)) / sizeof(zval))
-#define UOPZ_VAR_NUM(c) (c > 0L ? c / sizeof(zend_string) : c)
+#define UOPZ_ZVAL_NUM(c) 		((c > 0L ? (c) / sizeof(zval) : c) - ZEND_CALL_FRAME_SLOT)
+#define UOPZ_CONST_NUM(c) 		((c > 0L ? (c) / sizeof(zval) : c))
+#define UOPZ_CV_NUM(c) 			((c - sizeof(zend_execute_data)) / sizeof(zval))
+#define UOPZ_VAR_NUM(c) 		(c > 0L ? c / sizeof(zend_string) : c)
 
 /* {{{ */
 static inline void uopz_disassembler_destroy_opcodes(zval *zv) {
@@ -270,7 +271,7 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op *op
 		break;
 
 		case IS_CONST:
-			add_assoc_long(&result, "constant", UOPZ_ZVAL_NUM(op->constant));
+			add_assoc_long(&result, "constant", UOPZ_CONST_NUM(op->constant));
 		break;
 
 		case IS_VAR:
