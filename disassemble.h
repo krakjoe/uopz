@@ -497,7 +497,7 @@ static inline void uopz_disassemble_internal_function(zend_internal_function *fu
 	add_assoc_long(disassembly, "nargs", function->num_args);
 	add_assoc_long(disassembly, "rnargs", function->required_num_args);
 	if (function->arg_info)
-		uopz_disassemble_internal_internal_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
+		uopz_disassemble_internal_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
 } /* }}} */
 
 /* {{{ */
