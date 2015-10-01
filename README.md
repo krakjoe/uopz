@@ -386,9 +386,32 @@ int uopz_flags(string function, int flags);
 * Note: properties are in the form ```name => modifiers```, and declared null
 **/
 void uopz_compose(string name, array classes [, array methods [, array properties [, int flags = ZEND_ACC_CLASS]]]);
+
+/**
+* Disassemble class::method
+* @param string class
+* @param string method
+* @return array
+**/
+array uopz_disassemble(string class, string method);
+
+/**
+* Disassemble global function
+* @param string function
+* @return array
+**/
+array uopz_disassemble(string function);
+
+/**
+* Disassemble closure
+* @param Closure closure
+* @return array
+**/
+array uopz_disassemble(Closure closure);
 ```
 
-*Note: For a look at what is possible, see /tests.*
+*Note: For a look at what is possible, see /tests, for notes on disassembler see disassembler.md*
+
 
 Installation
 ============
