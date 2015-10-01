@@ -103,7 +103,7 @@ array(8) {
       ["result"]=>
       array(1) {
         ["tmp"]=>
-        int(8)
+        int(2)
       }
     }
     [3]=>
@@ -113,7 +113,7 @@ array(8) {
       ["op1"]=>
       array(1) {
         ["tmp"]=>
-        int(8)
+        int(2)
       }
     }
     [4]=>
