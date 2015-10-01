@@ -114,7 +114,7 @@ static inline void uopz_disassembler_shutdown() {
 } /* }}} */
 
 /* {{{ */
-static inline zend_string* uopz_type_name(zend_uchar type) {
+static inline zend_string* uopz_disassemble_type_name(zend_uchar type) {
 	return zend_string_copy(UOPZ(types)[type]);	
 } /* }}} */
 
@@ -132,7 +132,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 		if (return_type->class_name) {
 			add_assoc_str(&ret, "class", zend_string_copy(return_type->class_name));
 		} else if (return_type->type_hint != IS_UNDEF) {
-			add_assoc_str(&ret, "type", uopz_type_name(arginfo[it].type_hint));
+			add_assoc_str(&ret, "type", uopz_disassemble_type_name(arginfo[it].type_hint));
 		}
 
 		zend_hash_index_add(Z_ARRVAL(result), -1, &ret);		
@@ -146,7 +146,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 		if (arginfo[it].class_name) {
 			add_assoc_str(&arg, "class", zend_string_copy(arginfo[it].class_name));
 		} else if (arginfo[it].type_hint != IS_UNDEF) {
-			add_assoc_str(&arg, "type", uopz_type_name(arginfo[it].type_hint));
+			add_assoc_str(&arg, "type", uopz_disassemble_type_name(arginfo[it].type_hint));
 		}
 		add_assoc_bool(&arg, "reference", arginfo[it].pass_by_reference);
 		add_assoc_bool(&arg, "null", arginfo[it].allow_null);
@@ -176,7 +176,7 @@ static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arg
 
 			add_assoc_str(&ret, "class", class_name);
 		} else if (return_type->type_hint != IS_UNDEF) {
-			add_assoc_str(&ret, "type", uopz_type_name(arginfo[it].type_hint));
+			add_assoc_str(&ret, "type", uopz_disassemble_type_name(arginfo[it].type_hint));
 		}
 
 		zend_hash_index_add(Z_ARRVAL(result), -1, &ret);		
@@ -195,7 +195,7 @@ static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arg
 
 			add_assoc_str(&arg, "class", class_name);
 		} else if (arginfo[it].type_hint != IS_UNDEF) {
-			add_assoc_str(&arg, "type", uopz_type_name(arginfo[it].type_hint));
+			add_assoc_str(&arg, "type", uopz_disassemble_type_name(arginfo[it].type_hint));
 		}
 		add_assoc_bool(&arg, "reference", arginfo[it].pass_by_reference);
 		add_assoc_bool(&arg, "null", arginfo[it].allow_null);
@@ -238,6 +238,31 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op *op
 	}
 	
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), name, nlen, &result);
+} /* }}} */
+
+/* {{{ */
+static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t extended_value, zval *disassembly) {
+	switch (opcode) {	
+		case ZEND_FETCH_UNSET:
+		case ZEND_FETCH_RW:
+		case ZEND_FETCH_W:
+		case ZEND_FETCH_R: switch (extended_value & ZEND_FETCH_TYPE_MASK) {
+			case ZEND_FETCH_GLOBAL_LOCK:
+			case ZEND_FETCH_GLOBAL:
+				add_assoc_zval(disassembly, "fetch", zend_hash_index_find(&UOPZ(fetches), extended_value & ZEND_FETCH_TYPE_MASK));
+			break;
+
+			case ZEND_FETCH_STATIC:
+				add_assoc_zval(disassembly, "fetch", zend_hash_index_find(&UOPZ(fetches), extended_value & ZEND_FETCH_TYPE_MASK));
+			break;
+
+			case ZEND_FETCH_LOCAL:
+				add_assoc_zval(disassembly, "fetch", zend_hash_index_find(&UOPZ(fetches), extended_value & ZEND_FETCH_TYPE_MASK));
+			break;
+		} break;
+
+		/* TODO(krakjoe) these ... */
+	}
 } /* }}} */
 
 /* {{{ */
@@ -287,26 +312,7 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, zend
 		uopz_disassemble_operand(ZEND_STRL("result"), opcodes, &opcodes[it], opcodes[it].result_type, &opcodes[it].result, 0, &opcode);
 
 		if (opcodes[it].extended_value > 0L) {
-			switch (opcodes[it].opcode) {	
-				/* horrible, don't keep allocing these */
-				case ZEND_FETCH_UNSET:
-				case ZEND_FETCH_RW:
-				case ZEND_FETCH_W:
-				case ZEND_FETCH_R: switch (opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK) {
-					case ZEND_FETCH_GLOBAL_LOCK:
-					case ZEND_FETCH_GLOBAL:
-						add_assoc_zval(&opcode, "fetch", zend_hash_index_find(&UOPZ(fetches), opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK));
-					break;
-
-					case ZEND_FETCH_STATIC:
-						add_assoc_zval(&opcode, "fetch", zend_hash_index_find(&UOPZ(fetches), opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK));
-					break;
-
-					case ZEND_FETCH_LOCAL:
-						add_assoc_zval(&opcode, "fetch", zend_hash_index_find(&UOPZ(fetches), opcodes[it].extended_value & ZEND_FETCH_TYPE_MASK));
-					break;
-				} break;
-			}
+			upoz_disassemble_extended_value(opcodes[it].opcode, opcodes[it].extended_value, &opcode);
 		}
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
