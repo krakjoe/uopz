@@ -9,19 +9,19 @@ However, none of these tools allow programmatic interaction.
 uopz for PHP7 is able to disassemble PHP code into a representation that is understandable for humans.
 
 ```php
-	function uopz_disassemble(string class, string method) : array;
-	function uopz_disassemble(string function) : array;
-	function uopz_disassemble(Closure closure) : array;
+function uopz_disassemble(string class, string method) : array;
+function uopz_disassemble(string function) : array;
+function uopz_disassemble(Closure closure) : array;
 ```
 
 *Note: there is no assembler, that's a whole 'nother thing ...*
 
-The best way to learn about the format of a disassembly is by trying it for yourself, however, we can look at some simple examples:
+The best way to learn about the format of a disassembly is by trying it for yourself, however, the following simple example should give you a rough idea of what to expect:
 
 ```php
-	function add($a, $b) {
-		return $a + $b;
-	}
+function add($a, $b) {
+	return $a + $b;
+}
 ```
 
 The disassembly for the code above is thus:
