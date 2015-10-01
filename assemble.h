@@ -106,13 +106,13 @@ static inline void uopz_assemble_operand(zend_op *opline, znode_op *operand, zen
 	
 	if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
 		*type = IS_CV;
-		operand->num = (Z_LVAL_P(op) * sizeof(zval)) + sizeof(zend_execute_data);
+		operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("tmp")))) {
 		*type = IS_TMP_VAR;
-		operand->num = ((Z_LVAL_P(op) + ZEND_CALL_FRAME_SLOT) * sizeof(zval));
+		operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
 		*type = IS_VAR;
-		operand->num = Z_LVAL_P(op) * sizeof(zend_string);
+		operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
 		*type = IS_CONST;
 		if (Z_LVAL_P(op)) {
