@@ -490,32 +490,28 @@ static inline void uopz_disassemble_flags(uint32_t flags, zval *disassembly) {
 
 /* {{{ */
 static inline void uopz_disassemble_internal_function(zend_internal_function *function, zval *disassembly) {
+	if (function->scope)
+		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
 	add_assoc_str(disassembly,   "name", zend_string_copy(function->function_name));
 	uopz_disassemble_flags(function->fn_flags, disassembly);
-	if (function->scope) {
-		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
-	}
 	add_assoc_long(disassembly, "nargs", function->num_args);
 	add_assoc_long(disassembly, "rnargs", function->required_num_args);
-	
 	if (function->arg_info)
 		uopz_disassemble_internal_internal_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
 } /* }}} */
 
 /* {{{ */
 static inline void uopz_disassemble_function(zend_op_array *function, zval *disassembly) {
-	add_assoc_str(disassembly, "name",  zend_string_copy(function->function_name));
-
-	uopz_disassemble_flags(function->fn_flags, disassembly);
-	if (function->scope) {
+	if (function->scope)
 		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
-	}
+	add_assoc_str(disassembly, "name",  zend_string_copy(function->function_name));
+	uopz_disassemble_flags(function->fn_flags, disassembly);
+	if (function->this_var)	
+		add_assoc_long(disassembly, "this", UOPZ_CV_NUM(function->this_var));
 	add_assoc_long(disassembly, "nargs", function->num_args);
 	add_assoc_long(disassembly, "rnargs", function->required_num_args);
-	
 	if (function->arg_info)
 		uopz_disassemble_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
-
 	uopz_disassemble_opcodes(function->opcodes, function->last, function->vars, function->literals, disassembly);
 	uopz_disassemble_vars(function->vars, function->last_var, disassembly);
 	uopz_disassemble_literals(function->literals, function->last_literal, disassembly);
