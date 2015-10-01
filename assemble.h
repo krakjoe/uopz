@@ -154,6 +154,8 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, z
 	if (result)
 		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, result);
 	else assembled->opcodes[it].result_type = IS_UNUSED;
+
+	zend_vm_set_opcode_handler(&assembled->opcodes[it]);
 } /* }}} */
 
 /* {{{ */
