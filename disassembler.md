@@ -1,6 +1,8 @@
 Disassembler
 ============
-*Tearing apart PHP since 2015*
+*Tearing apart PHP, and sticking it back together, since 2015*
+
+__These functions are experimental and are still being developed__
 
 There are multiple tools for printing or dumping opcodes, vld is one, phpdbg is another. 
 
