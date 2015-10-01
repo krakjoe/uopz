@@ -12,9 +12,10 @@ uopz for PHP7 is able to disassemble PHP code into a representation that is unde
 function uopz_disassemble(string class, string method) : array;
 function uopz_disassemble(string function) : array;
 function uopz_disassemble(Closure closure) : array;
+function uopz_assemble(array disassembly) : Closure;
 ```
 
-*Note: there is no assembler, that's a whole 'nother thing ...*
+Whenever I asked my other half why Lord Voldemort has no nose, she replies "he done something really bad" ... *prepare to loose your nose* ...
 
 The best way to learn about the format of a disassembly is by trying it for yourself, however, the following simple example should give you a rough idea of what to expect:
 
@@ -160,4 +161,6 @@ The disassembly includes the folowing information:
 
 This is all the information contained in a ```zend_op_array```, Zend's internal representation of PHP code.
 
-*The author of uopz does not accept responsability for scary things that are written using uopz_disassemble ...*
+```uopz_assemble``` will take an array returned by ```uopz_disassemble``` and return a ```Closure``` ... 
+
+*The author of uopz does not accept responsability for scary things that are written using uopz_disassemble or uopz_assemble ...*
