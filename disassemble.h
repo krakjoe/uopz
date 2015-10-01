@@ -268,6 +268,10 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 			}
 		} break;
 
+		case ZEND_CAST:
+			add_assoc_str(disassembly, "type", uopz_disassemble_type_name(extended_value));
+		break;
+
 		/* TODO(krakjoe) these ... */
 	}
 } /* }}} */
