@@ -58,6 +58,41 @@ static inline void uopz_assemble_flags(zend_op_array *assembled, zval *disassemb
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_assemble_operand(zend_op *opline, znode_op *operand, zval *disassembly) {
+
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, zval *disassembly) {
+	zval *op1 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op1"));
+	zval *op2 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op2"));
+	zval *result = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("result"));
+	
+	if (op1)
+		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].op1, op1);
+	if (op2)
+		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].op2, op2);
+	if (result)
+		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].result, result);
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disassembly) {
+	zval *opcodes  = zend_hash_str_find(
+		Z_ARRVAL_P(disassembly), ZEND_STRL("opcodes"));
+	zval *opcode   = NULL;
+	uint32_t it   = 0;
+
+	assembled->last = zend_hash_num_elements(Z_ARRVAL_P(opcodes));
+	assembled->opcodes = 
+		(zend_op*) ecalloc(sizeof(zend_op), assembled->last);
+	
+	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(opcodes), opcode) {
+		uopz_assemble_opcode(assembled, it++, opcode);
+	} ZEND_HASH_FOREACH_END();
+} /* }}} */
+
+/* {{{ */
 static inline zend_function* uopz_assemble(zval *disassembly) {
 	zend_op_array *assembled = 
 		(zend_op_array*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
@@ -70,6 +105,7 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	
 	uopz_assemble_name(assembled, disassembly);
 	uopz_assemble_flags(assembled, disassembly);
+	uopz_assemble_opcodes(assembled, disassembly);
 
 	return (zend_function*) assembled;
 } /* }}} */
