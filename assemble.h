@@ -29,7 +29,22 @@ static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembl
 
 /* {{{ */
 static inline void uopz_assemble_flag(zend_op_array *assembled, zval *disassembly) {
-	
+	zend_string *name = Z_STR_P(disassembly);
+
+	/* this is horrible */
+	if (name->len == sizeof("final")-1 && memcmp(name->val, "final", name->len) == SUCCESS) {
+		assembled->fn_flags |= ZEND_ACC_FINAL;
+	} else if (name->len == sizeof("static")-1 && memcmp(name->val, "static", name->len) == SUCCESS) {
+		assembled->fn_flags |= ZEND_ACC_STATIC;
+	} else if (name->len == sizeof("reference")-1 && memcmp(name->val, "reference", name->len) == SUCCESS) {
+		assembled->fn_flags |= ZEND_ACC_RETURN_REFERENCE;
+	} else if (name->len == sizeof("protected")-1 && memcmp(name->val, "protected", name->len) == SUCCESS) {
+		assembled->fn_flags |= ZEND_ACC_PROTECTED;
+	} else if (name->len == sizeof("private")-1 && memcmp(name->val, "private", name->len) == SUCCESS) {
+		assembled->fn_flags |= ZEND_ACC_PRIVATE;
+	} else if (name->len == sizeof("public")-1 && memcmp(name->val, "public", name->len) == SUCCESS) {
+		assembled->fn_flags |= ZEND_ACC_PUBLIC;
+	}
 } /* }}} */
 
 /* {{{ */
