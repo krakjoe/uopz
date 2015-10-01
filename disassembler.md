@@ -17,7 +17,7 @@ function uopz_disassemble(Closure closure) : array;
 function uopz_assemble(array disassembly) : Closure;
 ```
 
-Whenever I asked my other half why Lord Voldemort has no nose, she replies "he done something really bad" ... *prepare to loose your nose* ...
+Whenever I ask my other half why Lord Voldemort has no nose, she replies "he done something really bad" ... *prepare to loose your nose* ...
 
 The best way to learn about the format of a disassembly is by trying it for yourself, however, the following simple example should give you a rough idea of what to expect:
 
