@@ -6,7 +6,7 @@ There are multiple tools for printing or dumping opcodes, vld is one, phpdbg is 
 
 However, none of these tools allow programmatic interaction.
 
-uopz for PHP7 is able to disassemble PHP code into a representation that is understandable for humans.
+uopz for PHP7 is able to disassemble PHP code into a representation that is understandable for humans, then reassemble it for Zend.
 
 ```php
 function uopz_disassemble(string class, string method) : array;
