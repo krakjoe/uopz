@@ -247,23 +247,23 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 		case ZEND_FETCH_RW:
 		case ZEND_FETCH_W:
 		case ZEND_FETCH_R: {
-			zval *fetch = zend_hash_index_find(&UOPZ(fetches), extended_value & ZEND_FETCH_TYPE_MASK);
+			zval *type = zend_hash_index_find(&UOPZ(fetches), extended_value & ZEND_FETCH_TYPE_MASK);
 
 			switch (extended_value & ZEND_FETCH_TYPE_MASK) {
 				case ZEND_FETCH_GLOBAL_LOCK:
 				case ZEND_FETCH_GLOBAL:
-					add_assoc_zval(disassembly, "fetch", fetch);
-					Z_ADDREF_P(fetch);
+					add_assoc_zval(disassembly, "fetch", type);
+					Z_ADDREF_P(type);
 				break;
 
 				case ZEND_FETCH_STATIC:
-					add_assoc_zval(disassembly, "fetch", fetch);
-					Z_ADDREF_P(fetch);
+					add_assoc_zval(disassembly, "fetch", type);
+					Z_ADDREF_P(type);
 				break;
 
 				case ZEND_FETCH_LOCAL:
-					add_assoc_zval(disassembly, "fetch", fetch);
-					Z_ADDREF_P(fetch);
+					add_assoc_zval(disassembly, "fetch", type);
+					Z_ADDREF_P(type);
 				break;
 			}
 		} break;
