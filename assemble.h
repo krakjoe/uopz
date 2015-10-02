@@ -135,6 +135,30 @@ static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disassembly) {
+	switch (assembled->opcode) {
+		case ZEND_FETCH_UNSET:
+		case ZEND_FETCH_RW:
+		case ZEND_FETCH_W:
+		case ZEND_FETCH_R: {
+			zval *fetch = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("fetch"));
+
+			if (Z_STRLEN_P(fetch) == sizeof("static")-1 && memcmp(Z_STRVAL_P(fetch), "static", Z_STRLEN_P(fetch)) == SUCCESS) {
+				assembled->extended_value = ZEND_FETCH_STATIC;
+			} else if (Z_STRLEN_P(fetch) == sizeof("global")-1 && memcmp(Z_STRVAL_P(fetch), "global", Z_STRLEN_P(fetch)) == SUCCESS) {
+				assembled->extended_value = ZEND_FETCH_GLOBAL;
+			} else if (Z_STRLEN_P(fetch) == sizeof("local")-1 && memcmp(Z_STRVAL_P(fetch), "local", Z_STRLEN_P(fetch)) == SUCCESS) {
+				assembled->extended_value = ZEND_FETCH_LOCAL;
+			}
+		} break;
+
+		case ZEND_CAST:
+			
+		break;
+	}
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, zval *disassembly) {
 	zval *opcode = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("opcode"));
 	zval *op1 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op1"));
@@ -154,6 +178,8 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, z
 	if (result)
 		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, result);
 	else assembled->opcodes[it].result_type = IS_UNUSED;
+
+	uopz_assemble_extended_value(&assembled->opcodes[it], disassembly);
 
 	zend_vm_set_opcode_handler(&assembled->opcodes[it]);
 } /* }}} */
@@ -203,6 +229,16 @@ static inline void uopz_assemble_literals(zend_op_array *assembled, zval *disass
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_assemble_statics(zend_op_array *assembled, zval *disassembly) {
+	zval *statics = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("static"));
+
+	if (!statics)
+		return;
+
+	assembled->static_variables = zend_array_dup(Z_ARRVAL_P(statics));
+} /* }}} */
+
+/* {{{ */
 static inline zend_function* uopz_assemble(zval *disassembly) {
 	zend_op_array *assembled = 
 		(zend_op_array*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
@@ -219,6 +255,7 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	uopz_assemble_opcodes(assembled, disassembly);
 	uopz_assemble_vars(assembled, disassembly);
 	uopz_assemble_literals(assembled, disassembly);
+	uopz_assemble_statics(assembled, disassembly);
 
 	return (zend_function*) assembled;
 } /* }}} */

@@ -445,7 +445,7 @@ static inline void uopz_disassemble_try(zend_try_catch_element *el, int end, zva
 	if (!end)
 		return;	
 
-	array_init(&result);	
+	array_init(&result);
 	while (it < end) {
 		zval tmp;
 		array_init(&tmp);
