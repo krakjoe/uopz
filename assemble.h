@@ -184,6 +184,9 @@ static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 	zval *opcode = NULL;
 	zend_long opnum = 0;
 
+	if (Z_TYPE_P(disassembly) == IS_LONG)
+		return Z_LVAL_P(disassembly);
+
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(&UOPZ(opcodes), opnum, opcode) {
 		if (zend_string_equals(Z_STR_P(opcode), Z_STR_P(disassembly))) {
 			return opnum;
@@ -219,6 +222,15 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 			zval *args = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("args"));
 			if (args && Z_TYPE_P(args) == IS_LONG)
 				assembled->extended_value = Z_LVAL_P(args);
+		} break;
+		
+		case ZEND_FE_FETCH_R:
+		case ZEND_FE_FETCH_RW:
+		case ZEND_FE_RESET_R:
+		case ZEND_FE_RESET_RW: {
+			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
+			if (ext && Z_TYPE_P(ext) == IS_LONG)
+				assembled->extended_value = Z_LVAL_P(ext);
 		} break;
 	}
 } /* }}} */

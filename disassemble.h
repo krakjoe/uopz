@@ -312,6 +312,13 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 			}
 		} break;
 
+		case ZEND_FE_FETCH_R:
+		case ZEND_FE_FETCH_RW:
+		case ZEND_FE_RESET_R:
+		case ZEND_FE_RESET_RW:
+			add_assoc_long(disassembly, "ext", extended_value);
+		break;
+
 		case ZEND_CAST:
 			add_assoc_str(disassembly, "type", uopz_disassemble_type_name(extended_value));
 		break;
