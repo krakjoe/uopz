@@ -506,6 +506,18 @@ static inline void uopz_disassemble_internal_function(zend_internal_function *fu
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_disassemble_misc(zend_op_array *function, zval *disassembly) {
+	if (function->filename)
+		add_assoc_str(disassembly, "file", function->filename);
+	if (function->line_start)
+		add_assoc_long(disassembly, "start", function->line_start);
+	if (function->line_end)
+		add_assoc_long(disassembly, "end", function->line_end);
+	if (function->doc_comment)
+		add_assoc_str(disassembly, "comment", function->doc_comment);
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_disassemble_function(zend_op_array *function, zval *disassembly) {
 	if (function->scope)
 		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
@@ -523,6 +535,7 @@ static inline void uopz_disassemble_function(zend_op_array *function, zval *disa
 	uopz_disassemble_statics(function->static_variables, disassembly);
 	uopz_disassemble_brk(function->brk_cont_array, function->last_brk_cont, disassembly);
 	uopz_disassemble_try(function->try_catch_array, function->last_try_catch, disassembly);
+	uopz_disassemble_misc(function, disassembly);
 } /* }}} */
 
 #undef UOPZ_CONST_NUM

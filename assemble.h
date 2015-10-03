@@ -257,18 +257,11 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, u
 		break;
 
 		default:
-			if (op1)
-				uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 0, op1);
-			else assembled->opcodes[it].op1_type = IS_UNUSED;
-			if (op2)
-				uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
-			else assembled->opcodes[it].op2_type = IS_UNUSED;
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 0, op1);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
 	}
 
-	if (result)
-		uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, last_var, 0, result);
-	else assembled->opcodes[it].result_type = IS_UNUSED;
-
+	uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, last_var, 0, result);
 	uopz_assemble_extended_value(&assembled->opcodes[it], disassembly);
 
 	zend_vm_set_opcode_handler(&assembled->opcodes[it]);
@@ -423,6 +416,23 @@ static inline void uopz_assemble_try(zend_op_array *assembled, zval *disassembly
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_assemble_misc(zend_op_array *assembled, zval *disassembly) {
+	zval *filename = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("file"));
+	zval *start    = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("start"));
+	zval *end      = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("end"));
+	zval *comment  = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("comment"));
+
+	if (filename && Z_TYPE_P(filename) == IS_STRING)
+		assembled->filename = zend_string_copy(Z_STR_P(filename));
+	if (comment && Z_TYPE_P(comment) == IS_STRING)
+		assembled->doc_comment = zend_string_copy(Z_STR_P(comment));
+	if (start && Z_TYPE_P(start) == IS_LONG)
+		assembled->line_start = (uint32_t) Z_LVAL_P(start);
+	if (end && Z_TYPE_P(end) == IS_LONG)
+		assembled->line_end = (uint32_t) Z_LVAL_P(end);
+} /* }}} */
+
+/* {{{ */
 static inline zend_function* uopz_assemble(zval *disassembly) {
 	zend_op_array *assembled = 
 		(zend_op_array*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
@@ -442,6 +452,7 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	uopz_assemble_statics(assembled, disassembly);
 	uopz_assemble_brk(assembled, disassembly);
 	uopz_assemble_try(assembled, disassembly);
+	uopz_assemble_misc(assembled, disassembly);
 
 	return (zend_function*) assembled;
 } /* }}} */
