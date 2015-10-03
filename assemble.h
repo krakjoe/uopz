@@ -56,6 +56,8 @@ static inline void uopz_assemble_flags(zend_op_array *assembled, zval *disassemb
 	zval *flags = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("flags"));
 	zval *flag  = NULL;
 
+	assembled->fn_flags |= ZEND_ACC_DONE_PASS_TWO;
+
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(flags), flag) {
 		uopz_assemble_flag(assembled, flag);
 	} ZEND_HASH_FOREACH_END();
@@ -143,23 +145,35 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_assemble_operand(zend_op *opline, znode_op *operand, zend_uchar *type, uint32_t last_var, zval *disassembly) {
+static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *opline, znode_op *operand, zend_uchar *type, uint32_t last_var, zend_bool jmp, zval *disassembly) {
 	zval *op = NULL;
 
-	if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
-		*type = IS_CV;
-		operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
-	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("tmp")))) {
-		*type = IS_TMP_VAR;
-		operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + last_var));
-	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
-		*type = IS_VAR;
-		operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
-	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
-		*type = IS_CONST;
-		operand->num = UOPZ_CONST_NUM(Z_LVAL_P(op));
+	if (!disassembly) {
+		*type = IS_UNUSED;
+		return;	
 	}
-
+	
+	if (jmp) {
+		*type = IS_UNUSED;
+		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp")))) {
+			operand->jmp_offset = ((Z_LVAL_P(op)+1) * sizeof(zend_op));
+		}
+	} else {
+		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
+			*type = IS_CV;
+			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
+		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("tmp")))) {
+			*type = IS_TMP_VAR;
+			operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + last_var));
+		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
+			*type = IS_VAR;
+			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
+		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
+			*type = IS_CONST;
+			operand->num = UOPZ_CONST_NUM(Z_LVAL_P(op));
+		}
+	}
+	
 #if 0
 	php_printf("a: %d: %d -> %d\n", *type, Z_LVAL_P(op), operand->num);
 #endif
@@ -214,17 +228,42 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, u
 	zval *result = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("result"));
 
 	assembled->opcodes[it].opcode = uopz_assemble_opcode_num(opcode);
-	
-	if (op1)
-		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, op1);
-	else assembled->opcodes[it].op1_type = IS_UNUSED;
 
-	if (op2)
-		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, op2);
-	else assembled->opcodes[it].op2_type = IS_UNUSED;
+	switch (assembled->opcodes[it].opcode) {
+		case ZEND_JMP:
+		case ZEND_FAST_CALL:
+		case ZEND_DECLARE_ANON_CLASS:
+		case ZEND_DECLARE_ANON_INHERITED_CLASS:
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 1, op1); // jmp
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
+		break;
+
+		case ZEND_JMPZNZ:
+		case ZEND_JMPZ:
+		case ZEND_JMPNZ:
+		case ZEND_JMPZ_EX:
+		case ZEND_JMPNZ_EX:
+		case ZEND_JMP_SET:
+		case ZEND_COALESCE:
+		case ZEND_NEW:
+		case ZEND_FE_RESET_R:
+		case ZEND_FE_RESET_RW:
+		case ZEND_ASSERT_CHECK:
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 0, op1);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 1, op2);
+		break;
+
+		default:
+			if (op1)
+				uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 0, op1);
+			else assembled->opcodes[it].op1_type = IS_UNUSED;
+			if (op2)
+				uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
+			else assembled->opcodes[it].op2_type = IS_UNUSED;
+	}
 
 	if (result)
-		uopz_assemble_operand(&assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, last_var, result);
+		uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, last_var, 0, result);
 	else assembled->opcodes[it].result_type = IS_UNUSED;
 
 	uopz_assemble_extended_value(&assembled->opcodes[it], disassembly);
