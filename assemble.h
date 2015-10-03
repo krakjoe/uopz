@@ -156,7 +156,7 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 	if (jmp) {
 		*type = IS_UNUSED;
 		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp")))) {
-			operand->jmp_offset = ((Z_LVAL_P(op)+1) * sizeof(zend_op));
+			operand->jmp_offset = ZEND_OPLINE_NUM_TO_OFFSET(op_array, opline, Z_LVAL_P(op));
 		}
 	} else {
 		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
@@ -182,7 +182,7 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 /* {{{ */
 static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 	zval *opcode = NULL;
-	zend_ulong opnum;
+	zend_long opnum = 0;
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(&UOPZ(opcodes), opnum, opcode) {
 		if (zend_string_equals(Z_STR_P(opcode), Z_STR_P(disassembly))) {
@@ -291,7 +291,10 @@ static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disasse
 static inline void uopz_assemble_vars(zend_op_array *assembled, zval *disassembly) {
 	zval *vars = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("vars"));
 	zval *var = NULL;
-	zend_ulong idx = 0;
+	zend_long idx = 0;
+
+	if (Z_TYPE_P(vars) != IS_ARRAY)
+		return;
 
 	assembled->last_var = zend_hash_num_elements(Z_ARRVAL_P(vars));
 	assembled->vars = ecalloc(sizeof(zend_string*), assembled->last_var);
@@ -305,7 +308,10 @@ static inline void uopz_assemble_vars(zend_op_array *assembled, zval *disassembl
 static inline void uopz_assemble_literals(zend_op_array *assembled, zval *disassembly) {
 	zval *literals = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("literals"));
 	zval *literal  = NULL;
-	zend_ulong idx = 0;
+	zend_long idx  = 0;
+
+	if (Z_TYPE_P(literals) != IS_ARRAY)
+		return;
 
 	assembled->last_literal = zend_hash_num_elements(Z_ARRVAL_P(literals));
 	assembled->literals = ecalloc(sizeof(zval), assembled->last_literal);
@@ -322,7 +328,95 @@ static inline void uopz_assemble_statics(zend_op_array *assembled, zval *disasse
 	if (!statics)
 		return;
 
+	if (Z_TYPE_P(statics) != IS_ARRAY)
+		return;
+
 	assembled->static_variables = zend_array_dup(Z_ARRVAL_P(statics));
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_assemble_brk_element(zend_brk_cont_element *el, zval *disassembly) {
+	zval *start = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("start"));
+	zval *cont  = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cont"));
+	zval *brk   = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("brk"));
+	zval *parent = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("parent"));
+
+	if (start && Z_TYPE_P(start) == IS_LONG) {
+		el->start = Z_LVAL_P(start);
+	} else el->start = -1;
+	
+	if (cont && Z_TYPE_P(cont) == IS_LONG) {
+		el->cont = Z_LVAL_P(cont);
+	} else el->cont = -1;
+
+	if (brk && Z_TYPE_P(brk) == IS_LONG) {
+		el->brk = Z_LVAL_P(brk);
+	} else el->brk = -1;
+
+	if (parent && Z_TYPE_P(parent) == IS_LONG) {
+		el->parent = Z_LVAL_P(parent);
+	} else el->parent = -1;
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_assemble_brk(zend_op_array *assembled, zval *disassembly) {
+	zval *brk = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("brk"));
+	zval *el = NULL;
+	zend_long idx = 0;
+
+	if (!brk)
+		return;
+
+	if (Z_TYPE_P(brk) != IS_ARRAY)
+		return;	
+	
+	assembled->last_brk_cont = zend_hash_num_elements(Z_ARRVAL_P(brk));	
+	assembled->brk_cont_array = ecalloc(sizeof(zend_brk_cont_element), assembled->last_brk_cont);
+	
+	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(brk), idx, el) {
+		if (Z_TYPE_P(el) != IS_ARRAY)
+			continue;
+		uopz_assemble_brk_element(&assembled->brk_cont_array[idx], el);
+	} ZEND_HASH_FOREACH_END();
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_assemble_try_element(zend_try_catch_element *el, zval *disassembly) {
+	zval *try_op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("try"));
+	zval *catch_op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("catch"));
+	zval *finally_op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("finally"));
+	zval *end_op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("end"));
+
+	if (try_op && Z_TYPE_P(try_op) == IS_LONG)	
+		el->try_op = Z_LVAL_P(try_op);
+	if (catch_op && Z_TYPE_P(catch_op) == IS_LONG)
+		el->catch_op = Z_LVAL_P(catch_op);
+	if (finally_op && Z_TYPE_P(finally_op) == IS_LONG)
+		el->finally_op = Z_LVAL_P(finally_op);
+	if (end_op && Z_TYPE_P(end_op) == IS_LONG)
+		el->finally_end = Z_LVAL_P(end_op);
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_assemble_try(zend_op_array *assembled, zval *disassembly) {
+	zval *tri = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("try"));
+	zval *el = NULL;
+	zend_long idx = 0;
+	
+	if (!tri)
+		return;
+
+	if (Z_TYPE_P(tri) != IS_ARRAY)
+		return;
+
+	assembled->last_try_catch = zend_hash_num_elements(Z_ARRVAL_P(tri));
+	assembled->try_catch_array = ecalloc(sizeof(zend_try_catch_element), assembled->last_try_catch);
+
+	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(tri), idx, el) {
+		if (Z_TYPE_P(el) != IS_ARRAY)
+			continue;
+		uopz_assemble_try_element(&assembled->try_catch_array[idx], el);
+	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
 /* {{{ */
@@ -343,7 +437,8 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	uopz_assemble_opcodes(assembled, disassembly);
 	uopz_assemble_literals(assembled, disassembly);
 	uopz_assemble_statics(assembled, disassembly);
-
+	uopz_assemble_brk(assembled, disassembly);
+	
 	return (zend_function*) assembled;
 } /* }}} */
 

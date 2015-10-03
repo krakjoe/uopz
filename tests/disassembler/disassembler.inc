@@ -16,6 +16,10 @@ function show_disassembly_diff(array $one, array $two) {
 			}
 		}
 	}
+
+	if ($on["brk"] != $two["brk"]) {
+		
+	}
 }
 
 function run_disassembler_test(Closure $test, array $args) {
