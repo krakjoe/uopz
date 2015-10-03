@@ -19,6 +19,8 @@
 #define HAVE_UOPZ_ASSEMBLE_H
 
 #define UOPZ_CONST_NUM(c) 		((c > 0L ? (c) * sizeof(zval) : c))
+#define UOPZ_ZVAL_MATCH(z, c)	(Z_TYPE_P(z) == IS_STRING && Z_STRLEN_P(z) == sizeof(c)-1 && memcmp(Z_STRVAL_P(z), c, Z_STRLEN_P(z)) == SUCCESS)
+#define UOPZ_STR_MATCH(s, c)	((s)->len == sizeof(c)-1 && memcmp((s)->val, c, (s)->len) == SUCCESS)
 
 /* {{{ */
 static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembly) {
@@ -34,18 +36,17 @@ static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembl
 static inline void uopz_assemble_flag(zend_op_array *assembled, zval *disassembly) {
 	zend_string *name = Z_STR_P(disassembly);
 
-	/* this is horrible */
-	if (name->len == sizeof("final")-1 && memcmp(name->val, "final", name->len) == SUCCESS) {
+	if (UOPZ_STR_MATCH(name, "final")) {
 		assembled->fn_flags |= ZEND_ACC_FINAL;
-	} else if (name->len == sizeof("static")-1 && memcmp(name->val, "static", name->len) == SUCCESS) {
+	} else if (UOPZ_STR_MATCH(name, "static")) {
 		assembled->fn_flags |= ZEND_ACC_STATIC;
-	} else if (name->len == sizeof("reference")-1 && memcmp(name->val, "reference", name->len) == SUCCESS) {
+	} else if (UOPZ_STR_MATCH(name, "reference")) {
 		assembled->fn_flags |= ZEND_ACC_RETURN_REFERENCE;
-	} else if (name->len == sizeof("protected")-1 && memcmp(name->val, "protected", name->len) == SUCCESS) {
+	} else if (UOPZ_STR_MATCH(name, "protected")) {
 		assembled->fn_flags |= ZEND_ACC_PROTECTED;
-	} else if (name->len == sizeof("private")-1 && memcmp(name->val, "private", name->len) == SUCCESS) {
+	} else if (UOPZ_STR_MATCH(name, "private")) {
 		assembled->fn_flags |= ZEND_ACC_PRIVATE;
-	} else if (name->len == sizeof("public")-1 && memcmp(name->val, "public", name->len) == SUCCESS) {
+	} else if (UOPZ_STR_MATCH(name, "public")) {
 		assembled->fn_flags |= ZEND_ACC_PUBLIC;
 	}
 } /* }}} */
@@ -63,15 +64,15 @@ static inline void uopz_assemble_flags(zend_op_array *assembled, zval *disassemb
 /* {{{ */
 static inline zend_uchar uopz_assemble_type_hint(zval *disassembly) {
 	if (Z_TYPE_P(disassembly) == IS_STRING) {
-		if (Z_STRLEN_P(disassembly) == sizeof("int")-1 && memcmp(Z_STRVAL_P(disassembly), "int", Z_STRLEN_P(disassembly)) == SUCCESS) {
+		if (UOPZ_ZVAL_MATCH(disassembly, "int")) {
 			return IS_LONG;
-		} else if (Z_STRLEN_P(disassembly) == sizeof("double")-1 && memcmp(Z_STRVAL_P(disassembly), "double", Z_STRLEN_P(disassembly)) == SUCCESS) {
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "double")) {
 			return IS_DOUBLE;
-		} else if (Z_STRLEN_P(disassembly) == sizeof("array")-1 && memcmp(Z_STRVAL_P(disassembly), "array", Z_STRLEN_P(disassembly)) == SUCCESS) {
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "array")) {
 			return IS_ARRAY;
-		} else if (Z_STRLEN_P(disassembly) == sizeof("callable")-1 && memcmp(Z_STRVAL_P(disassembly), "callable", Z_STRLEN_P(disassembly)) == SUCCESS) {
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "callable")) {
 			return IS_CALLABLE;
-		} else if (Z_STRLEN_P(disassembly) == sizeof("string")-1 && memcmp(Z_STRVAL_P(disassembly), "string", Z_STRLEN_P(disassembly)) == SUCCESS) {
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "string")) {
 			return IS_STRING;
 		}
 	} 
@@ -186,11 +187,11 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 		case ZEND_FETCH_R: {
 			zval *fetch = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("fetch"));
 
-			if (Z_STRLEN_P(fetch) == sizeof("static")-1 && memcmp(Z_STRVAL_P(fetch), "static", Z_STRLEN_P(fetch)) == SUCCESS) {
+			if (UOPZ_ZVAL_MATCH(fetch, "static")) {
 				assembled->extended_value = ZEND_FETCH_STATIC;
-			} else if (Z_STRLEN_P(fetch) == sizeof("global")-1 && memcmp(Z_STRVAL_P(fetch), "global", Z_STRLEN_P(fetch)) == SUCCESS) {
+			} else if (UOPZ_ZVAL_MATCH(fetch, "global")) {
 				assembled->extended_value = ZEND_FETCH_GLOBAL;
-			} else if (Z_STRLEN_P(fetch) == sizeof("local")-1 && memcmp(Z_STRVAL_P(fetch), "local", Z_STRLEN_P(fetch)) == SUCCESS) {
+			} else if (UOPZ_ZVAL_MATCH(fetch, "local")) {
 				assembled->extended_value = ZEND_FETCH_LOCAL;
 			}
 		} break;
