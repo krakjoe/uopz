@@ -438,7 +438,8 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	uopz_assemble_literals(assembled, disassembly);
 	uopz_assemble_statics(assembled, disassembly);
 	uopz_assemble_brk(assembled, disassembly);
-	
+	uopz_assemble_try(assembled, disassembly);
+
 	return (zend_function*) assembled;
 } /* }}} */
 
