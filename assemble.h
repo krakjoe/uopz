@@ -17,6 +17,9 @@
  */
 #ifndef HAVE_UOPZ_ASSEMBLE_H
 #define HAVE_UOPZ_ASSEMBLE_H
+
+#define UOPZ_CONST_NUM(c) 		((c > 0L ? (c) * sizeof(zval) : c))
+
 /* {{{ */
 static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembly) {
 	zval *name = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("name"));
@@ -115,9 +118,7 @@ static inline void uopz_assemble_operand(zend_op *opline, znode_op *operand, zen
 		operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 	} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
 		*type = IS_CONST;
-		if (Z_LVAL_P(op)) {
-			operand->num = Z_LVAL_P(op) * sizeof(zval);
-		} else operand->num = 0;
+		operand->num = UOPZ_CONST_NUM(Z_LVAL_P(op));
 	}
 
 #if 0
@@ -263,4 +264,6 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 
 	return (zend_function*) assembled;
 } /* }}} */
+
+#undef UOPZ_CONST_NUM
 #endif

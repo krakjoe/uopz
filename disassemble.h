@@ -523,8 +523,5 @@ static inline void uopz_disassemble_function(zend_op_array *function, zval *disa
 	uopz_disassemble_try(function->try_catch_array, function->last_try_catch, disassembly);
 } /* }}} */
 
-#undef UOPZ_VAR_NUM
-#undef UOPZ_ZVAL_NUM
-#undef UOPZ_CV_NUM
 #undef UOPZ_CONST_NUM
 #endif
