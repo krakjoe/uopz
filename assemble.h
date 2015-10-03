@@ -230,6 +230,12 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 			if (args && Z_TYPE_P(args) == IS_LONG)
 				assembled->extended_value = Z_LVAL_P(args);
 		} break;
+
+		case ZEND_CATCH: {
+			zval *jmp = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp"));
+			if (jmp && Z_TYPE_P(jmp) == IS_LONG)
+				assembled->extended_value = Z_LVAL_P(jmp);
+		} break;
 		
 		case ZEND_FE_FETCH_R:
 		case ZEND_FE_FETCH_RW:
