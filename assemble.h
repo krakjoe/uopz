@@ -200,7 +200,6 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 		case ZEND_FETCH_W:
 		case ZEND_FETCH_R: {
 			zval *fetch = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("fetch"));
-
 			if (UOPZ_ZVAL_MATCH(fetch, "static")) {
 				assembled->extended_value = ZEND_FETCH_STATIC;
 			} else if (UOPZ_ZVAL_MATCH(fetch, "global")) {
@@ -212,10 +211,14 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 
 		case ZEND_CAST: {
 			zval *type = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type"));
-			
-			if (type) {
+			if (type)
 				assembled->extended_value = uopz_assemble_type_hint(type);
-			}
+		} break;
+
+		case ZEND_NEW: {
+			zval *args = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("args"));
+			if (args && Z_TYPE_P(args) == IS_LONG)
+				assembled->extended_value = Z_LVAL_P(args);
 		} break;
 	}
 } /* }}} */
@@ -234,7 +237,7 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, u
 		case ZEND_FAST_CALL:
 		case ZEND_DECLARE_ANON_CLASS:
 		case ZEND_DECLARE_ANON_INHERITED_CLASS:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 1, op1); // jmp
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 1, op1);
 			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
 		break;
 

@@ -316,6 +316,10 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 			add_assoc_str(disassembly, "type", uopz_disassemble_type_name(extended_value));
 		break;
 
+		case ZEND_NEW:
+			add_assoc_long(disassembly, "args", extended_value);
+		break;
+
 		/* TODO(krakjoe) these ... */
 	}
 } /* }}} */
@@ -366,9 +370,7 @@ static inline void uopz_disassemble_opcodes(zend_op *opcodes, uint32_t end, uint
 		
 		uopz_disassemble_operand(ZEND_STRL("result"), opcodes, &opcodes[it], opcodes[it].result_type, &opcodes[it].result, 0, last_var, &opcode);
 
-		if (opcodes[it].extended_value > 0L) {
-			upoz_disassemble_extended_value(opcodes[it].opcode, opcodes[it].extended_value, &opcode);
-		}
+		upoz_disassemble_extended_value(opcodes[it].opcode, opcodes[it].extended_value, &opcode);
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
 		it++;
