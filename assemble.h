@@ -218,6 +218,13 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 				assembled->extended_value = uopz_assemble_type_hint(type);
 		} break;
 
+		case ZEND_INIT_METHOD_CALL:
+		case ZEND_INIT_STATIC_METHOD_CALL:
+		case ZEND_INIT_FCALL_BY_NAME:
+		case ZEND_INIT_DYNAMIC_CALL:
+		case ZEND_INIT_USER_CALL:
+		case ZEND_INIT_NS_FCALL_BY_NAME:
+		case ZEND_INIT_FCALL:
 		case ZEND_NEW: {
 			zval *args = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("args"));
 			if (args && Z_TYPE_P(args) == IS_LONG)

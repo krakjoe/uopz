@@ -323,6 +323,13 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 			add_assoc_str(disassembly, "type", uopz_disassemble_type_name(extended_value));
 		break;
 
+		case ZEND_INIT_METHOD_CALL:
+		case ZEND_INIT_STATIC_METHOD_CALL:
+		case ZEND_INIT_FCALL_BY_NAME:
+		case ZEND_INIT_DYNAMIC_CALL:
+		case ZEND_INIT_USER_CALL:
+		case ZEND_INIT_NS_FCALL_BY_NAME:
+		case ZEND_INIT_FCALL:
 		case ZEND_NEW:
 			add_assoc_long(disassembly, "args", extended_value);
 		break;
