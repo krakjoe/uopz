@@ -195,9 +195,13 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 			}
 		} break;
 
-		case ZEND_CAST:
+		case ZEND_CAST: {
+			zval *type = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type"));
 			
-		break;
+			if (type) {
+				assembled->extended_value = uopz_assemble_type_hint(type);
+			}
+		} break;
 	}
 } /* }}} */
 

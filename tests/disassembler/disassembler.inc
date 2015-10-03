@@ -10,7 +10,7 @@ function show_disassembly_diff(array $one, array $two) {
 		printf("opcodes failure:\n");
 		foreach ($one["opcodes"] as $idx => $op) {
 			if ($two["opcodes"][$idx] != $op) {
-				printf("%d: ");
+				printf("#%d:\n", $idx);
 				var_dump($op, $two["opcodes"][$idx]);
 				printf("\n");
 			}
