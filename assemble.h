@@ -65,6 +65,14 @@ static inline zend_uchar uopz_assemble_type_hint(zval *disassembly) {
 	if (Z_TYPE_P(disassembly) == IS_STRING) {
 		if (Z_STRLEN_P(disassembly) == sizeof("int")-1 && memcmp(Z_STRVAL_P(disassembly), "int", Z_STRLEN_P(disassembly)) == SUCCESS) {
 			return IS_LONG;
+		} else if (Z_STRLEN_P(disassembly) == sizeof("double")-1 && memcmp(Z_STRVAL_P(disassembly), "double", Z_STRLEN_P(disassembly)) == SUCCESS) {
+			return IS_DOUBLE;
+		} else if (Z_STRLEN_P(disassembly) == sizeof("array")-1 && memcmp(Z_STRVAL_P(disassembly), "array", Z_STRLEN_P(disassembly)) == SUCCESS) {
+			return IS_ARRAY;
+		} else if (Z_STRLEN_P(disassembly) == sizeof("callable")-1 && memcmp(Z_STRVAL_P(disassembly), "callable", Z_STRLEN_P(disassembly)) == SUCCESS) {
+			return IS_CALLABLE;
+		} else if (Z_STRLEN_P(disassembly) == sizeof("string")-1 && memcmp(Z_STRVAL_P(disassembly), "string", Z_STRLEN_P(disassembly)) == SUCCESS) {
+			return IS_STRING;
 		}
 	} 
 
