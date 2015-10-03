@@ -171,7 +171,7 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 		if (return_type->class_name) {
 			add_assoc_str(&ret, "class", zend_string_copy(return_type->class_name));
 		} else if (return_type->type_hint != IS_UNDEF) {
-			add_assoc_str(&ret, "type", uopz_disassemble_type_name(arginfo[it].type_hint));
+			add_assoc_str(&ret, "type", uopz_disassemble_type_name(return_type->type_hint));
 		}
 
 		zend_hash_index_add(Z_ARRVAL(result), -1, &ret);		

@@ -61,10 +61,22 @@ static inline void uopz_assemble_flags(zend_op_array *assembled, zval *disassemb
 } /* }}} */
 
 /* {{{ */
+static inline zend_uchar uopz_assemble_type_hint(zval *disassembly) {
+	if (Z_TYPE_P(disassembly) == IS_STRING) {
+		if (Z_STRLEN_P(disassembly) == sizeof("int")-1 && memcmp(Z_STRVAL_P(disassembly), "int", Z_STRLEN_P(disassembly)) == SUCCESS) {
+			return IS_LONG;
+		}
+	} 
+
+	return IS_UNDEF;
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disassembly) {
 	zval *info = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("nargs"));
 	zval *arginfo = NULL;
-	zend_ulong idx = 0;
+	zend_long idx = 0;
+	zend_arg_info *arg_info = NULL;
 
 	if (info)
 		assembled->num_args = Z_LVAL_P(info);
@@ -80,7 +92,12 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 		return;
 	}
 	
-	assembled->arg_info = ecalloc(sizeof(zend_arg_info), zend_hash_num_elements(Z_ARRVAL_P(info)));
+	assembled->arg_info = arg_info =
+		ecalloc(sizeof(zend_arg_info), zend_hash_num_elements(Z_ARRVAL_P(info)));
+	
+	if (zend_hash_index_exists(Z_ARRVAL_P(info), -1)) {
+		assembled->fn_flags |= ZEND_ACC_HAS_RETURN_TYPE;
+	}
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(info), idx, arginfo) {
 		zval *name = zend_hash_str_find(
@@ -93,14 +110,27 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 			Z_ARRVAL_P(arginfo), ZEND_STRL("null"));
 		zval *variadic = zend_hash_str_find(
 			Z_ARRVAL_P(arginfo), ZEND_STRL("variadic"));
+		zval *type = zend_hash_str_find(
+			Z_ARRVAL_P(arginfo), ZEND_STRL("type"));
 
-		assembled->arg_info[idx].name = zend_string_copy(Z_STR_P(name));
+		if (name)
+			arg_info->name = zend_string_copy(Z_STR_P(name));
 		if (clazz)
-			assembled->arg_info[idx].class_name = zend_string_copy(Z_STR_P(clazz));
-		assembled->arg_info[idx].pass_by_reference = zend_is_true(reference);
-		assembled->arg_info[idx].allow_null = zend_is_true(null);
-		assembled->arg_info[idx].is_variadic = zend_is_true(variadic);
+			arg_info->class_name = zend_string_copy(Z_STR_P(clazz));
+		if (type)
+			arg_info->type_hint = uopz_assemble_type_hint(type);
+		if (reference)
+			arg_info->pass_by_reference = zend_is_true(reference);
+		if (null)
+			arg_info->allow_null = zend_is_true(null);
+		if (variadic)
+			arg_info->is_variadic = zend_is_true(variadic);
+		arg_info++;
 	} ZEND_HASH_FOREACH_END();
+
+	if (UOPZ_HAS_RETURN_TYPE(assembled)) {
+		assembled->arg_info++;
+	}
 } /* }}} */
 
 /* {{{ */
