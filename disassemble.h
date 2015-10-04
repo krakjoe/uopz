@@ -338,6 +338,14 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 			add_assoc_long(disassembly, "jmp", extended_value);
 		break;
 
+		case ZEND_INIT_ARRAY:
+			add_assoc_long(disassembly, "size", extended_value);
+		break;
+
+		default:
+			if (extended_value)
+				add_assoc_long(disassembly, "ext", extended_value);
+
 		/* TODO(krakjoe) these ... */
 	}
 } /* }}} */

@@ -245,6 +245,18 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 			if (ext && Z_TYPE_P(ext) == IS_LONG)
 				assembled->extended_value = Z_LVAL_P(ext);
 		} break;
+
+		case ZEND_INIT_ARRAY: {
+			zval *size = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("size"));
+			if (size && Z_TYPE_P(size) == IS_LONG)
+				assembled->extended_value = Z_LVAL_P(size);
+		} break;
+
+		default: {
+			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
+			if (ext && Z_TYPE_P(ext) == IS_LONG)
+				assembled->extended_value = Z_LVAL_P(ext);
+		}
 	}
 } /* }}} */
 
