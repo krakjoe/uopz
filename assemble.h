@@ -169,6 +169,12 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 			*type = IS_CONST;
 			operand->num = Z_LVAL_P(op);
 			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
+		} else if((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type")))) {
+			zval *num = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("num"));
+
+			*type = Z_LVAL_P(op);
+			if (num && Z_TYPE_P(num) == IS_LONG)
+				operand->num = Z_LVAL_P(num);
 		}
 	}
 	

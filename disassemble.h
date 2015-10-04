@@ -258,6 +258,10 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 		case IS_VAR:
 			add_assoc_long(&result, "var", num = EX_VAR_TO_NUM(op->num));
 		break;
+
+		default:
+			add_assoc_long(&result, "type", op_type);
+			add_assoc_long(&result, "num", op->num);
 	}
 
 #if 0
