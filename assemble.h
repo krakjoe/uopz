@@ -459,6 +459,7 @@ static inline void uopz_assemble_misc(zend_op_array *assembled, zval *disassembl
 	zval *end      = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("end"));
 	zval *comment  = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("comment"));
 	zval *cache    = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cache"));
+	zval *T		   = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("T"));
 
 	if (filename && Z_TYPE_P(filename) == IS_STRING)
 		assembled->filename = zend_string_copy(Z_STR_P(filename));
@@ -468,9 +469,10 @@ static inline void uopz_assemble_misc(zend_op_array *assembled, zval *disassembl
 		assembled->line_start = (uint32_t) Z_LVAL_P(start);
 	if (end && Z_TYPE_P(end) == IS_LONG)
 		assembled->line_end = (uint32_t) Z_LVAL_P(end);
-	if (cache && Z_TYPE_P(cache) == IS_LONG) {
+	if (cache && Z_TYPE_P(cache) == IS_LONG)
 		assembled->cache_size = Z_LVAL_P(cache);
-	}
+	if (T && Z_TYPE_P(T) == IS_LONG)
+		assembled->T = Z_LVAL_P(T);
 } /* }}} */
 
 /* {{{ */
