@@ -290,52 +290,8 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 /* {{{ */
 static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t extended_value, zval *disassembly) {
 	switch (opcode) {
-		case ZEND_FETCH_UNSET:
-		case ZEND_FETCH_RW:
-		case ZEND_FETCH_W:
-		case ZEND_FETCH_R: {
-			zval *type = zend_hash_index_find(&UOPZ(fetches), extended_value & ZEND_FETCH_TYPE_MASK);
-
-			switch (extended_value & ZEND_FETCH_TYPE_MASK) {
-				case ZEND_FETCH_GLOBAL_LOCK:
-				case ZEND_FETCH_GLOBAL:
-					add_assoc_zval(disassembly, "fetch", type);
-					Z_ADDREF_P(type);
-				break;
-
-				case ZEND_FETCH_STATIC:
-					add_assoc_zval(disassembly, "fetch", type);
-					Z_ADDREF_P(type);
-				break;
-
-				case ZEND_FETCH_LOCAL:
-					add_assoc_zval(disassembly, "fetch", type);
-					Z_ADDREF_P(type);
-				break;
-			}
-		} break;
-
 		case ZEND_CAST:
 			add_assoc_str(disassembly, "type", uopz_disassemble_type_name(extended_value));
-		break;
-
-		case ZEND_INIT_METHOD_CALL:
-		case ZEND_INIT_STATIC_METHOD_CALL:
-		case ZEND_INIT_FCALL_BY_NAME:
-		case ZEND_INIT_DYNAMIC_CALL:
-		case ZEND_INIT_USER_CALL:
-		case ZEND_INIT_NS_FCALL_BY_NAME:
-		case ZEND_INIT_FCALL:
-		case ZEND_NEW:
-			add_assoc_long(disassembly, "args", extended_value);
-		break;
-
-		case ZEND_CATCH:
-			add_assoc_long(disassembly, "jmp", extended_value);
-		break;
-
-		case ZEND_INIT_ARRAY:
-			add_assoc_long(disassembly, "size", extended_value);
 		break;
 
 		default:

@@ -98,16 +98,14 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 
 	info = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("arginfo"));
 	
-	if (!info) {
+	if (!info)
 		return;
-	}
 	
 	assembled->arg_info = arg_info =
 		ecalloc(sizeof(zend_arg_info), zend_hash_num_elements(Z_ARRVAL_P(info)));
-	
-	if (zend_hash_index_exists(Z_ARRVAL_P(info), -1)) {
+
+	if (zend_hash_index_exists(Z_ARRVAL_P(info), -1))
 		assembled->fn_flags |= ZEND_ACC_HAS_RETURN_TYPE;
-	}
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(info), idx, arginfo) {
 		zval *name = zend_hash_str_find(
@@ -138,9 +136,8 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 		arg_info++;
 	} ZEND_HASH_FOREACH_END();
 
-	if (UOPZ_HAS_RETURN_TYPE(assembled)) {
+	if (UOPZ_HAS_RETURN_TYPE(assembled))
 		assembled->arg_info++;
-	}
 } /* }}} */
 
 /* {{{ */
@@ -189,9 +186,8 @@ static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 		return Z_LVAL_P(disassembly);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(&UOPZ(opcodes), opnum, opcode) {
-		if (zend_string_equals(Z_STR_P(opcode), Z_STR_P(disassembly))) {
+		if (zend_string_equals(Z_STR_P(opcode), Z_STR_P(disassembly)))
 			return opnum;
-		}
 	} ZEND_HASH_FOREACH_END();
 	return 0;
 } /* }}} */
@@ -199,49 +195,10 @@ static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 /* {{{ */
 static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disassembly) {
 	switch (assembled->opcode) {
-		case ZEND_FETCH_UNSET:
-		case ZEND_FETCH_RW:
-		case ZEND_FETCH_W:
-		case ZEND_FETCH_R: {
-			zval *fetch = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("fetch"));
-			if (UOPZ_ZVAL_MATCH(fetch, "static")) {
-				assembled->extended_value = ZEND_FETCH_STATIC;
-			} else if (UOPZ_ZVAL_MATCH(fetch, "global")) {
-				assembled->extended_value = ZEND_FETCH_GLOBAL;
-			} else if (UOPZ_ZVAL_MATCH(fetch, "local")) {
-				assembled->extended_value = ZEND_FETCH_LOCAL;
-			}
-		} break;
-
 		case ZEND_CAST: {
 			zval *type = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type"));
 			if (type)
 				assembled->extended_value = uopz_assemble_type_hint(type);
-		} break;
-
-		case ZEND_INIT_METHOD_CALL:
-		case ZEND_INIT_STATIC_METHOD_CALL:
-		case ZEND_INIT_FCALL_BY_NAME:
-		case ZEND_INIT_DYNAMIC_CALL:
-		case ZEND_INIT_USER_CALL:
-		case ZEND_INIT_NS_FCALL_BY_NAME:
-		case ZEND_INIT_FCALL:
-		case ZEND_NEW: {
-			zval *args = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("args"));
-			if (args && Z_TYPE_P(args) == IS_LONG)
-				assembled->extended_value = Z_LVAL_P(args);
-		} break;
-
-		case ZEND_CATCH: {
-			zval *jmp = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp"));
-			if (jmp && Z_TYPE_P(jmp) == IS_LONG)
-				assembled->extended_value = Z_LVAL_P(jmp);
-		} break;
-
-		case ZEND_INIT_ARRAY: {
-			zval *size = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("size"));
-			if (size && Z_TYPE_P(size) == IS_LONG)
-				assembled->extended_value = Z_LVAL_P(size);
 		} break;
 
 		default: {
