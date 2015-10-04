@@ -18,7 +18,6 @@
 #ifndef HAVE_UOPZ_ASSEMBLE_H
 #define HAVE_UOPZ_ASSEMBLE_H
 
-#define UOPZ_CONST_NUM(c) 		((c > 0L ? (c) * sizeof(zval) : c))
 #define UOPZ_ZVAL_MATCH(z, c)	(Z_TYPE_P(z) == IS_STRING && Z_STRLEN_P(z) == sizeof(c)-1 && memcmp(Z_STRVAL_P(z), c, Z_STRLEN_P(z)) == SUCCESS)
 #define UOPZ_STR_MATCH(s, c)	((s)->len == sizeof(c)-1 && memcmp((s)->val, c, (s)->len) == SUCCESS)
 
@@ -170,7 +169,8 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
 			*type = IS_CONST;
-			operand->num = UOPZ_CONST_NUM(Z_LVAL_P(op));
+			operand->num = Z_LVAL_P(op);
+			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
 		}
 	}
 	
@@ -484,8 +484,8 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	uopz_assemble_flags(assembled, disassembly);
 	uopz_assemble_arginfo(assembled, disassembly);
 	uopz_assemble_vars(assembled, disassembly);
-	uopz_assemble_opcodes(assembled, disassembly);
 	uopz_assemble_literals(assembled, disassembly);
+	uopz_assemble_opcodes(assembled, disassembly);
 	uopz_assemble_statics(assembled, disassembly);
 	uopz_assemble_brk(assembled, disassembly);
 	uopz_assemble_try(assembled, disassembly);
@@ -493,6 +493,4 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 
 	return (zend_function*) assembled;
 } /* }}} */
-
-#undef UOPZ_CONST_NUM
 #endif
