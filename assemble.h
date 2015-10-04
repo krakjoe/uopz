@@ -248,9 +248,7 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, zend_op *oplin
 	zval *op2 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op2"));
 	zval *result = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("result"));
 
-	opline->opcode = uopz_assemble_opcode_num(opcode);
-
-	switch (opline->opcode) {
+	switch (opline->opcode = uopz_assemble_opcode_num(opcode)) {
 		case ZEND_JMP:
 		case ZEND_FAST_CALL:
 		case ZEND_DECLARE_ANON_CLASS:
@@ -291,7 +289,6 @@ static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disasse
 		Z_ARRVAL_P(disassembly), ZEND_STRL("opcodes"));
 	zend_op *opline;
 	zval *opcode   = NULL;
-	uint32_t it   = 0;
 
 	if (!opcodes)
 		return;
