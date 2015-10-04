@@ -541,6 +541,8 @@ static inline void uopz_disassemble_misc(zend_op_array *function, zval *disassem
 		add_assoc_long(disassembly, "end", function->line_end);
 	if (function->doc_comment)
 		add_assoc_str(disassembly, "comment", function->doc_comment);
+	if (function->cache_size)
+		add_assoc_long(disassembly, "cache", function->cache_size);
 } /* }}} */
 
 /* {{{ */
