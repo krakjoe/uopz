@@ -229,7 +229,6 @@ static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arg
 /* {{{ */
 static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_array *op_array, zend_op *opline, zend_uchar op_type, znode_op *op, zend_bool jmp, zval *disassembly) {
 	zval result;
-	uint32_t num = 0;
 
 	if (op_type == IS_UNUSED && !jmp)
 		return;
@@ -241,32 +240,59 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 		add_assoc_long(&result, "jmp", op->opline_num);
 		ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, *op);
 	} else switch (op_type) {
-		case IS_TMP_VAR:
-			add_assoc_long(&result, "tmp", num = (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
-		break;
-
-		case IS_CV:
-			add_assoc_long(&result, "cv", num = EX_VAR_TO_NUM(op->num));
-		break;
-
 		case IS_CONST:
 			ZEND_PASS_TWO_UNDO_CONSTANT(op_array, *op);
-			add_assoc_long(&result, "constant", num = op->num);
+			add_assoc_long(&result, "constant", op->num);
 			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *op);
 		break;
 
+		case IS_TMP_VAR:
+			add_assoc_long(&result, "tmp", (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
+		break;
+
 		case IS_VAR:
-			add_assoc_long(&result, "var", num = EX_VAR_TO_NUM(op->num));
+			add_assoc_long(&result, "var", EX_VAR_TO_NUM(op->num));
+		break;
+
+		case IS_CV:
+			add_assoc_long(&result, "cv", EX_VAR_TO_NUM(op->num));
+		break;
+
+		case IS_UNUSED:
+			add_assoc_long(&result, "unused", EX_VAR_TO_NUM(op->num));
 		break;
 
 		default:
-			add_assoc_long(&result, "type", op_type);
-			add_assoc_long(&result, "num", op->num);
-	}
+			if (op_type & EXT_TYPE_UNUSED) {
+				zval ext;
 
-#if 0
-	php_printf("d: %d: %d = %d\n", op_type, op->num, num);	
-#endif
+				array_init(&ext);
+				switch (op_type &~ EXT_TYPE_UNUSED) {
+					case IS_CONST:
+						ZEND_PASS_TWO_UNDO_CONSTANT(op_array, *op);
+						add_assoc_long(&ext, "constant", op->num);
+						ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *op);
+					break;
+
+					case IS_TMP_VAR:
+						add_assoc_long(&ext, "tmp", (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
+					break;
+
+					case IS_VAR:
+						add_assoc_long(&ext, "var", EX_VAR_TO_NUM(op->num));
+					break;
+
+					case IS_CV:
+						add_assoc_long(&ext, "cv", EX_VAR_TO_NUM(op->num));
+					break;
+
+					case IS_UNUSED:
+						add_assoc_long(&ext, "unused", EX_VAR_TO_NUM(op->num));
+					break;
+				}
+				add_assoc_zval(&result, "ext", &ext);
+			}
+	}
 
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), name, nlen, &result);
 } /* }}} */

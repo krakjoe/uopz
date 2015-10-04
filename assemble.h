@@ -156,7 +156,11 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 			ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, *operand);
 		}
 	} else {
-		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
+		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
+			*type = IS_CONST;
+			operand->num = Z_LVAL_P(op);
+			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
+		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
 			*type = IS_CV;
 			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("tmp")))) {
@@ -165,22 +169,33 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
 			*type = IS_VAR;
 			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
-		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
-			*type = IS_CONST;
-			operand->num = Z_LVAL_P(op);
-			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
-		} else if((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type")))) {
-			zval *num = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("num"));
+		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("unused")))) {
+			*type = IS_UNUSED;
+			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
+		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext")))) {
+			zval *ext = NULL;
 
-			*type = Z_LVAL_P(op);
-			if (num && Z_TYPE_P(num) == IS_LONG)
-				operand->num = Z_LVAL_P(num);
+			*type |= EXT_TYPE_UNUSED;
+
+			if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("constant")))) {
+				*type |= IS_CONST;
+				operand->num = Z_LVAL_P(ext);
+				ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
+			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("cv")))) {
+				*type |= IS_CV;
+				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
+			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("tmp")))) {
+				*type |= IS_TMP_VAR;
+				operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext) + op_array->last_var));
+			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("var")))) {
+				*type |= IS_VAR;
+				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
+			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("unused")))) {
+				*type |= IS_UNUSED;
+				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
+			}
 		}
 	}
-	
-#if 0
-	php_printf("a: %d: %d -> %d\n", *type, Z_LVAL_P(op), operand->num);
-#endif
 } /* }}} */
 
 /* {{{ */
