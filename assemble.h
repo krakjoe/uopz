@@ -311,6 +311,12 @@ static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disasse
 	zval *opcode   = NULL;
 	uint32_t it   = 0;
 
+	if (!opcodes)
+		return;
+
+	if (Z_TYPE_P(opcodes) != IS_ARRAY)
+		return;
+	
 	assembled->last = zend_hash_num_elements(Z_ARRVAL_P(opcodes));
 	assembled->opcodes = 
 		(zend_op*) ecalloc(sizeof(zend_op), assembled->last);
@@ -326,6 +332,9 @@ static inline void uopz_assemble_vars(zend_op_array *assembled, zval *disassembl
 	zval *var = NULL;
 	zend_long idx = 0;
 
+	if (!vars)
+		return;
+
 	if (Z_TYPE_P(vars) != IS_ARRAY)
 		return;
 
@@ -333,7 +342,7 @@ static inline void uopz_assemble_vars(zend_op_array *assembled, zval *disassembl
 	assembled->vars = ecalloc(sizeof(zend_string*), assembled->last_var);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(vars), idx, var) {
-		assembled->vars[idx] = zend_string_copy(Z_STR_P(var));
+		assembled->vars[idx] = zend_string_dup(Z_STR_P(var), 0);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
@@ -343,6 +352,9 @@ static inline void uopz_assemble_literals(zend_op_array *assembled, zval *disass
 	zval *literal  = NULL;
 	zend_long idx  = 0;
 
+	if (!literals)
+		return;
+
 	if (Z_TYPE_P(literals) != IS_ARRAY)
 		return;
 
@@ -350,7 +362,7 @@ static inline void uopz_assemble_literals(zend_op_array *assembled, zval *disass
 	assembled->literals = ecalloc(sizeof(zval), assembled->last_literal);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(literals), idx, literal) {
-		ZVAL_COPY(&assembled->literals[idx], literal);
+		ZVAL_DUP(&assembled->literals[idx], literal);
 	} ZEND_HASH_FOREACH_END();	
 } /* }}} */
 
