@@ -530,8 +530,6 @@ static inline void uopz_disassemble_function(zend_op_array *function, zval *disa
 		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
 	add_assoc_str(disassembly, "name",  zend_string_copy(function->function_name));
 	uopz_disassemble_flags(function->fn_flags, disassembly);
-	if (function->scope && function->this_var)
-		add_assoc_long(disassembly, "this", UOPZ_CV_NUM(function->this_var));
 	add_assoc_long(disassembly, "nargs", function->num_args);
 	add_assoc_long(disassembly, "rnargs", function->required_num_args);
 	if (function->arg_info)

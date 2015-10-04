@@ -32,6 +32,15 @@ static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembl
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_assemble_scope(zend_op_array *assembled, zval *disassembly) {
+	zval *scope = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("scope"));
+
+	if (scope && Z_TYPE_P(scope) == IS_STRING) {
+		assembled->scope = zend_lookup_class(Z_STR_P(scope));
+	}
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_assemble_flag(zend_op_array *assembled, zval *disassembly) {
 	zend_string *name = Z_STR_P(disassembly);
 
@@ -467,7 +476,7 @@ static inline void uopz_assemble_misc(zend_op_array *assembled, zval *disassembl
 } /* }}} */
 
 /* {{{ */
-static inline zend_function* uopz_assemble(zval *disassembly) {
+static inline zend_op_array* uopz_assemble(zval *disassembly) {
 	zend_op_array *assembled = 
 		(zend_op_array*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
 
@@ -478,6 +487,7 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	*(assembled->refcount) = 1;
 	
 	uopz_assemble_name(assembled, disassembly);
+	uopz_assemble_scope(assembled, disassembly);
 	uopz_assemble_flags(assembled, disassembly);
 	uopz_assemble_arginfo(assembled, disassembly);
 	uopz_assemble_vars(assembled, disassembly);
@@ -488,6 +498,6 @@ static inline zend_function* uopz_assemble(zval *disassembly) {
 	uopz_assemble_try(assembled, disassembly);
 	uopz_assemble_misc(assembled, disassembly);
 
-	return (zend_function*) assembled;
+	return assembled;
 } /* }}} */
 #endif

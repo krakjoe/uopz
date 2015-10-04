@@ -730,12 +730,14 @@ static inline void uopz_disassemble(const zend_function *function, zval *disasse
 	array_init(disassembly);
 	
 	switch (function->type) {
-		case ZEND_INTERNAL_FUNCTION:
-			uopz_disassemble_internal_function((zend_internal_function*) function, disassembly);
-		break;
-
 		case ZEND_USER_FUNCTION:
 			uopz_disassemble_function((zend_op_array*) function, disassembly);
+		break;
+
+		case ZEND_INTERNAL_FUNCTION:
+			uopz_refuse_parameters(
+				"unexpected parameter, will not disassemble internal functions");
+			return;
 		break;
 	}
 } /* }}} */
@@ -770,20 +772,23 @@ static PHP_FUNCTION(uopz_disassemble)
 /* {{{ */
 PHP_FUNCTION(uopz_assemble) {
 	zval *disassembly = NULL;
-	zend_function *assembled;
+	zend_op_array *assembled = NULL;
+	zval *scope = NULL;
 
-	if (uopz_parse_parameters("a", &disassembly) != SUCCESS) {
+	if (uopz_parse_parameters("a|o", &disassembly, &scope) != SUCCESS) {
 		uopz_refuse_paramters(
-			"unexpected parameter combination, expected (array disassembly)");
+			"unexpected parameter combination, expected (array disassembly [, object scope])");
 		return;
 	}
 
 	if ((assembled = uopz_assemble(disassembly))) {
 		zend_create_closure(
-			return_value, 
-			assembled, 
-			NULL, NULL, NULL); /* not sure about these yet */
-		destroy_op_array((zend_op_array*)assembled);
+			return_value,
+			(zend_function*) assembled,
+			scope ? Z_OBJCE_P(scope) : NULL, 
+			scope ? Z_OBJCE_P(scope) : NULL, 
+			scope ? scope : NULL);
+		destroy_op_array(assembled);
 	}
 } /* }}} */
 
