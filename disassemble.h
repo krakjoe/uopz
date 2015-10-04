@@ -109,35 +109,15 @@ static inline zend_string *uopz_disassemble_modifier_name(uint32_t modifier) {
 /* }}} */
 
 /* {{{ */
-static inline void uopz_disassembler_init_fetches(HashTable *hash) {
-	zval tmp;
-
-	zend_hash_init(hash, 4, NULL, ZVAL_PTR_DTOR, 0);	
-	
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("global"), 0));
-	zend_hash_index_add(hash, ZEND_FETCH_GLOBAL, &tmp);
-	zend_hash_index_add(hash, ZEND_FETCH_GLOBAL_LOCK, &tmp);
-	Z_ADDREF(tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("static"), 0));
-	zend_hash_index_add(hash, ZEND_FETCH_STATIC, &tmp);
-	
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("local"), 0));
-	zend_hash_index_add(hash, ZEND_FETCH_LOCAL, &tmp);
-} /* }}} */
-
-/* {{{ */
 static inline void uopz_disassembler_init() {
 	uopz_disassembler_init_opcodes(&UOPZ(opcodes));
 	uopz_disassembler_init_types(UOPZ(types));
-	uopz_disassembler_init_fetches(&UOPZ(fetches));
 	uopz_disassembler_init_modifiers(&UOPZ(modifiers));
 } /* }}} */
 
 /* {{{ */
 static inline void uopz_disassembler_shutdown() {
 	zend_hash_destroy(&UOPZ(opcodes));
-	zend_hash_destroy(&UOPZ(fetches));
 	zend_hash_destroy(&UOPZ(modifiers));
 	{
 		uint32_t it = IS_UNDEF, end = IS_PTR;

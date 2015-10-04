@@ -42,7 +42,6 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 
 	/* disassembler stuff */
 	HashTable   opcodes;
-	HashTable   fetches;
 	HashTable   modifiers;
 	zend_string *types[UOPZ_NUM_TYPES];
 ZEND_END_MODULE_GLOBALS(uopz)
