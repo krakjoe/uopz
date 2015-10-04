@@ -155,7 +155,8 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 	if (jmp) {
 		*type = IS_UNUSED;
 		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp")))) {
-			operand->jmp_offset = ZEND_OPLINE_NUM_TO_OFFSET(op_array, opline, Z_LVAL_P(op));
+			operand->opline_num = Z_LVAL_P(op);
+			ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, *operand);
 		}
 	} else {
 		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {

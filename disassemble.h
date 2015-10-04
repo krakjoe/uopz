@@ -257,7 +257,9 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 	array_init(&result);
 
 	if (jmp) {
-		add_assoc_long(&result, "jmp", OP_JMP_ADDR(opline, *op) - op_array->opcodes);
+		ZEND_PASS_TWO_UNDO_JMP_TARGET(op_array, opline, *op);
+		add_assoc_long(&result, "jmp", op->opline_num);
+		ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, *op);
 	} else switch (op_type) {
 		case IS_TMP_VAR:
 			add_assoc_long(&result, "tmp", num = (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
