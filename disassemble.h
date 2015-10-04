@@ -56,7 +56,7 @@ static inline void uopz_disassembler_init_types(zend_string  **types) {
 	types[IS_FALSE]	= zend_string_init(ZEND_STRL("false"), 0);
 	types[IS_TRUE]	= zend_string_init(ZEND_STRL("true"), 0);
 	types[IS_LONG]	= zend_string_init(ZEND_STRL("int"), 0);
-	types[IS_DOUBLE]	= zend_string_init(ZEND_STRL("double"), 0);
+	types[IS_DOUBLE]	= zend_string_init(ZEND_STRL("float"), 0);
 	types[IS_STRING]	= zend_string_init(ZEND_STRL("string"), 0);
 	types[IS_ARRAY]		= zend_string_init(ZEND_STRL("array"), 0);
 	types[IS_OBJECT]	= zend_string_init(ZEND_STRL("object"), 0);

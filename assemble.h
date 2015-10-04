@@ -67,7 +67,7 @@ static inline zend_uchar uopz_assemble_type_hint(zval *disassembly) {
 	if (Z_TYPE_P(disassembly) == IS_STRING) {
 		if (UOPZ_ZVAL_MATCH(disassembly, "int")) {
 			return IS_LONG;
-		} else if (UOPZ_ZVAL_MATCH(disassembly, "double")) {
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "float")) {
 			return IS_DOUBLE;
 		} else if (UOPZ_ZVAL_MATCH(disassembly, "array")) {
 			return IS_ARRAY;
