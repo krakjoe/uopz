@@ -772,7 +772,7 @@ PHP_FUNCTION(uopz_assemble) {
 	zval *disassembly = NULL;
 	zend_function *assembled;
 
-	if (uopz_parse_parameters("z", &disassembly) != SUCCESS || Z_TYPE_P(disassembly) != IS_ARRAY) {
+	if (uopz_parse_parameters("a", &disassembly) != SUCCESS) {
 		uopz_refuse_paramters(
 			"unexpected parameter combination, expected (array disassembly)");
 		return;

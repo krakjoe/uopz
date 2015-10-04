@@ -144,7 +144,7 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *opline, znode_op *operand, zend_uchar *type, uint32_t last_var, zend_bool jmp, zval *disassembly) {
+static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *opline, znode_op *operand, zend_uchar *type, zend_bool jmp, zval *disassembly) {
 	zval *op = NULL;
 
 	if (!disassembly) {
@@ -164,7 +164,7 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("tmp")))) {
 			*type = IS_TMP_VAR;
-			operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + last_var));
+			operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + op_array->last_var));
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
 			*type = IS_VAR;
 			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
@@ -237,15 +237,6 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 			if (jmp && Z_TYPE_P(jmp) == IS_LONG)
 				assembled->extended_value = Z_LVAL_P(jmp);
 		} break;
-		
-		case ZEND_FE_FETCH_R:
-		case ZEND_FE_FETCH_RW:
-		case ZEND_FE_RESET_R:
-		case ZEND_FE_RESET_RW: {
-			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
-			if (ext && Z_TYPE_P(ext) == IS_LONG)
-				assembled->extended_value = Z_LVAL_P(ext);
-		} break;
 
 		case ZEND_INIT_ARRAY: {
 			zval *size = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("size"));
@@ -262,7 +253,7 @@ static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disass
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, uint32_t last_var, zval *disassembly) {
+static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, zval *disassembly) {
 	zval *opcode = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("opcode"));
 	zval *op1 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op1"));
 	zval *op2 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op2"));
@@ -275,8 +266,8 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, u
 		case ZEND_FAST_CALL:
 		case ZEND_DECLARE_ANON_CLASS:
 		case ZEND_DECLARE_ANON_INHERITED_CLASS:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 1, op1);
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, 1, op1);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, 0, op2);
 		break;
 
 		case ZEND_JMPZNZ:
@@ -290,16 +281,16 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, u
 		case ZEND_FE_RESET_R:
 		case ZEND_FE_RESET_RW:
 		case ZEND_ASSERT_CHECK:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 0, op1);
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 1, op2);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, 0, op1);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, 1, op2);
 		break;
 
 		default:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, last_var, 0, op1);
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, last_var, 0, op2);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, 0, op1);
+			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, 0, op2);
 	}
 
-	uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, last_var, 0, result);
+	uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, 0, result);
 	uopz_assemble_extended_value(&assembled->opcodes[it], disassembly);
 
 	zend_vm_set_opcode_handler(&assembled->opcodes[it]);
@@ -320,10 +311,10 @@ static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disasse
 	
 	assembled->last = zend_hash_num_elements(Z_ARRVAL_P(opcodes));
 	assembled->opcodes = 
-		(zend_op*) ecalloc(sizeof(zend_op), assembled->last + 1);
+		(zend_op*) ecalloc(sizeof(zend_op), assembled->last);
 	
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(opcodes), opcode) {
-		uopz_assemble_opcode(assembled, it++, assembled->last_var, opcode);
+		uopz_assemble_opcode(assembled, it++, opcode);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
