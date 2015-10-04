@@ -170,7 +170,7 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 			operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + op_array->last_var));
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
 			*type = IS_VAR;
-			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
+			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + op_array->last_var);
 		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("unused")))) {
 			*type = IS_UNUSED;
 			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
@@ -191,7 +191,7 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 				operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext) + op_array->last_var));
 			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("var")))) {
 				*type |= IS_VAR;
-				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
+				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext) + op_array->last_var);
 			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("unused")))) {
 				*type |= IS_UNUSED;
 				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
@@ -216,38 +216,47 @@ static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_assemble_extended_value(zend_op *assembled, zval *disassembly) {
-	switch (assembled->opcode) {
+static inline void uopz_assemble_extended_value(zend_op_array *assembled, zend_op *opline, zval *disassembly) {
+	switch (opline->opcode) {
 		case ZEND_CAST: {
 			zval *type = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type"));
 			if (type)
-				assembled->extended_value = uopz_assemble_type_hint(type);
+				opline->extended_value = uopz_assemble_type_hint(type);
+		} break;
+
+		case ZEND_JMPZNZ:
+		case ZEND_FE_FETCH_R:
+		case ZEND_FE_FETCH_RW: {
+			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
+
+			if (ext && Z_TYPE_P(ext) == IS_LONG)
+				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(assembled, opline, opline->extended_value);
 		} break;
 
 		default: {
 			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
 			if (ext && Z_TYPE_P(ext) == IS_LONG)
-				assembled->extended_value = Z_LVAL_P(ext);
+				opline->extended_value = Z_LVAL_P(ext);
 		}
 	}
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, zval *disassembly) {
+static inline void uopz_assemble_opcode(zend_op_array *assembled, zend_op *opline, zval *disassembly) {
 	zval *opcode = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("opcode"));
 	zval *op1 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op1"));
 	zval *op2 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op2"));
 	zval *result = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("result"));
 
-	assembled->opcodes[it].opcode = uopz_assemble_opcode_num(opcode);
+	opline->opcode = uopz_assemble_opcode_num(opcode);
 
-	switch (assembled->opcodes[it].opcode) {
+	switch (opline->opcode) {
 		case ZEND_JMP:
 		case ZEND_FAST_CALL:
 		case ZEND_DECLARE_ANON_CLASS:
 		case ZEND_DECLARE_ANON_INHERITED_CLASS:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, 1, op1);
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, 0, op2);
+			uopz_assemble_operand(assembled, opline, &opline->op1, &opline->op1_type, 1, op1);
+			uopz_assemble_operand(assembled, opline, &opline->op2, &opline->op2_type, 0, op2);
 		break;
 
 		case ZEND_JMPZNZ:
@@ -261,25 +270,26 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, uint32_t it, z
 		case ZEND_FE_RESET_R:
 		case ZEND_FE_RESET_RW:
 		case ZEND_ASSERT_CHECK:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, 0, op1);
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, 1, op2);
+			uopz_assemble_operand(assembled, opline, &opline->op1, &opline->op1_type, 0, op1);
+			uopz_assemble_operand(assembled, opline, &opline->op2, &opline->op2_type, 1, op2);
 		break;
 
 		default:
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op1, &assembled->opcodes[it].op1_type, 0, op1);
-			uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].op2, &assembled->opcodes[it].op2_type, 0, op2);
+			uopz_assemble_operand(assembled, opline, &opline->op1, &opline->op1_type, 0, op1);
+			uopz_assemble_operand(assembled, opline, &opline->op2, &opline->op2_type, 0, op2);
 	}
 
-	uopz_assemble_operand(assembled, &assembled->opcodes[it], &assembled->opcodes[it].result, &assembled->opcodes[it].result_type, 0, result);
-	uopz_assemble_extended_value(&assembled->opcodes[it], disassembly);
+	uopz_assemble_operand(assembled, opline, &opline->result, &opline->result_type, 0, result);
+	uopz_assemble_extended_value(assembled, opline, disassembly);
 
-	zend_vm_set_opcode_handler(&assembled->opcodes[it]);
+	zend_vm_set_opcode_handler(opline);
 } /* }}} */
 
 /* {{{ */
 static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disassembly) {
 	zval *opcodes  = zend_hash_str_find(
 		Z_ARRVAL_P(disassembly), ZEND_STRL("opcodes"));
+	zend_op *opline;
 	zval *opcode   = NULL;
 	uint32_t it   = 0;
 
@@ -288,13 +298,13 @@ static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disasse
 
 	if (Z_TYPE_P(opcodes) != IS_ARRAY)
 		return;
-	
+
 	assembled->last = zend_hash_num_elements(Z_ARRVAL_P(opcodes));
-	assembled->opcodes = 
+	assembled->opcodes = opline =
 		(zend_op*) ecalloc(sizeof(zend_op), assembled->last);
 	
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(opcodes), opcode) {
-		uopz_assemble_opcode(assembled, it++, opcode);
+		uopz_assemble_opcode(assembled, opline++, opcode);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
