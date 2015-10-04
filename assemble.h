@@ -47,6 +47,8 @@ static inline void uopz_assemble_flag(zend_op_array *assembled, zval *disassembl
 		assembled->fn_flags |= ZEND_ACC_PRIVATE;
 	} else if (UOPZ_STR_MATCH(name, "public")) {
 		assembled->fn_flags |= ZEND_ACC_PUBLIC;
+	} else if (UOPZ_STR_MATCH(name, "generator")) {
+		assembled->fn_flags |= ZEND_ACC_GENERATOR;
 	}
 } /* }}} */
 

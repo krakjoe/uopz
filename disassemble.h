@@ -74,7 +74,7 @@ static inline void uopz_disassembler_init_types(zend_string  **types) {
 static inline void uopz_disassembler_init_modifiers(HashTable *hash) {
 	zval tmp;
 
-	zend_hash_init(hash, 10, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_init(hash, 11, NULL, ZVAL_PTR_DTOR, 0);
 
 	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("unknown"), 0));
 	zend_hash_index_add(hash, -1, &tmp);
@@ -96,6 +96,9 @@ static inline void uopz_disassembler_init_modifiers(HashTable *hash) {
 
 	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("reference"), 0));
 	zend_hash_index_add(hash, ZEND_ACC_RETURN_REFERENCE, &tmp);
+
+	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("generator"), 0));
+	zend_hash_index_add(hash, ZEND_ACC_GENERATOR, &tmp);
 } /* }}} */
 
 /* {{{ */
@@ -458,6 +461,9 @@ static inline void uopz_disassemble_flags(uint32_t flags, zval *disassembly) {
 	zval result;
 
 	array_init(&result);
+
+	if (flags & ZEND_ACC_GENERATOR)
+		add_next_index_str(&result, uopz_disassemble_modifier_name(ZEND_ACC_GENERATOR));
 
 	if (flags & ZEND_ACC_RETURN_REFERENCE)
 		add_next_index_str(&result, uopz_disassemble_modifier_name(ZEND_ACC_RETURN_REFERENCE));
