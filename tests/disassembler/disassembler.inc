@@ -1,5 +1,7 @@
 <?php
 function show_disassembly_diff(array $one, array $two) {
+	printf("disassembly failures:\n");
+
 	if ($one["arginfo"] != $two["arginfo"]) {	
 		printf("arginfo failure:\n");
 		var_dump($one["arginfo"], $two["arginfo"]);
@@ -17,8 +19,26 @@ function show_disassembly_diff(array $one, array $two) {
 		}
 	}
 
-	if ($on["brk"] != $two["brk"]) {
-		
+	if ($one["brk"] != $two["brk"]) {
+		printf("brk failure:\n");
+		foreach ($one["brk"] as $idx => $brk) {
+			if ($two["brk"][$idx] != $brk) {
+				printf("#%d:\n", $idx);
+				var_dump($brk, $two["brk"][$idx]);
+				printf("\n");
+			}
+		}
+	}
+	
+	if ($one["try"] != $two["try"]) {
+		printf("try failure:\n");
+		foreach ($one["try"] as $idx => $try) {
+			if ($two["try"][$idx] != $try) {
+				printf("#%d:\n", $idx);
+				var_dump($try, $two["try"][$idx]);
+				printf("\n");
+			}
+		}
 	}
 }
 
