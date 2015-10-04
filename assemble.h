@@ -319,7 +319,7 @@ static inline void uopz_assemble_opcodes(zend_op_array *assembled, zval *disasse
 	
 	assembled->last = zend_hash_num_elements(Z_ARRVAL_P(opcodes));
 	assembled->opcodes = 
-		(zend_op*) ecalloc(sizeof(zend_op), assembled->last);
+		(zend_op*) ecalloc(sizeof(zend_op), assembled->last + 1);
 	
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(opcodes), opcode) {
 		uopz_assemble_opcode(assembled, it++, assembled->last_var, opcode);
@@ -362,7 +362,7 @@ static inline void uopz_assemble_literals(zend_op_array *assembled, zval *disass
 	assembled->literals = ecalloc(sizeof(zval), assembled->last_literal);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(literals), idx, literal) {
-		ZVAL_DUP(&assembled->literals[idx], literal);
+		ZVAL_COPY(&assembled->literals[idx], literal);
 	} ZEND_HASH_FOREACH_END();	
 } /* }}} */
 

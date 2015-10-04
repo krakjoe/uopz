@@ -615,7 +615,7 @@ static PHP_MINIT_FUNCTION(uopz)
 		CG(class_table)->pDestructor = NULL;
 		CG(function_table)->pDestructor = NULL;
 	}
-	
+
 	zend_execute_internal_function = zend_execute_internal;
 	zend_execute_internal = uopz_execute_internal;
 	zend_execute_ex_function = zend_execute_ex;

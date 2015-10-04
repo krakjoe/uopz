@@ -48,7 +48,11 @@ function run_disassembler_test(Closure $test, array $args) {
 	$validation   = uopz_disassemble($assembled);
 
 	if ($validation == $disassembled) {
-		var_dump($assembled(...$args));
+		$expected = $test(...$args);
+		$result   = $assembled(...$args);
+		if ($expected != $result) {
+			var_dump($expected, $result);
+		} else var_dump($result);
 	} else show_disassembly_diff($disassembled, $validation);
 }
 ?>

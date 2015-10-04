@@ -6,8 +6,8 @@ Test disassembler cast
 <?php
 require_once('disassembler.inc');
 
-run_disassembler_test(function(int $arg) : double {
-	return (double) $arg;
+run_disassembler_test(function(int $arg) : float {
+	return (float) $arg;
 }, [2]);
 ?>
 --EXPECT--

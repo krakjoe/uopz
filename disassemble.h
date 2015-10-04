@@ -247,7 +247,7 @@ static inline void uopz_disassemble_internal_arginfo(zend_internal_arg_info *arg
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_array *op_array, zend_op *opline, zend_uchar op_type, znode_op *op, zend_bool jmp, uint32_t last_var, zval *disassembly) {
+static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_array *op_array, zend_op *opline, zend_uchar op_type, znode_op *op, zend_bool jmp, zval *disassembly) {
 	zval result;
 	uint32_t num = 0;
 
@@ -260,7 +260,7 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 		add_assoc_long(&result, "jmp", OP_JMP_ADDR(opline, *op) - op_array->opcodes);
 	} else switch (op_type) {
 		case IS_TMP_VAR:
-			add_assoc_long(&result, "tmp", num = (EX_VAR_TO_NUM(op->num) - last_var));		
+			add_assoc_long(&result, "tmp", num = (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
 		break;
 
 		case IS_CV:
@@ -351,12 +351,12 @@ static inline void upoz_disassemble_extended_value(zend_uchar opcode, uint32_t e
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_disassemble_opcodes(zend_op_array *op_array, uint32_t end, uint32_t last_var, zval *disassembly) {
+static inline void uopz_disassemble_opcodes(zend_op_array *op_array, zval *disassembly) {
 	uint32_t it = 0;
 	zval result;
 
 	array_init(&result);
-	while (it < end) {
+	while (it < op_array->last) {
 		zval opcode;
 		zend_string *name = zend_hash_index_find_ptr(&UOPZ(opcodes), op_array->opcodes[it].opcode);
 
@@ -370,8 +370,8 @@ static inline void uopz_disassemble_opcodes(zend_op_array *op_array, uint32_t en
 			case ZEND_FAST_CALL:
 			case ZEND_DECLARE_ANON_CLASS:
 			case ZEND_DECLARE_ANON_INHERITED_CLASS:
-				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op1_type, &op_array->opcodes[it].op1, 1, last_var, &opcode);
-				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op2_type, &op_array->opcodes[it].op2, 0, last_var, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op1_type, &op_array->opcodes[it].op1, 1, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op2_type, &op_array->opcodes[it].op2, 0, &opcode);
 			break;
 
 			case ZEND_JMPZNZ:
@@ -385,16 +385,16 @@ static inline void uopz_disassemble_opcodes(zend_op_array *op_array, uint32_t en
 			case ZEND_FE_RESET_R:
 			case ZEND_FE_RESET_RW:
 			case ZEND_ASSERT_CHECK:
-				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op1_type, &op_array->opcodes[it].op1, 0, last_var, &opcode);
-				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op2_type, &op_array->opcodes[it].op2, 1, last_var, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op1_type, &op_array->opcodes[it].op1, 0, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op2_type, &op_array->opcodes[it].op2, 1, &opcode);
 			break;
 
 			default:
-				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op1_type, &op_array->opcodes[it].op1, 0, last_var, &opcode);
-				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op2_type, &op_array->opcodes[it].op2, 0, last_var, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op1_type, &op_array->opcodes[it].op1, 0, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, &op_array->opcodes[it], op_array->opcodes[it].op2_type, &op_array->opcodes[it].op2, 0, &opcode);
 		}
 		
-		uopz_disassemble_operand(ZEND_STRL("result"), op_array, &op_array->opcodes[it], op_array->opcodes[it].result_type, &op_array->opcodes[it].result, 0, last_var, &opcode);
+		uopz_disassemble_operand(ZEND_STRL("result"), op_array, &op_array->opcodes[it], op_array->opcodes[it].result_type, &op_array->opcodes[it].result, 0, &opcode);
 
 		upoz_disassemble_extended_value(op_array->opcodes[it].opcode, op_array->opcodes[it].extended_value, &opcode);
 
@@ -559,7 +559,7 @@ static inline void uopz_disassemble_function(zend_op_array *function, zval *disa
 	add_assoc_long(disassembly, "rnargs", function->required_num_args);
 	if (function->arg_info)
 		uopz_disassemble_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
-	uopz_disassemble_opcodes(function, function->last, function->last_var, disassembly);
+	uopz_disassemble_opcodes(function, disassembly);
 	uopz_disassemble_vars(function->vars, function->last_var, disassembly);
 	uopz_disassemble_literals(function->literals, function->last_literal, disassembly);
 	uopz_disassemble_statics(function->static_variables, disassembly);
