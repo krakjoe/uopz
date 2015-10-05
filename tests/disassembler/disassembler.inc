@@ -70,6 +70,8 @@ function run_disassembler_method_test(array $test, array $args) {
 	$validation   = uopz_disassemble($assembled);
 
 	if ($validation == $disassembled) {
+		$disassembled["flags"] = ["public"];
+		$assembled = uopz_assemble($disassembled, $test[0]);
 		$expected = $test(...$args);
 		$result   = $assembled(...$args);
 		if ($expected != $result) {

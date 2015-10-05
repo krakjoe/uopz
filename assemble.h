@@ -490,6 +490,7 @@ static inline zend_op_array* uopz_assemble(zval *disassembly) {
 
 	memset(assembled, 0, sizeof(zend_op_array));
 
+	assembled->this_var = -1;
 	assembled->type = ZEND_USER_FUNCTION;
 	assembled->refcount = (uint32_t*) emalloc(sizeof(uint32_t));
 	*(assembled->refcount) = 1;
