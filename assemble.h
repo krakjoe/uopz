@@ -199,8 +199,8 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 				operand->num = Z_LVAL_P(num);
 				ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
 			} else if ((*type) & (IS_TMP_VAR|IS_VAR)) {
-				operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num) + op_array->last_var));
-			} else operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
+				operand->num = (uint32_t)(zend_intptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num) + op_array->last_var));
+			} else operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
 		}
 		
 		if (ext && Z_TYPE_P(ext) == IS_TRUE) {
@@ -251,11 +251,18 @@ static inline void uopz_assemble_extended_value(zend_op_array *assembled, zend_o
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_assemble_lineno(zend_op *opline, zval *disassembly) {
+	if (disassembly && Z_TYPE_P(disassembly) == IS_LONG)
+		opline->lineno = Z_LVAL_P(disassembly);
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_assemble_opcode(zend_op_array *assembled, zend_op *opline, zval *disassembly) {
 	zval *opcode = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("opcode"));
 	zval *op1 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op1"));
 	zval *op2 = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("op2"));
 	zval *result = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("result"));
+	zval *lineno = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("lineno"));
 
 	switch (opline->opcode = uopz_assemble_opcode_num(opcode)) {
 		case ZEND_JMP:
@@ -288,6 +295,7 @@ static inline void uopz_assemble_opcode(zend_op_array *assembled, zend_op *oplin
 
 	uopz_assemble_operand(assembled, opline, &opline->result, &opline->result_type, 0, result);
 	uopz_assemble_extended_value(assembled, opline, disassembly);
+	uopz_assemble_lineno(opline, lineno);
 
 	zend_vm_set_opcode_handler(opline);
 } /* }}} */

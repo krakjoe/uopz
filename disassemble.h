@@ -142,7 +142,7 @@ static inline void uopz_disassembler_init() {
 	uopz_disassembler_init_opcodes(&UOPZ(opcodes));
 	uopz_disassembler_init_modifiers(&UOPZ(modifiers));
 	uopz_disassembler_init_optypes(&UOPZ(optypes));
-	uopz_disassembler_init_types(UOPZ(types));
+	uopz_disassembler_init_types(UOPZ(types));	
 } /* }}} */
 
 /* {{{ */
@@ -159,7 +159,6 @@ static inline void uopz_disassembler_shutdown() {
 			it++;
 		}
 	}
-	
 } /* }}} */
 
 /* {{{ */
@@ -236,9 +235,6 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 			add_assoc_str(&result, "type", uopz_disassemble_optype(IS_CV));
 		else add_assoc_str(&result, "type", uopz_disassemble_optype(IS_UNUSED));
 		add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
-	} else {
-		zval_ptr_dtor(&result);
-		return;
 	}
 
 	if (op_type & EXT_TYPE_UNUSED) {
@@ -266,6 +262,12 @@ static inline void upoz_disassemble_extended_value(zend_op_array *op_array, zend
 			if (opline->extended_value)
 				add_assoc_long(disassembly, "ext", opline->extended_value);
 	}
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassemble_lineno(zend_op *opline, zval *disassembly) {
+	if (opline->lineno)
+		add_assoc_long(disassembly, "lineno", (zend_long) opline->lineno);
 } /* }}} */
 
 /* {{{ */
@@ -319,6 +321,7 @@ static inline void uopz_disassemble_opcodes(zend_op_array *op_array, zval *disas
 		
 		uopz_disassemble_operand(ZEND_STRL("result"), op_array, opline, opline->result_type, &opline->result, 0, &opcode);
 		upoz_disassemble_extended_value(op_array, opline, &opcode);
+		uopz_disassemble_lineno(opline, &opcode);
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &opcode);
 		opline++;
@@ -330,7 +333,7 @@ static inline void uopz_disassemble_opcodes(zend_op_array *op_array, zval *disas
 static inline void uopz_disassemble_vars(zend_string **vars, int end, zval *disassembly) {
 	zval result;
 	int it = 0;
-	
+
 	array_init(&result);
 	while (it < end) {
 		add_index_str(&result, it, zend_string_copy(vars[it]));
@@ -357,7 +360,8 @@ static inline void uopz_disassemble_statics(HashTable *statics, zval *disassembl
 	if (statics) {
 		zval tmp;
 		ZVAL_ARR(&tmp, statics);
-		add_assoc_zval(disassembly, "static", &tmp);
+		add_assoc_zval(
+			disassembly, "static", &tmp);
 		Z_ADDREF(tmp);
 	}
 } /* }}} */
