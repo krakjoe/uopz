@@ -71,34 +71,60 @@ static inline void uopz_disassembler_init_types(zend_string  **types) {
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_disassembler_init_optypes(HashTable *types) {
+#define REGISTER_OPTYPE(n, c) do { \
+	zval tmp; \
+	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL(n), 0)); \
+	zend_hash_index_update(types, c, &tmp); \
+} while(0)
+
+	zend_hash_init(
+		types, 5, NULL, ZVAL_PTR_DTOR, 1);
+	
+	REGISTER_OPTYPE("var",				IS_VAR);
+	REGISTER_OPTYPE("tmp",				IS_TMP_VAR);
+	REGISTER_OPTYPE("cv",				IS_CV);
+	REGISTER_OPTYPE("constant",			IS_CONST);
+	REGISTER_OPTYPE("unused",			IS_UNUSED);
+	REGISTER_OPTYPE("ext-type-unused",	EXT_TYPE_UNUSED);
+	REGISTER_OPTYPE("unknown",			-1);
+
+#undef REGISTER_OPTYPE
+} /* }}} */
+
+/* {{{ */
+static inline zend_string *uopz_disassemble_optype(zend_uchar type) {
+	zval *disassembly = zend_hash_index_find(&UOPZ(optypes), type &~ EXT_TYPE_UNUSED);
+	
+	if (type && Z_TYPE_P(disassembly) == IS_STRING) {
+		return zend_string_copy(Z_STR_P(disassembly));
+	}
+
+	return uopz_disassemble_optype(-1); 
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_disassembler_init_modifiers(HashTable *hash) {
 	zval tmp;
 
+#define REGISTER_MODIFIER(n, m) do { \
+	zval tmp; \
+	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL(n), 0)); \
+	zend_hash_index_add(hash, m, &tmp); \
+} while(0)
+
 	zend_hash_init(hash, 11, NULL, ZVAL_PTR_DTOR, 0);
 
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("unknown"), 0));
-	zend_hash_index_add(hash, -1, &tmp);
+	REGISTER_MODIFIER("unknown",	-1);
+	REGISTER_MODIFIER("public",		ZEND_ACC_PUBLIC);
+	REGISTER_MODIFIER("protected",	ZEND_ACC_PROTECTED);
+	REGISTER_MODIFIER("private",	ZEND_ACC_PRIVATE);
+	REGISTER_MODIFIER("final",		ZEND_ACC_FINAL);
+	REGISTER_MODIFIER("static", 	ZEND_ACC_STATIC);
+	REGISTER_MODIFIER("reference", 	ZEND_ACC_RETURN_REFERENCE);
+	REGISTER_MODIFIER("generator", 	ZEND_ACC_GENERATOR);
 
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("public"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_PUBLIC, &tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("protected"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_PROTECTED, &tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("private"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_PRIVATE, &tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("final"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_FINAL, &tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("static"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_STATIC, &tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("reference"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_RETURN_REFERENCE, &tmp);
-
-	ZVAL_STR(&tmp, zend_string_init(ZEND_STRL("generator"), 0));
-	zend_hash_index_add(hash, ZEND_ACC_GENERATOR, &tmp);
+#undef REGISTER_MODIFIER
 } /* }}} */
 
 /* {{{ */
@@ -114,14 +140,16 @@ static inline zend_string *uopz_disassemble_modifier_name(uint32_t modifier) {
 /* {{{ */
 static inline void uopz_disassembler_init() {
 	uopz_disassembler_init_opcodes(&UOPZ(opcodes));
-	uopz_disassembler_init_types(UOPZ(types));
 	uopz_disassembler_init_modifiers(&UOPZ(modifiers));
+	uopz_disassembler_init_optypes(&UOPZ(optypes));
+	uopz_disassembler_init_types(UOPZ(types));
 } /* }}} */
 
 /* {{{ */
 static inline void uopz_disassembler_shutdown() {
 	zend_hash_destroy(&UOPZ(opcodes));
 	zend_hash_destroy(&UOPZ(modifiers));
+	zend_hash_destroy(&UOPZ(optypes));
 	{
 		uint32_t it = IS_UNDEF, end = IS_PTR;
 		
@@ -193,59 +221,28 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 		ZEND_PASS_TWO_UNDO_JMP_TARGET(op_array, opline, *op);
 		add_assoc_long(&result, "jmp", op->opline_num);
 		ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, *op);
-	} else switch (op_type) {
-		case IS_CONST:
-			ZEND_PASS_TWO_UNDO_CONSTANT(op_array, *op);
-			add_assoc_long(&result, "constant", op->num);
-			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *op);
-		break;
+	} else if (op_type & IS_CONST) {
+		ZEND_PASS_TWO_UNDO_CONSTANT(op_array, *op);
+		add_assoc_str(&result,  "type", uopz_disassemble_optype(IS_CONST));
+		add_assoc_long(&result, "num",  op->num);
+		ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *op);
+	} else if(op_type & (IS_TMP_VAR|IS_VAR)) {
+		if (op_type & IS_TMP_VAR)
+			add_assoc_str(&result, "type", uopz_disassemble_optype(IS_TMP_VAR));
+		else add_assoc_str(&result, "type", uopz_disassemble_optype(IS_VAR));
+		add_assoc_long(&result, "num", (EX_VAR_TO_NUM(op->num) - op_array->last_var));
+	} else if (op_type & IS_CV|IS_UNUSED) {
+		if (op_type & IS_CV)
+			add_assoc_str(&result, "type", uopz_disassemble_optype(IS_CV));
+		else add_assoc_str(&result, "type", uopz_disassemble_optype(IS_UNUSED));
+		add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
+	} else {
+		zval_ptr_dtor(&result);
+		return;
+	}
 
-		case IS_TMP_VAR:
-			add_assoc_long(&result, "tmp", (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
-		break;
-
-		case IS_VAR:
-			add_assoc_long(&result, "var", EX_VAR_TO_NUM(op->num) - op_array->last_var);
-		break;
-
-		case IS_CV:
-			add_assoc_long(&result, "cv", EX_VAR_TO_NUM(op->num));
-		break;
-
-		case IS_UNUSED:
-			add_assoc_long(&result, "unused", EX_VAR_TO_NUM(op->num));
-		break;
-
-		default:
-			if (op_type & EXT_TYPE_UNUSED) {
-				zval ext;
-
-				array_init(&ext);
-				switch (op_type &~ EXT_TYPE_UNUSED) {
-					case IS_CONST:
-						ZEND_PASS_TWO_UNDO_CONSTANT(op_array, *op);
-						add_assoc_long(&ext, "constant", op->num);
-						ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *op);
-					break;
-
-					case IS_TMP_VAR:
-						add_assoc_long(&ext, "tmp", (EX_VAR_TO_NUM(op->num) - op_array->last_var));		
-					break;
-
-					case IS_VAR:
-						add_assoc_long(&ext, "var", EX_VAR_TO_NUM(op->num) - op_array->last_var);
-					break;
-
-					case IS_CV:
-						add_assoc_long(&ext, "cv", EX_VAR_TO_NUM(op->num));
-					break;
-
-					case IS_UNUSED:
-						add_assoc_long(&ext, "unused", EX_VAR_TO_NUM(op->num));
-					break;
-				}
-				add_assoc_zval(&result, "ext", &ext);
-			}
+	if (op_type & EXT_TYPE_UNUSED) {
+		add_assoc_bool(&result, "ext-type-unused", 1);
 	}
 
 	zend_hash_str_add(Z_ARRVAL_P(disassembly), name, nlen, &result);

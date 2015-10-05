@@ -93,6 +93,25 @@ static inline zend_uchar uopz_assemble_type_hint(zval *disassembly) {
 } /* }}} */
 
 /* {{{ */
+static inline zend_uchar uopz_assemble_optype(zval *disassembly) {
+	if (Z_TYPE_P(disassembly) == IS_STRING) {
+		if (UOPZ_ZVAL_MATCH(disassembly, "cv")) {
+			return IS_CV;
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "tmp")) {
+			return IS_TMP_VAR;
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "var")) {
+			return IS_VAR;
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "constant")) {
+			return IS_CONST;
+		} else if (UOPZ_ZVAL_MATCH(disassembly, "unused")) {
+			return IS_UNUSED;
+		}
+	}
+
+	return IS_UNDEF;
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disassembly) {
 	zval *info = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("nargs"));
 	zval *arginfo = NULL;
@@ -153,7 +172,9 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 
 /* {{{ */
 static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *opline, znode_op *operand, zend_uchar *type, zend_bool jmp, zval *disassembly) {
-	zval *op = NULL;
+	zval *optype = NULL,
+		 *num    = NULL,
+		 *ext	 = NULL;
 
 	if (!disassembly) {
 		*type = IS_UNUSED;
@@ -162,49 +183,28 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 	
 	if (jmp) {
 		*type = IS_UNUSED;
-		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp")))) {
-			operand->opline_num = Z_LVAL_P(op);
+		if ((num = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp")))) {
+			operand->opline_num = Z_LVAL_P(num);
 			ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, *operand);
 		}
 	} else {
-		if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("constant")))) {
-			*type = IS_CONST;
-			operand->num = Z_LVAL_P(op);
-			ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
-		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("cv")))) {
-			*type = IS_CV;
-			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
-		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("tmp")))) {
-			*type = IS_TMP_VAR;
-			operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + op_array->last_var));
-		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("var")))) {
-			*type = IS_VAR;
-			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op) + op_array->last_var);
-		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("unused")))) {
-			*type = IS_UNUSED;
-			operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(op));
-		} else if ((op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext")))) {
-			zval *ext = NULL;
+		optype = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type"));
+		num    = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("num"));
+		ext    = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext-type-unused"));
 
-			*type |= EXT_TYPE_UNUSED;
-
-			if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("constant")))) {
-				*type |= IS_CONST;
-				operand->num = Z_LVAL_P(ext);
+		if ((optype && Z_TYPE_P(optype) == IS_STRING) &&
+			(num  && Z_TYPE_P(num)  == IS_LONG)) {
+			(*type) |= uopz_assemble_optype(optype);
+			if ((*type) & IS_CONST) {
+				operand->num = Z_LVAL_P(num);
 				ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
-			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("cv")))) {
-				*type |= IS_CV;
-				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
-			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("tmp")))) {
-				*type |= IS_TMP_VAR;
-				operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext) + op_array->last_var));
-			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("var")))) {
-				*type |= IS_VAR;
-				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext) + op_array->last_var);
-			} else if ((ext = zend_hash_str_find(Z_ARRVAL_P(op), ZEND_STRL("unused")))) {
-				*type |= IS_UNUSED;
-				operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(ext));
-			}
+			} else if ((*type) & (IS_TMP_VAR|IS_VAR)) {
+				operand->num = (uintptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num) + op_array->last_var));
+			} else operand->num = (uintptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
+		}
+		
+		if (ext && Z_TYPE_P(ext) == IS_TRUE) {
+			(*type) |= EXT_TYPE_UNUSED;
 		}
 	}
 } /* }}} */
