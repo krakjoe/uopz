@@ -383,19 +383,19 @@ static inline void uopz_assemble_brk_element(zend_brk_cont_element *el, zval *di
 	zval *parent = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("parent"));
 
 	if (start && Z_TYPE_P(start) == IS_LONG) {
-		el->start = Z_LVAL_P(start);
+		el->start = (int) Z_LVAL_P(start);
 	} else el->start = -1;
 	
 	if (cont && Z_TYPE_P(cont) == IS_LONG) {
-		el->cont = Z_LVAL_P(cont);
+		el->cont = (int) Z_LVAL_P(cont);
 	} else el->cont = -1;
 
 	if (brk && Z_TYPE_P(brk) == IS_LONG) {
-		el->brk = Z_LVAL_P(brk);
+		el->brk = (int) Z_LVAL_P(brk);
 	} else el->brk = -1;
 
 	if (parent && Z_TYPE_P(parent) == IS_LONG) {
-		el->parent = Z_LVAL_P(parent);
+		el->parent = (int) Z_LVAL_P(parent);
 	} else el->parent = -1;
 } /* }}} */
 
@@ -429,13 +429,13 @@ static inline void uopz_assemble_try_element(zend_try_catch_element *el, zval *d
 	zval *end_op = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("end"));
 
 	if (try_op && Z_TYPE_P(try_op) == IS_LONG)	
-		el->try_op = Z_LVAL_P(try_op);
+		el->try_op = (uint32_t) Z_LVAL_P(try_op);
 	if (catch_op && Z_TYPE_P(catch_op) == IS_LONG)
-		el->catch_op = Z_LVAL_P(catch_op);
+		el->catch_op = (uint32_t) Z_LVAL_P(catch_op);
 	if (finally_op && Z_TYPE_P(finally_op) == IS_LONG)
-		el->finally_op = Z_LVAL_P(finally_op);
+		el->finally_op = (uint32_t) Z_LVAL_P(finally_op);
 	if (end_op && Z_TYPE_P(end_op) == IS_LONG)
-		el->finally_end = Z_LVAL_P(end_op);
+		el->finally_end = (uint32_t) Z_LVAL_P(end_op);
 } /* }}} */
 
 /* {{{ */
