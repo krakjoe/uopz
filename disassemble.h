@@ -167,14 +167,23 @@ static inline zend_string* uopz_disassemble_type_name(zend_uchar type) {
 } /* }}} */
 
 /* {{{ */
-static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end, zend_bool return_type, zval *disassembly) {
+static inline void uopz_disassemble_arginfo(zend_op_array *function, zval *disassembly) {
 	zval result;
 	uint32_t it = 0;
 
+	if (!function->num_args && !UOPZ_HAS_RETURN_TYPE(function)) {
+		return;
+	}
+
+	if (function->num_args)
+		add_assoc_long(disassembly, "nargs", function->num_args);
+	if (function->required_num_args)
+		add_assoc_long(disassembly, "rnargs", function->required_num_args);
+
 	array_init(&result);
-	if (return_type) {
+	if (UOPZ_HAS_RETURN_TYPE(function)) {
 		zval ret;
-		zend_arg_info *return_type = (arginfo - 1);
+		zend_arg_info *return_type = (function->arg_info - 1);
 
 		array_init(&ret);
 		if (return_type->class_name) {
@@ -186,19 +195,19 @@ static inline void uopz_disassemble_arginfo(zend_arg_info *arginfo, uint32_t end
 		zend_hash_index_add(Z_ARRVAL(result), -1, &ret);		
 	}
 
-	while (it < end) {
+	while (it < function->num_args) {
 		zval arg;
 
 		array_init(&arg);
-		add_assoc_str(&arg, "name", zend_string_copy(arginfo[it].name));
-		if (arginfo[it].class_name) {
-			add_assoc_str(&arg, "class", zend_string_copy(arginfo[it].class_name));
-		} else if (arginfo[it].type_hint != IS_UNDEF) {
-			add_assoc_str(&arg, "type", uopz_disassemble_type_name(arginfo[it].type_hint));
+		add_assoc_str(&arg, "name", zend_string_copy(function->arg_info[it].name));
+		if (function->arg_info[it].class_name) {
+			add_assoc_str(&arg, "class", zend_string_copy(function->arg_info[it].class_name));
+		} else if (function->arg_info[it].type_hint != IS_UNDEF) {
+			add_assoc_str(&arg, "type", uopz_disassemble_type_name(function->arg_info[it].type_hint));
 		}
-		add_assoc_bool(&arg, "reference", arginfo[it].pass_by_reference);
-		add_assoc_bool(&arg, "null", arginfo[it].allow_null);
-		add_assoc_bool(&arg, "variadic", arginfo[it].is_variadic);
+		add_assoc_bool(&arg, "reference", function->arg_info[it].pass_by_reference);
+		add_assoc_bool(&arg, "null", function->arg_info[it].allow_null);
+		add_assoc_bool(&arg, "variadic", function->arg_info[it].is_variadic);
 
 		zend_hash_next_index_insert(Z_ARRVAL(result), &arg);
 		it++;
@@ -449,6 +458,18 @@ static inline void uopz_disassemble_flags(uint32_t flags, zval *disassembly) {
 } /* }}} */
 
 /* {{{ */
+static inline void uopz_disassemble_name(zend_op_array *function, zval *disassembly) {
+	if (function->function_name)
+		add_assoc_str(disassembly, "name",  zend_string_copy(function->function_name));
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_disassemble_scope(zend_op_array *function, zval *disassembly) {
+	if (function->scope)
+		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_disassemble_misc(zend_op_array *function, zval *disassembly) {
 	if (function->filename)
 		add_assoc_str(disassembly, "file", function->filename);
@@ -466,14 +487,10 @@ static inline void uopz_disassemble_misc(zend_op_array *function, zval *disassem
 
 /* {{{ */
 static inline void uopz_disassemble_function(zend_op_array *function, zval *disassembly) {
-	if (function->scope)
-		add_assoc_str(disassembly, "scope", zend_string_copy(function->scope->name));
-	add_assoc_str(disassembly, "name",  zend_string_copy(function->function_name));
+	uopz_disassemble_name(function, disassembly);
+	uopz_disassemble_scope(function, disassembly);
 	uopz_disassemble_flags(function->fn_flags, disassembly);
-	add_assoc_long(disassembly, "nargs", function->num_args);
-	add_assoc_long(disassembly, "rnargs", function->required_num_args);
-	if (function->arg_info)
-		uopz_disassemble_arginfo(function->arg_info, function->num_args, UOPZ_HAS_RETURN_TYPE(function), disassembly);
+	uopz_disassemble_arginfo(function, disassembly);
 	uopz_disassemble_opcodes(function, disassembly);
 	uopz_disassemble_vars(function->vars, function->last_var, disassembly);
 	uopz_disassemble_literals(function->literals, function->last_literal, disassembly);

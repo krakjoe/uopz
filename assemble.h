@@ -25,7 +25,7 @@
 static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembly) {
 	zval *name = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("name"));
 	
-	if (!name)
+	if (!name || Z_TYPE_P(name) != IS_STRING)
 		return;	
 
 	assembled->function_name = zend_string_copy(Z_STR_P(name));
@@ -35,9 +35,10 @@ static inline void uopz_assemble_name(zend_op_array *assembled, zval *disassembl
 static inline void uopz_assemble_scope(zend_op_array *assembled, zval *disassembly) {
 	zval *scope = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("scope"));
 
-	if (scope && Z_TYPE_P(scope) == IS_STRING) {
-		assembled->scope = zend_lookup_class(Z_STR_P(scope));
-	}
+	if (!scope || Z_TYPE_P(scope) != IS_STRING)
+		return;
+
+	assembled->scope = zend_lookup_class(Z_STR_P(scope));
 } /* }}} */
 
 /* {{{ */
