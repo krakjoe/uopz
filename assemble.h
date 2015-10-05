@@ -119,17 +119,17 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 	zend_long idx = 0;
 	zend_arg_info *arg_info = NULL;
 
-	if (info)
+	if (info && Z_TYPE_P(info) == IS_LONG)
 		assembled->num_args = Z_LVAL_P(info);
 	
 	info = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("rnargs"));
 	
-	if (info)
+	if (info && Z_TYPE_P(info) == IS_LONG)
 		assembled->required_num_args = Z_LVAL_P(info);
 
 	info = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("arginfo"));
 	
-	if (!info)
+	if (!info || Z_TYPE_P(info) != IS_ARRAY)
 		return;
 	
 	assembled->arg_info = arg_info =
@@ -152,11 +152,11 @@ static inline void uopz_assemble_arginfo(zend_op_array *assembled, zval *disasse
 		zval *type = zend_hash_str_find(
 			Z_ARRVAL_P(arginfo), ZEND_STRL("type"));
 
-		if (name)
+		if (name && Z_TYPE_P(name) == IS_STRING)
 			arg_info->name = zend_string_copy(Z_STR_P(name));
-		if (clazz)
+		if (clazz && Z_TYPE_P(clazz) == IS_STRING)
 			arg_info->class_name = zend_string_copy(Z_STR_P(clazz));
-		if (type)
+		if (type && Z_TYPE_P(type) == IS_STRING)
 			arg_info->type_hint = uopz_assemble_type_hint(type);
 		if (reference)
 			arg_info->pass_by_reference = zend_is_true(reference);
@@ -238,7 +238,6 @@ static inline void uopz_assemble_extended_value(zend_op_array *assembled, zend_o
 		case ZEND_FE_FETCH_R:
 		case ZEND_FE_FETCH_RW: {
 			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
-
 			if (ext && Z_TYPE_P(ext) == IS_LONG)
 				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(assembled, opline, opline->extended_value);
 		} break;
