@@ -334,7 +334,7 @@ static inline void uopz_assemble_vars(zend_op_array *assembled, zval *disassembl
 	if (Z_TYPE_P(vars) != IS_ARRAY)
 		return;
 
-	assembled->last_var = zend_hash_num_elements(Z_ARRVAL_P(vars));
+	assembled->last_var = (int) zend_hash_num_elements(Z_ARRVAL_P(vars));
 	assembled->vars = ecalloc(sizeof(zend_string*), assembled->last_var);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(vars), idx, var) {
@@ -354,7 +354,7 @@ static inline void uopz_assemble_literals(zend_op_array *assembled, zval *disass
 	if (Z_TYPE_P(literals) != IS_ARRAY)
 		return;
 
-	assembled->last_literal = zend_hash_num_elements(Z_ARRVAL_P(literals));
+	assembled->last_literal = (int) zend_hash_num_elements(Z_ARRVAL_P(literals));
 	assembled->literals = ecalloc(sizeof(zval), assembled->last_literal);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(literals), idx, literal) {
@@ -411,7 +411,7 @@ static inline void uopz_assemble_brk(zend_op_array *assembled, zval *disassembly
 	if (Z_TYPE_P(brk) != IS_ARRAY)
 		return;	
 	
-	assembled->last_brk_cont = zend_hash_num_elements(Z_ARRVAL_P(brk));	
+	assembled->last_brk_cont = (int) zend_hash_num_elements(Z_ARRVAL_P(brk));	
 	assembled->brk_cont_array = ecalloc(sizeof(zend_brk_cont_element), assembled->last_brk_cont);
 	
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(brk), idx, el) {
@@ -450,7 +450,7 @@ static inline void uopz_assemble_try(zend_op_array *assembled, zval *disassembly
 	if (Z_TYPE_P(tri) != IS_ARRAY)
 		return;
 
-	assembled->last_try_catch = zend_hash_num_elements(Z_ARRVAL_P(tri));
+	assembled->last_try_catch = (int) zend_hash_num_elements(Z_ARRVAL_P(tri));
 	assembled->try_catch_array = ecalloc(sizeof(zend_try_catch_element), assembled->last_try_catch);
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(tri), idx, el) {
@@ -480,7 +480,7 @@ static inline void uopz_assemble_misc(zend_op_array *assembled, zval *disassembl
 	if (cache && Z_TYPE_P(cache) == IS_LONG)
 		assembled->cache_size = Z_LVAL_P(cache);
 	if (T && Z_TYPE_P(T) == IS_LONG)
-		assembled->T = Z_LVAL_P(T);
+		assembled->T = (uint32_t) Z_LVAL_P(T);
 } /* }}} */
 
 /* {{{ */
