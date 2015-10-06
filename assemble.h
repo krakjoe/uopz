@@ -489,8 +489,11 @@ static inline zend_op_array* uopz_assemble(zval *disassembly) {
 		(zend_op_array*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
 
 	memset(assembled, 0, sizeof(zend_op_array));
+	memset(assembled->reserved, 0, ZEND_MAX_RESERVED_RESOURCES * sizeof(void*));
 
 	assembled->this_var = -1;
+	assembled->early_binding = -1;
+
 	assembled->type = ZEND_USER_FUNCTION;
 	assembled->refcount = (uint32_t*) emalloc(sizeof(uint32_t));
 	*(assembled->refcount) = 1;

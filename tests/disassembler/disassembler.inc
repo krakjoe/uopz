@@ -46,8 +46,6 @@ function show_disassembly_diff(array $one, array $two) {
 				@$one["scope"],
 				@$two["scope"]);
 	}
-
-	var_dump($one, $two);
 }
 
 function run_disassembler_test(Closure $test, array $args) {

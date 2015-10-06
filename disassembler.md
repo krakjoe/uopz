@@ -22,7 +22,7 @@ Whenever I ask my other half why Lord Voldemort has no nose, she replies "he don
 The best way to learn about the format of a disassembly is by trying it for yourself, however, the following simple example should give you a rough idea of what to expect:
 
 ```php
-function add($a, $b) {
+function add(int $a, int $b) : int {
 	return $a + $b;
 }
 ```
@@ -30,9 +30,9 @@ function add($a, $b) {
 The disassembly for the code above is thus:
 
 ```
-array(8) {
+array(12) {
   ["name"]=>
-  string(3) "add"
+  string(9) "{closure}"
   ["flags"]=>
   array(1) {
     [0]=>
@@ -43,91 +43,147 @@ array(8) {
   ["rnargs"]=>
   int(2)
   ["arginfo"]=>
-  array(2) {
+  array(3) {
+    [-1]=>
+    array(1) {
+      ["type"]=>
+      string(3) "int"
+    }
     [0]=>
-    array(4) {
+    array(5) {
       ["name"]=>
       string(1) "a"
+      ["type"]=>
+      string(3) "int"
       ["reference"]=>
       bool(false)
       ["null"]=>
-      bool(true)
+      bool(false)
       ["variadic"]=>
       bool(false)
     }
     [1]=>
-    array(4) {
+    array(5) {
       ["name"]=>
       string(1) "b"
+      ["type"]=>
+      string(3) "int"
       ["reference"]=>
       bool(false)
       ["null"]=>
-      bool(true)
+      bool(false)
       ["variadic"]=>
       bool(false)
     }
   }
   ["opcodes"]=>
-  array(5) {
+  array(7) {
     [0]=>
-    array(2) {
+    array(3) {
       ["opcode"]=>
       string(9) "ZEND_RECV"
       ["result"]=>
-      array(1) {
-        ["cv"]=>
+      array(2) {
+        ["type"]=>
+        string(2) "cv"
+        ["num"]=>
         int(0)
       }
+      ["lineno"]=>
+      int(2)
     }
     [1]=>
-    array(2) {
+    array(3) {
       ["opcode"]=>
       string(9) "ZEND_RECV"
       ["result"]=>
-      array(1) {
-        ["cv"]=>
+      array(2) {
+        ["type"]=>
+        string(2) "cv"
+        ["num"]=>
         int(1)
       }
+      ["lineno"]=>
+      int(2)
     }
     [2]=>
-    array(4) {
+    array(5) {
       ["opcode"]=>
       string(8) "ZEND_ADD"
       ["op1"]=>
-      array(1) {
-        ["cv"]=>
+      array(2) {
+        ["type"]=>
+        string(2) "cv"
+        ["num"]=>
         int(0)
       }
       ["op2"]=>
-      array(1) {
-        ["cv"]=>
+      array(2) {
+        ["type"]=>
+        string(2) "cv"
+        ["num"]=>
         int(1)
       }
       ["result"]=>
-      array(1) {
-        ["tmp"]=>
-        int(2)
-      }
-    }
-    [3]=>
-    array(2) {
-      ["opcode"]=>
-      string(11) "ZEND_RETURN"
-      ["op1"]=>
-      array(1) {
-        ["tmp"]=>
-        int(2)
-      }
-    }
-    [4]=>
-    array(2) {
-      ["opcode"]=>
-      string(11) "ZEND_RETURN"
-      ["op1"]=>
-      array(1) {
-        ["constant"]=>
+      array(2) {
+        ["type"]=>
+        string(3) "tmp"
+        ["num"]=>
         int(0)
       }
+      ["lineno"]=>
+      int(3)
+    }
+    [3]=>
+    array(3) {
+      ["opcode"]=>
+      string(23) "ZEND_VERIFY_RETURN_TYPE"
+      ["op1"]=>
+      array(2) {
+        ["type"]=>
+        string(3) "tmp"
+        ["num"]=>
+        int(0)
+      }
+      ["lineno"]=>
+      int(3)
+    }
+    [4]=>
+    array(3) {
+      ["opcode"]=>
+      string(11) "ZEND_RETURN"
+      ["op1"]=>
+      array(2) {
+        ["type"]=>
+        string(3) "tmp"
+        ["num"]=>
+        int(0)
+      }
+      ["lineno"]=>
+      int(3)
+    }
+    [5]=>
+    array(2) {
+      ["opcode"]=>
+      string(23) "ZEND_VERIFY_RETURN_TYPE"
+      ["lineno"]=>
+      int(4)
+    }
+    [6]=>
+    array(4) {
+      ["opcode"]=>
+      string(11) "ZEND_RETURN"
+      ["op1"]=>
+      array(2) {
+        ["type"]=>
+        string(8) "constant"
+        ["num"]=>
+        int(0)
+      }
+      ["ext"]=>
+      int(4294967295)
+      ["lineno"]=>
+      int(4)
     }
   }
   ["vars"]=>
@@ -142,6 +198,14 @@ array(8) {
     [0]=>
     NULL
   }
+  ["file"]=>
+  string(22) "/usr/src/uopz/test.php"
+  ["start"]=>
+  int(2)
+  ["end"]=>
+  int(4)
+  ["T"]=>
+  int(1)
 }
 ```
 
