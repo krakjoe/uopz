@@ -493,29 +493,31 @@ static inline void php_uopz_backup() {
 /* {{{ */
 static inline void php_uopz_init_handlers(int module) {
 	memset(ohandlers, 0, sizeof(user_opcode_handler_t) * MAX_OPCODE);
-	
+
 #define REGISTER_ZEND_UOPCODE(u) \
 	zend_register_long_constant\
 		((u)->name, (u)->length, (u)->code, CONST_CS|CONST_PERSISTENT, module)
 
-	uopz_opcode_t *uop = uoverrides;
+	{
+		uopz_opcode_t *uop = uoverrides;
 
-	while (uop->code != ZEND_NOP) {
-		zval *constant;
-		zend_string *name = zend_string_init(uop->name, uop->length, 0);
+		while (uop->code != ZEND_NOP) {
+			zval *constant;
+			zend_string *name = zend_string_init(uop->name, uop->length, 0);
 
-		if (UOPZ(ini).overloads) {
-			ohandlers[uop->code] =
-				zend_get_user_opcode_handler(uop->code);
-			zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+			if (UOPZ(ini).overloads) {
+				ohandlers[uop->code] =
+					zend_get_user_opcode_handler(uop->code);
+				zend_set_user_opcode_handler(uop->code, php_uopz_handler);
+			}
+
+			if (!(constant = zend_get_constant(name))) {
+				REGISTER_ZEND_UOPCODE(uop);
+			} else zval_ptr_dtor(constant);
+
+			zend_string_release(name);
+			uop++;
 		}
-
-		if (!(constant = zend_get_constant(name))) {
-			REGISTER_ZEND_UOPCODE(uop);
-		} else zval_ptr_dtor(constant);
-
-		zend_string_release(name);
-		uop++;
 	}
 
 #undef REGISTER_ZEND_UOPCODE
@@ -609,17 +611,19 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	REGISTER_INI_ENTRIES();
 
-	php_uopz_init_handlers(module_number);
-
 	if (UOPZ(ini).fixup) {
 		CG(class_table)->pDestructor = NULL;
 		CG(function_table)->pDestructor = NULL;
 	}
 
-	zend_execute_internal_function = zend_execute_internal;
-	zend_execute_internal = uopz_execute_internal;
-	zend_execute_ex_function = zend_execute_ex;
-	zend_execute_ex = uopz_execute_ex;
+	if (UOPZ(ini).overloads) {
+		php_uopz_init_handlers(module_number);
+
+		zend_execute_internal_function = zend_execute_internal;
+		zend_execute_internal = uopz_execute_internal;
+		zend_execute_ex_function = zend_execute_ex;
+		zend_execute_ex = uopz_execute_ex;
+	}
 
 	return SUCCESS;
 }

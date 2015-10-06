@@ -239,7 +239,7 @@ static inline void uopz_assemble_extended_value(zend_op_array *assembled, zend_o
 		case ZEND_FE_FETCH_RW: {
 			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
 			if (ext && Z_TYPE_P(ext) == IS_LONG)
-				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(assembled, opline, opline->extended_value);
+				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(assembled, opline, Z_LVAL_P(ext));
 		} break;
 
 		default: {
