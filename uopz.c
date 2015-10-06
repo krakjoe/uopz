@@ -725,6 +725,8 @@ static PHP_MINFO_FUNCTION(uopz)
 {
 	php_info_print_table_start();
 	php_info_print_table_header(2, "uopz support", "enabled");
+	if (UOPZ(ini).overloads)
+		php_info_print_table_header(2, "uopz overloads", "enabled");
 	php_info_print_table_end();
 }
 /* }}} */
