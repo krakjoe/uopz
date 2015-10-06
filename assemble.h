@@ -201,7 +201,11 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 				ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *operand);
 			} else if ((*type) & (IS_TMP_VAR|IS_VAR)) {
 				operand->num = (uint32_t)(zend_intptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num) + op_array->last_var));
-			} else operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
+			} else if ((*type) & IS_CV) {
+				operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
+			} else if ((*type) & IS_UNUSED) {
+				operand->num = Z_LVAL_P(num);	
+			}
 		}
 		
 		if (ext && Z_TYPE_P(ext) == IS_TRUE) {

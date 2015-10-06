@@ -220,7 +220,7 @@ static inline void uopz_disassemble_arginfo(zend_op_array *function, zval *disas
 static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_array *op_array, zend_op *opline, zend_uchar op_type, znode_op *op, zend_bool jmp, zval *disassembly) {
 	zval result;
 
-	if (op_type == IS_UNUSED && !jmp)
+	if (op_type == IS_UNUSED && !jmp && !op->num)
 		return;
 
 	array_init(&result);
@@ -239,11 +239,12 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 			add_assoc_str(&result, "type", uopz_disassemble_optype(IS_TMP_VAR));
 		else add_assoc_str(&result, "type", uopz_disassemble_optype(IS_VAR));
 		add_assoc_long(&result, "num", (EX_VAR_TO_NUM(op->num) - op_array->last_var));
-	} else if (op_type & IS_CV|IS_UNUSED) {
-		if (op_type & IS_CV)
-			add_assoc_str(&result, "type", uopz_disassemble_optype(IS_CV));
-		else add_assoc_str(&result, "type", uopz_disassemble_optype(IS_UNUSED));
+	} else if (op_type & IS_CV) {
+		add_assoc_str(&result, "type", uopz_disassemble_optype(IS_CV));
 		add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
+	} else if (op_type & IS_UNUSED) {
+		add_assoc_str(&result, "type", uopz_disassemble_optype(IS_UNUSED));
+		add_assoc_long(&result, "num", op->num);
 	}
 
 	if (op_type & EXT_TYPE_UNUSED) {
