@@ -1195,8 +1195,6 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	uopz_magic_t *magic = umagic;
 
-	uopz_backup(clazz, name);
-
 	if (!zend_hash_exists(table, name)) {
 		if (clazz) {
 			uopz_exception(
@@ -1475,8 +1473,6 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 	zend_function *destination = NULL;
 	zend_function *function = (zend_function*) zend_get_closure_method_def(closure);
 	zend_string *lower = zend_string_tolower(name);
-
-	uopz_backup(clazz, lower);
 
 	if (!flags) {
 		/* get flags from original function */

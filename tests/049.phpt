@@ -12,6 +12,9 @@ class A {
 
 class B extends A {}
 
+uopz_backup("A", "method");
+uopz_backup("B", "method");
+
 /* this relies on 48.phpt passing */
 uopz_function("A", "method", function(){
 	return false;

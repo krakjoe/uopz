@@ -181,7 +181,11 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 		*type = IS_UNUSED;
 		return;	
 	}
-	
+
+#define IS_OP1 (operand == &opline->op1)
+#define IS_OP2 (operand == &opline->op2)
+#define IS_RESULT (operand == &opline->result)
+
 	if (jmp) {
 		*type = IS_UNUSED;
 		if ((num = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("jmp")))) {
@@ -204,14 +208,36 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 			} else if ((*type) & IS_CV) {
 				operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
 			} else if ((*type) & IS_UNUSED) {
-				operand->num = Z_LVAL_P(num);	
+				switch (opline->opcode) {
+					case ZEND_RECV_VARIADIC:
+					case ZEND_RECV:
+					case ZEND_VERIFY_RETURN_TYPE:
+						if (IS_OP2) {
+							operand->num = (int32_t) Z_LVAL_P(num);
+							break;
+						}
+
+					case ZEND_SEND_VAR_EX:
+						if (IS_RESULT) {
+							operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
+							break;
+						}
+
+					default:
+						operand->num = Z_LVAL_P(num);
+				}
+				operand->num = (int32_t) Z_LVAL_P(num);
 			}
 		}
 		
-		if (ext && Z_TYPE_P(ext) == IS_TRUE) {
+		if (ext && zend_is_true(ext)) {
 			(*type) |= EXT_TYPE_UNUSED;
 		}
 	}
+
+#undef IS_OP1
+#undef IS_OP2
+#undef IS_RESULT
 } /* }}} */
 
 /* {{{ */
@@ -230,8 +256,23 @@ static inline uint32_t uopz_assemble_opcode_num(zval *disassembly) {
 } /* }}} */
 
 /* {{{ */
+static inline int uopz_assemble_fetch(zval *disassembly) {
+	if (UOPZ_ZVAL_MATCH(disassembly, "default")) {
+		return ZEND_FETCH_CLASS_DEFAULT;
+	} else if (UOPZ_ZVAL_MATCH(disassembly, "parent")) {
+		return ZEND_FETCH_CLASS_PARENT;
+	}  else if (UOPZ_ZVAL_MATCH(disassembly, "static")) {
+		return ZEND_FETCH_CLASS_STATIC;
+	} else if (UOPZ_ZVAL_MATCH(disassembly, "self")) {
+		return ZEND_FETCH_CLASS_SELF;
+	}
+	return 0;
+} /* }}} */
+
+/* {{{ */
 static inline void uopz_assemble_extended_value(zend_op_array *assembled, zend_op *opline, zval *disassembly) {
 	switch (opline->opcode) {
+		case ZEND_TYPE_CHECK:		
 		case ZEND_CAST: {
 			zval *type = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("type"));
 			if (type)
@@ -244,6 +285,14 @@ static inline void uopz_assemble_extended_value(zend_op_array *assembled, zend_o
 			zval *ext = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("ext"));
 			if (ext && Z_TYPE_P(ext) == IS_LONG)
 				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(assembled, opline, Z_LVAL_P(ext));
+		} break;
+		
+		case ZEND_FETCH_CLASS_NAME: {
+			zval *fetch = zend_hash_str_find(Z_ARRVAL_P(disassembly), ZEND_STRL("fetch"));
+
+			if (fetch && Z_TYPE_P(fetch) == IS_STRING) {
+				opline->extended_value = uopz_assemble_fetch(fetch);
+			}
 		} break;
 
 		default: {

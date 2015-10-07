@@ -224,7 +224,11 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 		return;
 
 	array_init(&result);
-	
+
+#define IS_OP1 (op == &opline->op1) 
+#define IS_OP2 (op == &opline->op2)
+#define IS_RESULT (op == &opline->result)
+
 	if (jmp) {
 		ZEND_PASS_TWO_UNDO_JMP_TARGET(op_array, opline, *op);
 		add_assoc_long(&result, "jmp", op->opline_num);
@@ -232,7 +236,7 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 	} else if (op_type & IS_CONST) {
 		ZEND_PASS_TWO_UNDO_CONSTANT(op_array, *op);
 		add_assoc_str(&result,  "type", uopz_disassemble_optype(IS_CONST));
-		add_assoc_long(&result, "num",  op->num);
+		add_assoc_long(&result, "num", (int32_t) op->num);
 		ZEND_PASS_TWO_UPDATE_CONSTANT(op_array, *op);
 	} else if(op_type & (IS_TMP_VAR|IS_VAR)) {
 		if (op_type & IS_TMP_VAR)
@@ -244,8 +248,30 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 		add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
 	} else if (op_type & IS_UNUSED) {
 		add_assoc_str(&result, "type", uopz_disassemble_optype(IS_UNUSED));
-		add_assoc_long(&result, "num", op->num);
+
+		switch (opline->opcode) {
+			case ZEND_RECV_VARIADIC:
+			case ZEND_RECV:
+			case ZEND_VERIFY_RETURN_TYPE:
+				if (IS_OP2) {
+					add_assoc_long(&result, "num", (int32_t) op->num);
+					break;
+				}
+
+			case ZEND_SEND_VAR_EX:
+				if (IS_RESULT) {
+					add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
+					break;
+				}
+
+			default:
+				add_assoc_long(&result, "num", op->num);
+		}
 	}
+
+#undef IS_OP1
+#undef IS_OP2
+#undef IS_RESULT
 
 	if (op_type & EXT_TYPE_UNUSED) {
 		add_assoc_bool(&result, "ext-type-unused", 1);
@@ -257,6 +283,7 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 /* {{{ */
 static inline void upoz_disassemble_extended_value(zend_op_array *op_array, zend_op *opline, zval *disassembly) {
 	switch (opline->opcode) {
+		case ZEND_TYPE_CHECK:
 		case ZEND_CAST:
 			add_assoc_str(disassembly, "type", uopz_disassemble_type_name(opline->extended_value));
 		break;
@@ -265,6 +292,26 @@ static inline void upoz_disassemble_extended_value(zend_op_array *op_array, zend
 		case ZEND_FE_FETCH_R:
 		case ZEND_FE_FETCH_RW:
 			add_assoc_long(disassembly, "ext", ZEND_OFFSET_TO_OPLINE_NUM(op_array, opline, opline->extended_value));
+		break;
+
+		case ZEND_FETCH_CLASS_NAME:
+			switch (opline->extended_value) {
+				case ZEND_FETCH_CLASS_SELF:
+					add_assoc_str(disassembly, "fetch", zend_string_init(ZEND_STRL("self"), 0));
+				break;
+
+				case ZEND_FETCH_CLASS_STATIC:
+					add_assoc_str(disassembly, "fetch", zend_string_init(ZEND_STRL("static"), 0));
+				break;
+
+				case ZEND_FETCH_CLASS_PARENT:
+					add_assoc_str(disassembly, "fetch", zend_string_init(ZEND_STRL("parent"), 0));
+				break;
+				
+				case ZEND_FETCH_CLASS_DEFAULT:
+					add_assoc_str(disassembly, "fetch", zend_string_init(ZEND_STRL("default"), 0));
+				break;
+			}
 		break;
 
 		default:
@@ -306,7 +353,7 @@ static inline void uopz_disassemble_opcodes(zend_op_array *op_array, zval *disas
 			case ZEND_DECLARE_ANON_CLASS:
 			case ZEND_DECLARE_ANON_INHERITED_CLASS:
 				uopz_disassemble_operand(ZEND_STRL("op1"), op_array, opline, opline->op1_type, &opline->op1, 1, &opcode);
-				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, opline, opline->op2_type, &opline->op1, 0, &opcode);
+				uopz_disassemble_operand(ZEND_STRL("op2"), op_array, opline, opline->op2_type, &opline->op2, 0, &opcode);
 			break;
 
 			case ZEND_JMPZNZ:
