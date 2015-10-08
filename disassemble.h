@@ -220,7 +220,7 @@ static inline void uopz_disassemble_arginfo(zend_op_array *function, zval *disas
 static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_array *op_array, zend_op *opline, zend_uchar op_type, znode_op *op, zend_bool jmp, zval *disassembly) {
 	zval result;
 
-	if (op_type == IS_UNUSED && !jmp && !op->num)
+	if (op_type == IS_UNUSED && !jmp)
 		return;
 
 	array_init(&result);
@@ -246,27 +246,11 @@ static inline void uopz_disassemble_operand(char *name, size_t nlen, zend_op_arr
 	} else if (op_type & IS_CV) {
 		add_assoc_str(&result, "type", uopz_disassemble_optype(IS_CV));
 		add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
-	} else if (op_type & IS_UNUSED) {
+	} else {
 		add_assoc_str(&result, "type", uopz_disassemble_optype(IS_UNUSED));
-
-		switch (opline->opcode) {
-			case ZEND_RECV_VARIADIC:
-			case ZEND_RECV:
-			case ZEND_VERIFY_RETURN_TYPE:
-				if (IS_OP2) {
-					add_assoc_long(&result, "num", (int32_t) op->num);
-					break;
-				}
-
-			case ZEND_SEND_VAR_EX:
-				if (IS_RESULT) {
-					add_assoc_long(&result, "num", EX_VAR_TO_NUM(op->num));
-					break;
-				}
-
-			default:
-				add_assoc_long(&result, "num", op->num);
-		}
+		if (op->num > -1) {
+			add_assoc_long(&result, "num", op->num);
+		} else add_assoc_long(&result, "num", -1);
 	}
 
 #undef IS_OP1

@@ -207,26 +207,8 @@ static inline void uopz_assemble_operand(zend_op_array *op_array, zend_op *oplin
 				operand->num = (uint32_t)(zend_intptr_t) (ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num) + op_array->last_var));
 			} else if ((*type) & IS_CV) {
 				operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
-			} else if ((*type) & IS_UNUSED) {
-				switch (opline->opcode) {
-					case ZEND_RECV_VARIADIC:
-					case ZEND_RECV:
-					case ZEND_VERIFY_RETURN_TYPE:
-						if (IS_OP2) {
-							operand->num = (int32_t) Z_LVAL_P(num);
-							break;
-						}
-
-					case ZEND_SEND_VAR_EX:
-						if (IS_RESULT) {
-							operand->num = (uint32_t)(zend_intptr_t) ZEND_CALL_VAR_NUM(NULL, Z_LVAL_P(num));
-							break;
-						}
-
-					default:
-						operand->num = Z_LVAL_P(num);
-				}
-				operand->num = (int32_t) Z_LVAL_P(num);
+			} else {
+				operand->num = Z_LVAL_P(num);
 			}
 		}
 		
@@ -550,6 +532,7 @@ static inline zend_op_array* uopz_assemble(zval *disassembly) {
 	assembled->type = ZEND_USER_FUNCTION;
 	assembled->refcount = (uint32_t*) emalloc(sizeof(uint32_t));
 	*(assembled->refcount) = 1;
+	assembled->run_time_cache = NULL;
 	
 	uopz_assemble_name(assembled, disassembly);
 	uopz_assemble_scope(assembled, disassembly);
