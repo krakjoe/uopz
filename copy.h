@@ -209,7 +209,7 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 
 static inline zend_function* uopz_copy_internal_function(zend_function *function) {
 	zend_internal_function *copy = 
-		(zend_internal_function*) malloc(sizeof(zend_internal_function));
+		(zend_internal_function*) pemalloc(sizeof(zend_internal_function), 1);
 	memcpy(copy, function, sizeof(zend_internal_function));
 	zend_string_addref(copy->function_name);
 	return (zend_function*) copy;

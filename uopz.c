@@ -566,6 +566,15 @@ static inline void uopz_execute_ex(zend_execute_data *ex) {
 	if (zend_execute_ex_function) {
 		zend_execute_ex_function(ex);
 	} else execute_ex(ex);
+
+	if (ex->func && ex->func->type == ZEND_USER_FUNCTION) {
+		if (ex->func->op_array.run_time_cache) {
+			if (ex->func->common.function_name) {
+				zend_arena_release(&CG(arena), ex->func->op_array.run_time_cache);
+			} else efree(ex->func->op_array.run_time_cache);
+		}
+		ex->func->op_array.run_time_cache = NULL;
+	}
 }
 
 static inline void uopz_execute_internal(zend_execute_data *ex, zval *retval) {
@@ -618,12 +627,12 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	if (UOPZ(ini).overloads) {
 		php_uopz_init_handlers(module_number);
-
-		zend_execute_internal_function = zend_execute_internal;
-		zend_execute_internal = uopz_execute_internal;
-		zend_execute_ex_function = zend_execute_ex;
-		zend_execute_ex = uopz_execute_ex;
 	}
+
+	zend_execute_internal_function = zend_execute_internal;
+	zend_execute_internal = uopz_execute_internal;
+	zend_execute_ex_function = zend_execute_ex;
+	zend_execute_ex = uopz_execute_ex;
 
 	return SUCCESS;
 }
@@ -1485,7 +1494,7 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 
 		destination = NULL;
 	}
-	
+
 	destination = uopz_copy_function(function);
 	
 	if (!zend_hash_update_ptr(table, lower, destination)) {
