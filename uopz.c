@@ -1859,7 +1859,7 @@ static inline void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_l
 	zend_function *function = NULL;
 	zend_long current = 0;
 
-	if (!name) {
+	if (!name || !ZSTR_LEN(name) || !ZSTR_VAL(name)) {
 		if (flags == LONG_MAX) {
 			RETURN_LONG(clazz->ce_flags);
 		}
