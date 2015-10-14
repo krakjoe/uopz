@@ -382,6 +382,15 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					zval_ptr_dtor(&retval);
 				}
 
+#define CLEANUP_PARAMS() do { \
+	if (Z_TYPE(fci.params[0]) != IS_UNDEF) \
+		zval_ptr_dtor(&fci.params[0]); \
+	if (Z_TYPE(fci.params[1]) != IS_UNDEF) \
+		zval_ptr_dtor(&fci.params[1]); \
+	if (fci.params) \
+		efree(fci.params); \
+} while(0)
+
 				switch (OPCODE) {
 					case ZEND_INSTANCEOF: {
 						convert_to_string(&fci.params[1]);
@@ -428,37 +437,17 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						if (dispatching == ZEND_USER_OPCODE_CONTINUE) {
 							if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
 								ZEND_VM_JMP(OPLINE + 1);
-								if (Z_TYPE(fci.params[0]) != IS_UNDEF)
-									zval_ptr_dtor(&fci.params[0]);
-								if (Z_TYPE(fci.params[1]) != IS_UNDEF)
-									zval_ptr_dtor(&fci.params[1]);
-				
-								if (fci.params)
-									efree(fci.params);
-
+								CLEANUP_PARAMS();
 								return ZEND_USER_OPCODE_CONTINUE;
 							}
 						}
 
-						if (Z_TYPE(fci.params[0]) != IS_UNDEF)
-							zval_ptr_dtor(&fci.params[0]);
-						if (Z_TYPE(fci.params[1]) != IS_UNDEF)
-							zval_ptr_dtor(&fci.params[1]);
-				
-						if (fci.params)
-							efree(fci.params);
-
+						CLEANUP_PARAMS();
 						return ZEND_USER_OPCODE_RETURN;
 					} break;
 				}
 
-				if (Z_TYPE(fci.params[0]) != IS_UNDEF)
-					zval_ptr_dtor(&fci.params[0]);
-				if (Z_TYPE(fci.params[1]) != IS_UNDEF)
-					zval_ptr_dtor(&fci.params[1]);
-				
-				if (fci.params)
-					efree(fci.params);
+				CLEANUP_PARAMS();
 			}
 		}
 	}
@@ -562,6 +551,7 @@ typedef void (*zend_execute_internal_t) (zend_execute_data *, zval *);
 zend_execute_ex_t zend_execute_ex_function = NULL;
 zend_execute_internal_t zend_execute_internal_function = NULL;
 
+/* {{{ */
 static inline void uopz_execute_ex(zend_execute_data *ex) {
 	if (zend_execute_ex_function) {
 		zend_execute_ex_function(ex);
@@ -572,16 +562,17 @@ static inline void uopz_execute_ex(zend_execute_data *ex) {
 			if (ex->func->common.function_name) {
 				zend_arena_release(&CG(arena), ex->func->op_array.run_time_cache);
 			} else efree(ex->func->op_array.run_time_cache);
-		}
-		ex->func->op_array.run_time_cache = NULL;
+			ex->func->op_array.run_time_cache = NULL;
+		}		
 	}
-}
+} /* }}} */
 
+/* {{{ */
 static inline void uopz_execute_internal(zend_execute_data *ex, zval *retval) {
 	if (zend_execute_internal_function) {
 		zend_execute_internal_function(ex, retval);
 	} else execute_internal(ex, retval);
-}
+} /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
  */
