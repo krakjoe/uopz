@@ -561,11 +561,10 @@ static inline void uopz_execute_ex(zend_execute_data *ex) {
 		if (ex->func->op_array.run_time_cache) {
 			if (!ex->func->common.function_name) {
 				efree(ex->func->op_array.run_time_cache);
+				ex->func->op_array.run_time_cache = NULL;
 			}
 			
-			ex->func->op_array.run_time_cache = NULL;
 		}
-		
 	}
 } /* }}} */
 
@@ -623,9 +622,9 @@ static PHP_MINIT_FUNCTION(uopz)
 	}
 
 	zend_execute_internal_function = zend_execute_internal;
-	zend_execute_internal = uopz_execute_internal;
+	//zend_execute_internal = uopz_execute_internal;
 	zend_execute_ex_function = zend_execute_ex;
-	zend_execute_ex = uopz_execute_ex;
+	//zend_execute_ex = uopz_execute_ex;
 
 	return SUCCESS;
 }
@@ -870,8 +869,10 @@ static zend_bool uopz_backup(zend_class_entry *clazz, zend_string *name) {
 	HashTable     *backups = NULL;
 	zend_function *function = NULL;
 	HashTable     *table = (clazz) ? &clazz->function_table : CG(function_table);
-	
-	if (uopz_find_function(table, name, &function) != SUCCESS) {
+	zend_string   *lower = zend_string_tolower(name);
+
+	if (uopz_find_function(table, lower, &function) != SUCCESS) {
+		zend_string_release(lower);
 		return 0;
 	}
 
@@ -883,15 +884,15 @@ static zend_bool uopz_backup(zend_class_entry *clazz, zend_string *name) {
 			(zend_ulong) table, &creating, sizeof(HashTable));
 	}
 
-	if (!zend_hash_exists(backups, name)) {
+	if (!zend_hash_exists(backups, lower)) {
 		uopz_backup_t backup;
 
 		backup.scope = clazz;
 		backup.internal = uopz_copy_function(function);
 
 		if (backup.internal->type == ZEND_INTERNAL_FUNCTION) {
-			backup.name = zend_string_dup(name, 1);
-		} else backup.name = zend_string_copy(name);
+			backup.name = zend_string_dup(lower, 1);
+		} else backup.name = zend_string_copy(lower);
 
 		if (!zend_hash_add_mem(
 			backups,
@@ -907,15 +908,20 @@ static zend_bool uopz_backup(zend_class_entry *clazz, zend_string *name) {
 					"backup of %s failed, update failed",
 					name->val);
 			}
+
+			zend_string_release(backup.name);
+			zend_string_release(lower);
 			return 0;
 		}
 
 		if (clazz)
 			clazz->refcount++;
 
+		zend_string_release(lower);
 		return 1;
 	}
 
+	zend_string_release(lower);
 	return 0;
 } /* }}} */
 
@@ -1496,8 +1502,10 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 		destination = NULL;
 	}
 
-	destination = uopz_copy_function(function);
-	
+	uopz_backup(clazz, name);
+
+	destination = uopz_copy_function(function);	
+
 	if (!zend_hash_update_ptr(table, lower, destination)) {
 		zend_arena_release(&CG(arena), destination);
 		zend_string_release(lower);
