@@ -559,11 +559,13 @@ static inline void uopz_execute_ex(zend_execute_data *ex) {
 
 	if (ex->func && ex->func->type == ZEND_USER_FUNCTION) {
 		if (ex->func->op_array.run_time_cache) {
-			if (ex->func->common.function_name) {
-				zend_arena_release(&CG(arena), ex->func->op_array.run_time_cache);
-			} else efree(ex->func->op_array.run_time_cache);
+			if (!ex->func->common.function_name) {
+				efree(ex->func->op_array.run_time_cache);
+			}
+			
 			ex->func->op_array.run_time_cache = NULL;
-		}		
+		}
+		
 	}
 } /* }}} */
 
@@ -633,6 +635,9 @@ static PHP_MINIT_FUNCTION(uopz)
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
+
+	zend_execute_ex = zend_execute_ex_function;
+	zend_execute_internal = zend_execute_internal_function;
 
 	return SUCCESS;
 } /* }}} */
