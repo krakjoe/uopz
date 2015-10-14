@@ -1199,8 +1199,9 @@ PHP_FUNCTION(uopz_rename) {
 static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	uopz_magic_t *magic = umagic;
+	zend_string *lower = zend_string_tolower(name);
 
-	if (!zend_hash_exists(table, name)) {
+	if (!zend_hash_exists(table, lower)) {
 		if (clazz) {
 			uopz_exception(
 				"failed to delete the function %s::%s, it does not exist", clazz->name->val, name->val);
@@ -1208,10 +1209,11 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 			uopz_exception(
 				"failed to delete the function %s, it does not exist", name->val);
 		}
+		zend_string_release(lower);
 		return 0;
 	}
 
-	if (zend_hash_del(table, name) != SUCCESS) {
+	if (zend_hash_del(table, lower) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
 				"failed to delete the function %s::%s, delete failed", clazz->name->val, name->val);
@@ -1219,13 +1221,14 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 			uopz_exception(
 				"failed to delete the function %s, delete failed", name->val);
 		}
+		zend_string_release(lower);
 		return 0;
 	}
 
 	if (clazz) {
 		while (magic && magic->name) {
-			if (name->len == magic->length &&
-				strncasecmp(name->val, magic->name, magic->length) == SUCCESS) {
+			if (lower->len == magic->length &&
+				strncasecmp(lower->val, magic->name, magic->length) == SUCCESS) {
 
 				switch (magic->id) {
 					case 0: clazz->constructor = NULL; break;
@@ -1247,6 +1250,8 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 			magic++;
 		}
 	}
+
+	zend_string_release(lower);
 
 	return 1;
 } /* }}} */
