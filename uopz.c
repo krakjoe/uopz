@@ -45,9 +45,6 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
-#include "disassemble.h"
-#include "assemble.h"
-
 #define MAX_OPCODE 163
 #undef EX
 #define EX(element) EG(current_execute_data)->element
@@ -652,8 +649,6 @@ static PHP_RINIT_FUNCTION(uopz)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
-	uopz_disassembler_init();
-
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
 	spl_ce_RuntimeException =
 			(ce = zend_lookup_class(spl)) ?
@@ -709,8 +704,6 @@ static inline int php_uopz_clean_user_class(zval *zv) {
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
 {
-	uopz_disassembler_shutdown();
-
 	CG(compiler_options) = UOPZ(copts);
 
 	zend_hash_destroy(&UOPZ(overload));
@@ -734,73 +727,6 @@ static PHP_MINFO_FUNCTION(uopz)
 	php_info_print_table_end();
 }
 /* }}} */
-
-/* {{{ */
-static inline void uopz_disassemble(const zend_function *function, zval *disassembly) {
-	array_init(disassembly);
-	
-	switch (function->type) {
-		case ZEND_USER_FUNCTION:
-			uopz_disassemble_function((zend_op_array*) function, disassembly);
-		break;
-
-		case ZEND_INTERNAL_FUNCTION:
-			uopz_refuse_parameters(
-				"unexpected parameter, will not disassemble internal functions");
-			return;
-		break;
-	}
-} /* }}} */
-
-/* {{{ */
-static PHP_FUNCTION(uopz_disassemble) 
-{
-	zend_class_entry *clazz = NULL;
-	zend_string *method = NULL;
-	zend_function *function;
-	zval *zclosure = NULL;
-	
-	if (uopz_parse_parameters("S", &method) != SUCCESS &&
-		uopz_parse_parameters("CS", &clazz, &method) != SUCCESS &&
-		uopz_parse_parameters("O", &zclosure,zend_ce_closure)) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, "
-			"expected "
-			"(class, method) or (function) or (Closure)");
-		return;
-	}
-
-	if (zclosure) {
-		function = (zend_function*) zend_get_closure_method_def(zclosure);
-	} else if (uopz_find_function(clazz ? &clazz->function_table : CG(function_table), method, &function) != SUCCESS) {
-		return;
-	}
-
-	uopz_disassemble(function, return_value);
-} /* }}} */
-
-/* {{{ */
-PHP_FUNCTION(uopz_assemble) {
-	zval *disassembly = NULL;
-	zend_op_array *assembled = NULL;
-	zval *scope = NULL;
-
-	if (uopz_parse_parameters("a|o", &disassembly, &scope) != SUCCESS) {
-		uopz_refuse_paramters(
-			"unexpected parameter combination, expected (array disassembly [, object scope])");
-		return;
-	}
-
-	if ((assembled = uopz_assemble(disassembly))) {
-		zend_create_closure(
-			return_value,
-			(zend_function*) assembled,
-			scope ? Z_OBJCE_P(scope) : NULL, 
-			scope ? Z_OBJCE_P(scope) : NULL, 
-			scope ? scope : NULL);
-		destroy_op_array(assembled);
-	}
-} /* }}} */
 
 /* {{{ */
 static inline zend_bool uopz_verify_overload(zval *handler, zend_long opcode, char **expected) {
@@ -1950,13 +1876,6 @@ ZEND_BEGIN_ARG_INFO(uopz_overload_arginfo, 1)
 	ZEND_ARG_INFO(0, opcode)
 	ZEND_ARG_INFO(0, callable)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO(uopz__disassemble_arginfo, 1)
-	ZEND_ARG_INFO(0, class)
-	ZEND_ARG_INFO(0, function)
-ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO(uopz__assemble_arginfo, 1)
-	ZEND_ARG_INFO(0, disassembly)
-ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_rename_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
@@ -2019,8 +1938,6 @@ ZEND_END_ARG_INFO()
 /* {{{ uopz_functions[]
  */
 static const zend_function_entry uopz_functions[] = {
-	PHP_FE(uopz_disassemble, uopz__disassemble_arginfo)
-	PHP_FE(uopz_assemble, uopz__assemble_arginfo)
 	PHP_FE(uopz_overload, uopz_overload_arginfo)
 	PHP_FE(uopz_backup, uopz_backup_arginfo)
 	PHP_FE(uopz_restore, uopz_restore_arginfo)
