@@ -60,6 +60,7 @@ static zend_try_catch_element* uopz_copy_try(zend_try_catch_element *old, int en
 	return try_catch;
 } /* }}} */
 
+#if PHP_VERSION_ID < 70100
 /* {{{ */
 static zend_brk_cont_element* uopz_copy_brk(zend_brk_cont_element *old, int end) {
 	zend_brk_cont_element *brk_cont = safe_emalloc(end, sizeof(zend_brk_cont_element), 0);
@@ -71,6 +72,18 @@ static zend_brk_cont_element* uopz_copy_brk(zend_brk_cont_element *old, int end)
 	
 	return brk_cont;
 } /* }}} */
+#else
+static zend_live_range* uopz_copy_live(zend_live_range *old, int end) {
+	zend_live_range *range = safe_emalloc(end, sizeof(zend_live_range), 0);
+
+	memcpy(
+		range,
+		old,
+		sizeof(zend_live_range) * end);
+
+	return range;
+}
+#endif
 
 /* {{{ */
 static zval* uopz_copy_literals(zval *old, int end) {
@@ -183,9 +196,10 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	op_array = &copy->op_array;
 	variables = op_array->vars;
 	literals = op_array->literals;
-	arg_info = op_array->arg_info;
-	
+	arg_info = op_array->arg_info;	
+
 	op_array->function_name = zend_string_copy(op_array->function_name);
+	//php_printf("%s: %p\n", ZSTR_VAL(op_array->function_name), op_array->function_name);
 	op_array->prototype = copy;
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
@@ -199,7 +213,11 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	op_array->opcodes = uopz_copy_opcodes(op_array, literals);
 
 	if (op_array->arg_info) 	op_array->arg_info = uopz_copy_arginfo(op_array, arg_info, op_array->num_args);
+#if PHP_VERSION_ID < 70100
 	if (op_array->brk_cont_array) 	op_array->brk_cont_array = uopz_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
+#else
+	if (op_array->live_range)		op_array->live_range = uopz_copy_live(op_array->live_range, op_array->last_live_range);
+#endif
 	if (op_array->try_catch_array)  op_array->try_catch_array = uopz_copy_try(op_array->try_catch_array, op_array->last_try_catch);
 	if (op_array->vars) 		op_array->vars = uopz_copy_variables(variables, op_array->last_var);
 	if (op_array->static_variables) op_array->static_variables = uopz_copy_statics(op_array->static_variables);
