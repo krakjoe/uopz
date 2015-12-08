@@ -28,17 +28,16 @@ extern zend_module_entry uopz_module_entry;
 #define UOPZ_NUM_TYPES 18
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
+	zend_long	copts;
 	HashTable	overload;
 	
 	struct {
 		zend_bool	overloads;
-		zend_bool	backup;
-		/* this is horrible, and not normally necessary */
-		zend_bool	fixup;
 	} ini;
-	
-	zend_ulong	copts;
-	HashTable	backup;
+
+	HashTable classes;
+	HashTable functions;
+	zend_bool override;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS

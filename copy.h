@@ -154,8 +154,8 @@ static zend_op* uopz_copy_opcodes(zend_op_array *op_array, zval *literals) {
 
 /* {{{ */
 static zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg_info *old, uint32_t end) {
-	zend_arg_info *info = safe_emalloc(end, sizeof(zend_arg_info), 0);
-	uint32_t it = 0;	
+	zend_arg_info *info;
+	uint32_t it = 0;
 
 	if (op_array->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
 		old--;
@@ -164,14 +164,17 @@ static zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg_info *
 
 	if (op_array->fn_flags & ZEND_ACC_VARIADIC) {
 		end++;
-	}	
+	}
+
+	info = safe_emalloc
+		(end, sizeof(zend_arg_info), 0);
+	memcpy(info, old, sizeof(zend_arg_info) * end);	
 
 	while (it < end) {
-		memcpy(&info[it], &old[it], sizeof(zend_arg_info));
-		info[it].name = zend_string_copy(old[it].name);
-		if (info[it].class_name) {
+		if (info[it].name)
+			info[it].name = zend_string_copy(old[it].name);
+		if (info[it].class_name)
 			info[it].class_name = zend_string_copy(old[it].class_name);
-		}
 		it++;
 	}
 	
@@ -198,8 +201,8 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	literals = op_array->literals;
 	arg_info = op_array->arg_info;	
 
-	op_array->function_name = zend_string_copy(op_array->function_name);
-	//php_printf("%s: %p\n", ZSTR_VAL(op_array->function_name), op_array->function_name);
+	op_array->function_name = zend_string_dup(op_array->function_name, 1);
+
 	op_array->prototype = copy;
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;

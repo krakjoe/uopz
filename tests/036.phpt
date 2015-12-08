@@ -12,17 +12,15 @@ class Test {
 	protected $arg;
 }
 
-uopz_function("Test", 'isProtected', function(){
+uopz_function("Test", 'isStatic', function(){
 	return __METHOD__;
-}, ZEND_ACC_PROTECTED);
+}, ZEND_ACC_STATIC);
 
-var_dump(Test::isProtected());
+var_dump(Test::isStatic());
 ?>
 --EXPECTF--
-Fatal error: Uncaught Error: Call to protected method Test::isProtected() from context '' in %s:14
-Stack trace:
-#0 {main}
-  thrown in %s on line 14
+string(9) "{closure}"
+
 
 
 

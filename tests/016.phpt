@@ -15,6 +15,14 @@ class A {
 uopz_compose("C", ["A"], [
 	"__construct" => function(){
 		echo "do not execute\n";
+	},
+	"serialize" => function() {
+		echo "serializing\n";
+		return "hello world";
+	},
+	"unserialize" => function($data) {
+		echo "unserializing\n";
+		var_dump($data);
 	}
 ]);
 
@@ -41,17 +49,6 @@ uopz_function("C", "__wakeup", function(){
 	return [];
 });
 
-/* implementing serializable on the fly */
-uopz_function("C", "serialize", function(){
-	echo "serializing\n";
-	return "hello world";
-});
-
-uopz_function("C", "unserialize", function($data){
-	echo "unserializing\n";
-	var_dump($data);
-});
-
 uopz_implement("C", "Serializable");
 
 
@@ -62,7 +59,7 @@ $s = serialize($c);
 $u = unserialize($s);
 ?>
 --EXPECTF--
-object(C)#1 (1) {
+object(C)#3 (1) {
   ["test":protected]=>
   string(5) "value"
 }

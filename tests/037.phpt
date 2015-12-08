@@ -5,7 +5,7 @@ Test modifiers on functions are copied by default
 --FILE--
 <?php
 class Test {
-	protected function existing() {
+	protected static function existing() {
 		return $this->arg;
 	}
 
@@ -19,9 +19,7 @@ uopz_function("Test", 'existing', function(){
 var_dump(Test::existing());
 ?>
 --EXPECTF--
-Fatal error: Uncaught Error: Call to protected method Test::existing() from context '' in %s:14
-Stack trace:
-#0 {main}
-  thrown in %s on line 14
+string(9) "{closure}"
+
 
 

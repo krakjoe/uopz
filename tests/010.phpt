@@ -4,26 +4,13 @@ Test delete
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-function _MY_strlen($string) {
-	return Strlen($string) * 5;
-}
+uopz_function("_My_strlen", function($string) {
+	return strlen($string) * 5;
+});
 
-class MyClass {
-	public function First() {
-		
-	}
-}
-
-uopz_delete("_my_strlen");
-uopz_delete("myClass", "first");
-
-var_dump(function_exists("_my_strlen"));
-
-$my = new myClass();
-var_dump(method_exists($my, "first"));
+var_dump(uopz_delete("_my_strlen"));
 ?>
 --EXPECT--
-bool(false)
-bool(false)
+bool(true)
 
 
