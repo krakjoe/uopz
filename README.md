@@ -232,14 +232,14 @@ API
 void uopz_overload(int opcode, Callable overload);
 
 /**
-* Delete $class::$method
+* Delete $class::$method, created by uopz_function
 * @param string class
 * @param string method
 **/
 void uopz_delete(string class, string method);
 
 /**
-* Delete $function
+* Delete $function, created by uopz_function
 * @param string function
 **/
 void uopz_delete(string function);
@@ -340,32 +340,7 @@ int uopz_flags(string function, int flags);
 * Note: properties are in the form ```name => modifiers```, and declared null
 **/
 void uopz_compose(string name, array classes [, array methods [, array properties [, int flags = ZEND_ACC_CLASS]]]);
-
-/**
-* Disassemble class::method
-* @param string class
-* @param string method
-* @return array
-**/
-array uopz_disassemble(string class, string method);
-
-/**
-* Disassemble global function
-* @param string function
-* @return array
-**/
-array uopz_disassemble(string function);
-
-/**
-* Disassemble closure
-* @param Closure closure
-* @return array
-**/
-array uopz_disassemble(Closure closure);
 ```
-
-*Note: For a look at what is possible, see /tests, for notes on disassembler see disassembler.md*
-
 
 Installation
 ============
