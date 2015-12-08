@@ -232,52 +232,6 @@ API
 void uopz_overload(int opcode, Callable overload);
 
 /**
-* Rename $class::$method to $class::$rename
-* @param string class
-* @param string method
-* @param string rename
-* Note: if both methods exist, this effectively swaps their names
-**/
-void uopz_rename(string class, string method, string rename);
-
-/**
-* Rename $function to $rename
-* @param string function      the function to rename
-* @param string rename        the new name for function
-* Note: if both functions exist, this effectively swaps their names
-**/
-void uopz_rename(string function, string rename);
-
-/**
-* Makes a backup of $class::$method
-* @param string class
-* @param string method
-* Note: backups are automatically restored on shutdown
-**/
-void uopz_backup(string class, string method);
-
-/**
-* Makes a backup of $function
-* @param string function      the function to backup
-* Note: backups are automatically restored on shutdown
-**/
-void uopz_backup(string function);
-
-/**
-* Restores previously backed up $class::$method
-* @param string class
-* @param string method
-* @param bool ancestry
-**/
-void uopz_restore(string class, string method [, bool ancestry = true]);
-
-/**
-* Restores previously backed up $function
-* @param string function      the function to backup
-**/
-void uopz_restore(string function);
-
-/**
 * Delete $class::$method
 * @param string class
 * @param string method
