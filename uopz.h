@@ -37,7 +37,6 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 
 	HashTable classes;
 	HashTable functions;
-	zend_bool override;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS

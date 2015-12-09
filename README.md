@@ -232,19 +232,6 @@ API
 void uopz_overload(int opcode, Callable overload);
 
 /**
-* Delete $class::$method, created by uopz_function
-* @param string class
-* @param string method
-**/
-void uopz_delete(string class, string method);
-
-/**
-* Delete $function, created by uopz_function
-* @param string function
-**/
-void uopz_delete(string function);
-
-/**
 * Declare $class::$method as $handler
 * @param string class
 * @param string function
@@ -263,6 +250,32 @@ void uopz_function(string class, string method, Closure handler [, int modifiers
 * Note: if the function does not exist it will be created
 **/
 void uopz_function(string function, Closure handler [, int modifiers = 0]);
+
+/**
+* Delete $class::$method, created by uopz_function
+* @param string class
+* @param string method
+**/
+void uopz_delete(string class, string method);
+
+/**
+* Delete $function, created by uopz_function
+* @param string function
+**/
+void uopz_delete(string function);
+
+/**
+* Copy a method to a closure
+* @param string class
+* @param string method
+**/
+void uopz_copy(string class, string method);
+
+/**
+* Copy a function to a closure
+* @param string function
+**/
+void uopz_copy(string function);
 
 /**
 * Redefine $class::$constant to $value

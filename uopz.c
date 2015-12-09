@@ -194,7 +194,6 @@ static int uopz_find_function(HashTable *table, zend_string *name, zend_function
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 	ng->ini.overloads = 0;
-	ng->override = 1;
 } /* }}} */
 
 /* {{{ */
@@ -526,7 +525,7 @@ static inline int php_uopz_init_fcall_handler(zend_execute_data *execute_data) {
 	zval *fname = EX_CONSTANT(opline->op2);
 	zend_function *fbc = CACHED_PTR(Z_CACHE_SLOT_P(fname));
 
-	if (fbc || !UOPZ(override)) {
+	if (fbc) {
 		return ZEND_USER_OPCODE_DISPATCH;
 	}
 
@@ -545,7 +544,7 @@ static inline int php_uopz_init_fcall_by_name_handler(zend_execute_data *execute
 	zend_function *fbc = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)));
 	zval *fname = NULL;
 
-	if (fbc || !UOPZ(override)) {
+	if (fbc) {
 		return ZEND_USER_OPCODE_DISPATCH;
 	}
 
