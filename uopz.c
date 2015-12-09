@@ -478,11 +478,12 @@ zend_execute_internal_t zend_execute_internal_function = NULL;
 static zend_function* uopz_find_overload(zend_class_entry *clazz, zend_string *name) {
 	HashTable *overloads = clazz ? 
 		zend_hash_find_ptr(&UOPZ(classes), clazz->name) : &UOPZ(functions);
+	zend_function *overload = NULL;
 
 	if (!overloads)
-		return NULL;
+		return overload;
 
-	zend_function *overload = zend_hash_find_ptr(overloads, name);
+	overload = zend_hash_find_ptr(overloads, name);
 
 	if (!overload) {
 		zend_string *lower = zend_string_tolower(name);
