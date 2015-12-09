@@ -607,7 +607,16 @@ static inline int php_uopz_init_static_method_call_handler(zend_execute_data *ex
 			}
 			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op1)), ce);
 		}
-	} else {
+	}
+#if PHP_VERSION_ID >= 70100
+	 else if(opline->op1_type == IS_UNUSED) {
+		ce = zend_fetch_class(NULL, opline->op1.num);
+		if (ce == NULL) {
+			return ZEND_USER_OPCODE_DISPATCH;
+		}
+	}
+#endif
+	else {
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 	}
 
