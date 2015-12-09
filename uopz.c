@@ -25,7 +25,6 @@
 #include "ext/standard/info.h"
 #include "Zend/zend_closures.h"
 #include "Zend/zend_exceptions.h"
-#include "Zend/zend_extensions.h"
 #include "Zend/zend_string.h"
 #include "Zend/zend_inheritance.h"
 #include "Zend/zend_compile.h"
@@ -40,7 +39,6 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #endif
 
 #include "uopz.h"
-#include "compile.h"
 #include "copy.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
@@ -51,13 +49,28 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 #define OPLINE EX(opline)
 #define OPCODE OPLINE->opcode
 
-#define AI_SET_PTR(t, val) do {				\
-	temp_variable *__t = (t);			\
-	__t->var.ptr = (val);				\
-	__t->var.ptr_ptr = &__t->var.ptr;		\
-} while (0)
+#define ZEND_VM_GET_OP1_IN(as, i) do {\
+	if ((OPLINE->op1_type != IS_UNUSED) &&\
+		(op1 = zend_get_zval_ptr(\
+			OPLINE->op1_type, &OPLINE->op1, execute_data, &free_op1, as TSRMLS_CC))) {\
+		ZVAL_COPY(&fci.params[i], op1); \
+	} else { \
+		ZVAL_COPY(&fci.params[i], &EG(uninitialized_zval)); \
+	}\
+} while(0)
+#define ZEND_VM_GET_OP1(as) ZEND_VM_GET_OP1_IN(as, 0)
 
-#define RETURN_VALUE_USED(opline) (!((opline)->result_type & EXT_TYPE_UNUSED))
+#define ZEND_VM_GET_OP2_IN(as, i) do {\
+	if ((OPLINE->op2_type != IS_UNUSED) &&\
+		(op2 = zend_get_zval_ptr(\
+			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
+		ZVAL_COPY(&fci.params[i], op2); \
+	} else {\
+		ZVAL_COPY(&fci.params[i], &EG(uninitialized_zval)); \
+	}\
+} while(0)
+#define ZEND_VM_GET_OP2(as) ZEND_VM_GET_OP2_IN(as, 1)
+
 #define ZEND_VM_CONTINUE()         return 0
 
 #define HANDLE_EXCEPTION() \
@@ -83,8 +96,6 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 	(spl_ce_InvalidArgumentException, 0, message, ##__VA_ARGS__)
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
-
-#define UOPZ_FUNCTION_SIZE(f) (((f)->type == ZEND_INTERNAL_FUNCTION) ? sizeof(zend_internal_function) : sizeof(zend_op_array))
 
 /* {{{ */
 PHP_INI_BEGIN()
@@ -204,10 +215,7 @@ static void php_uopz_table_dtor(zval *zv) {
 
 /* {{{ */
 static inline void php_uopz_function_dtor(zval *zv) {
-	zend_function *function = Z_PTR_P(zv);
-	
-	destroy_op_array(
-		(zend_op_array*) function);
+	destroy_op_array((zend_op_array*) Z_PTR_P(zv));
 } /* }}} */
 
 static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
@@ -244,7 +252,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 
 				switch (OPCODE) {
 					case ZEND_INSTANCEOF: {
-						GET_OP1(BP_VAR_R);
+						ZEND_VM_GET_OP1(BP_VAR_R);
 
 						if (OPLINE->op2_type == IS_CONST) {
 							oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)));
@@ -327,13 +335,13 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					} break;
 
 					case ZEND_EXIT: {
-						GET_OP1(BP_VAR_RW);
+						ZEND_VM_GET_OP1(BP_VAR_RW);
 						fci.param_count = 1;
 					} break;
 
 					default: {
-						GET_OP1(BP_VAR_RW);
-						GET_OP2(BP_VAR_RW);
+						ZEND_VM_GET_OP1(BP_VAR_RW);
+						ZEND_VM_GET_OP2(BP_VAR_RW);
 					}
 				}
 
@@ -459,39 +467,6 @@ static inline void php_uopz_init_handlers(int module) {
 
 #undef REGISTER_ZEND_UOPCODE
 } /* }}} */
-
-static int uopz_zend_startup(zend_extension *extension) /* {{{ */
-{
-	return zend_startup_module(&uopz_module_entry);
-}
-/* }}} */
-
-#ifndef ZEND_EXT_API
-#define ZEND_EXT_API    ZEND_DLEXPORT
-#endif
-ZEND_EXTENSION();
-
-static inline void php_uopz_overload_exit(zend_op_array *op_array);
-
-ZEND_EXT_API zend_extension zend_extension_entry = {
-	PHP_UOPZ_EXTNAME,
-	PHP_UOPZ_VERSION,
-	"Joe Watkins <krakjoe@php.net>",
-	"https://github.com/krakjoe/uopz",
-	"Copyright (c) 2014",
-	uopz_zend_startup,
-	NULL,           	/* shutdown_func_t */
-	NULL,                   /* activate_func_t */
-	NULL,                   /* deactivate_func_t */
-	NULL,           	/* message_handler_func_t */
-	NULL,	 		/* op_array_handler_func_t */
-	NULL, 			/* statement_handler_func_t */
-	NULL,             	/* fcall_begin_handler_func_t */
-	NULL,           	/* fcall_end_handler_func_t */
-	NULL,      		/* op_array_ctor_func_t */
-	NULL,      		/* op_array_dtor_func_t */
-	STANDARD_ZEND_EXTENSION_PROPERTIES
-};
 
 typedef void (*zend_execute_ex_t) (zend_execute_data *);
 typedef void (*zend_execute_internal_t) (zend_execute_data *, zval *);
@@ -675,11 +650,6 @@ static inline void uopz_execute_internal(zend_execute_data *execute_data, zval *
  */
 static PHP_MINIT_FUNCTION(uopz)
 {
-	if (!zend_get_extension("uopz")) {
-		zend_extension_entry.startup = NULL;
-		zend_register_extension(&zend_extension_entry, NULL);
-	}
-
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
