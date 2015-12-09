@@ -1060,12 +1060,11 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 				return 0;
 			}
 		} else {
-			if (!zend_hash_update(table, name, variable)) {
+			if (zend_declare_class_constant(clazz, ZSTR_VAL(name), ZSTR_LEN(name), variable) == FAILURE) {
 				uopz_exception(
 					"failed to redefine the constant %s::%s, update failed", clazz->name->val, name->val);
 				return 0;
 			}
-			Z_TRY_ADDREF_P(variable);
 		}
 
 		return 1;
@@ -1081,12 +1080,13 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 			return 0;
 		}
 	} else {
-		if (!zend_hash_update(table, name, variable)) {
+		zend_hash_del(table, name);
+		
+		if (zend_declare_class_constant(clazz, ZSTR_VAL(name), ZSTR_LEN(name), variable) == FAILURE) {
 			uopz_exception(
 				"failed to redefine the constant %s::%s, update failed", clazz->name->val, name->val);
 			return 0;
 		}
-		Z_TRY_ADDREF_P(variable);
 	}
 
 	return 1;
