@@ -1045,6 +1045,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 					"failed to redefine the constant %s::%s, update failed", clazz->name->val, name->val);
 				return 0;
 			}
+			Z_TRY_ADDREF_P(variable);
 		}
 
 		return 1;
@@ -1067,6 +1068,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 				"failed to redefine the constant %s::%s, update failed", clazz->name->val, name->val);
 			return 0;
 		}
+		Z_TRY_ADDREF_P(variable);
 	}
 
 	return 1;
