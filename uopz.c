@@ -666,7 +666,6 @@ static inline void uopz_execute_ex(zend_execute_data *ex) {
 
 /* {{{ */
 static inline void uopz_execute_internal(zend_execute_data *execute_data, zval *retval) {
-	EX(return_value) = retval;
 	if (zend_execute_internal_function) {
 		zend_execute_internal_function(execute_data, retval);
 	} else execute_internal(execute_data, retval);
