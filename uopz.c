@@ -585,6 +585,30 @@ static PHP_RINIT_FUNCTION(uopz)
 	return SUCCESS;
 } /* }}} */
 
+static inline int php_uopz_destroy_user_function(zval *zv) {
+	zend_function *function = Z_PTR_P(zv);
+
+	if (function->type == ZEND_USER_FUNCTION) {
+		destroy_op_array(
+			(zend_op_array*) function);
+		return ZEND_HASH_APPLY_REMOVE;
+	}
+	
+	return ZEND_HASH_APPLY_KEEP;
+}
+
+static inline int php_uopz_destroy_user_functions(zval *zv) {
+	zend_class_entry *ce = Z_PTR_P(zv);
+	
+	zend_hash_apply(&ce->function_table, php_uopz_destroy_user_function);
+	
+	if (ce->type == ZEND_USER_CLASS) {
+		return ZEND_HASH_APPLY_REMOVE;
+	}
+
+	return ZEND_HASH_APPLY_KEEP;
+}
+
 /* {{{ PHP_RSHUTDOWN_FUNCTION
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
@@ -592,7 +616,10 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	CG(compiler_options) = UOPZ(copts);
 
 	zend_hash_destroy(&UOPZ(overload));
-	
+
+	zend_hash_apply(CG(class_table), php_uopz_destroy_user_functions);	
+	zend_hash_apply(CG(function_table), php_uopz_destroy_user_function);
+
 	return SUCCESS;
 }
 /* }}} */
@@ -1519,10 +1546,6 @@ ZEND_BEGIN_ARG_INFO(uopz_flags_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, flags)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO(__uopz_exit_overload_arginfo, 0)
-	ZEND_ARG_INFO(0, status)
 ZEND_END_ARG_INFO()
 /* }}} */
 
