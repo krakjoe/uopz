@@ -499,11 +499,11 @@ static zend_function* uopz_find_overload(zend_class_entry *clazz, zend_string *n
 static inline int php_uopz_init_fcall_handler(zend_execute_data *execute_data) {
 	const zend_op *opline = execute_data->opline;
 	zval *fname = EX_CONSTANT(opline->op2);
-	zend_function *fbc = CACHED_PTR(Z_CACHE_SLOT_P(fname));
+	zend_function *fbc; /*= CACHED_PTR(Z_CACHE_SLOT_P(fname));
 
 	if (fbc) {
 		return ZEND_USER_OPCODE_DISPATCH;
-	}
+	}*/
 
 	fbc = uopz_find_overload(NULL, Z_STR_P(fname));
 	if (fbc) {
@@ -517,12 +517,12 @@ static inline int php_uopz_init_fcall_handler(zend_execute_data *execute_data) {
 /* {{{ */
 static inline int php_uopz_init_fcall_by_name_handler(zend_execute_data *execute_data) {
 	const zend_op *opline = execute_data->opline;
-	zend_function *fbc = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)));
 	zval *fname = NULL;
+	zend_function *fbc;/* = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)));
 
 	if (fbc) {
 		return ZEND_USER_OPCODE_DISPATCH;
-	}
+	}*/
 
 	fname = (zval*)(EX_CONSTANT(opline->op2)+1);
 	fbc = uopz_find_overload(NULL, Z_STR_P(fname));
@@ -580,9 +580,9 @@ static inline int php_uopz_init_method_call_handler(zend_execute_data *execute_d
 		return ZEND_USER_OPCODE_DISPATCH;
 	} while(0);
 
-	if ((fbc = CACHED_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(method), Z_OBJCE_P(object)))) {
-		return ZEND_USER_OPCODE_DISPATCH;
-	}
+	//if ((fbc = CACHED_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(method), Z_OBJCE_P(object)))) {
+	//	return ZEND_USER_OPCODE_DISPATCH;
+	//}
 
 	if ((fbc = uopz_find_overload(Z_OBJCE_P(object), Z_STR_P(method)))) {
 		CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(method), Z_OBJCE_P(object), fbc);
@@ -620,13 +620,13 @@ static inline int php_uopz_init_static_method_call_handler(zend_execute_data *ex
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 	}
 
-	if ((opline->op1_type == IS_CONST && opline->op2_type == IS_CONST) && 
+	/*if ((opline->op1_type == IS_CONST && opline->op2_type == IS_CONST) && 
 		(fbc = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2))))) {
 		return ZEND_USER_OPCODE_DISPATCH;
 	} else if((opline->op1_type != IS_CONST && opline->op2_type == IS_CONST) &&
 		(fbc = CACHED_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), ce))) {
 		return ZEND_USER_OPCODE_DISPATCH;
-	} else if (opline->op2_type != IS_UNUSED) {
+	} else */if (opline->op2_type != IS_UNUSED) {
 		method = (opline->op2_type == IS_CONST) ?
 			EX_CONSTANT(opline->op2) :
 			EX_VAR(opline->op2.var);
