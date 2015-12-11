@@ -191,7 +191,7 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	zend_string   **variables;
 	zval           *literals;
 	zend_arg_info  *arg_info;
-	
+
 	copy = (zend_function*) 
 		zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
 	memcpy(copy, function, sizeof(zend_op_array));
@@ -206,11 +206,11 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	op_array->prototype = copy;
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
-	
+
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_copy(op_array->doc_comment);
 	}
-	
+
 	if (op_array->literals) op_array->literals = uopz_copy_literals (literals, op_array->last_literal);
 
 	op_array->opcodes = uopz_copy_opcodes(op_array, literals);

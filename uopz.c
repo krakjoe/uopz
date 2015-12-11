@@ -468,26 +468,6 @@ static inline void php_uopz_init_handlers(int module) {
 #undef REGISTER_ZEND_UOPCODE
 } /* }}} */
 
-typedef void (*zend_execute_ex_t) (zend_execute_data *);
-typedef void (*zend_execute_internal_t) (zend_execute_data *, zval *);
-
-zend_execute_ex_t zend_execute_ex_function = NULL;
-zend_execute_internal_t zend_execute_internal_function = NULL;
-
-/* {{{ */
-static inline void uopz_execute_ex(zend_execute_data *ex) {
-	if (zend_execute_ex_function) {
-		zend_execute_ex_function(ex);
-	} else execute_ex(ex);
-} /* }}} */
-
-/* {{{ */
-static inline void uopz_execute_internal(zend_execute_data *execute_data, zval *retval) {
-	if (zend_execute_internal_function) {
-		zend_execute_internal_function(execute_data, retval);
-	} else execute_internal(execute_data, retval);
-} /* }}} */
-
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
@@ -524,16 +504,6 @@ static PHP_MINIT_FUNCTION(uopz)
 		php_uopz_init_handlers(module_number);
 	}
 
-	zend_execute_internal_function = zend_execute_internal;
-	zend_execute_internal = uopz_execute_internal;
-	zend_execute_ex_function = zend_execute_ex;
-	zend_execute_ex = uopz_execute_ex;
-
-	//zend_set_user_opcode_handler(ZEND_INIT_FCALL, php_uopz_init_fcall_handler);
-	//zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, php_uopz_init_fcall_by_name_handler);
-	//zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, php_uopz_init_method_call_handler);
-	//zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, php_uopz_init_static_method_call_handler);
-
 	return SUCCESS;
 }
 /* }}} */
@@ -542,9 +512,6 @@ static PHP_MINIT_FUNCTION(uopz)
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
-
-	zend_execute_ex = zend_execute_ex_function;
-	zend_execute_internal = zend_execute_internal_function;
 
 	return SUCCESS;
 } /* }}} */
@@ -565,13 +532,13 @@ static PHP_RINIT_FUNCTION(uopz)
 			(ce = zend_lookup_class(spl)) ?
 				ce : zend_exception_get_default();
 	zend_string_release(spl);
-	
+
 	spl = zend_string_init(ZEND_STRL("InvalidArgumentException"), 0);	
 	spl_ce_InvalidArgumentException =
 			(ce = zend_lookup_class(spl)) ?
 				ce : zend_exception_get_default();
 	zend_string_release(spl);
-	
+
 	UOPZ(copts) = CG(compiler_options);
 
 	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | 
@@ -585,6 +552,7 @@ static PHP_RINIT_FUNCTION(uopz)
 	return SUCCESS;
 } /* }}} */
 
+/* {{{ */
 static inline int php_uopz_destroy_user_function(zval *zv) {
 	zend_function *function = Z_PTR_P(zv);
 
@@ -593,21 +561,22 @@ static inline int php_uopz_destroy_user_function(zval *zv) {
 			(zend_op_array*) function);
 		return ZEND_HASH_APPLY_REMOVE;
 	}
-	
-	return ZEND_HASH_APPLY_KEEP;
-}
 
+	return ZEND_HASH_APPLY_KEEP;
+} /* }}} */
+
+/* {{{ */
 static inline int php_uopz_destroy_user_functions(zval *zv) {
 	zend_class_entry *ce = Z_PTR_P(zv);
-	
+
 	zend_hash_apply(&ce->function_table, php_uopz_destroy_user_function);
-	
+
 	if (ce->type == ZEND_USER_CLASS) {
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 
 	return ZEND_HASH_APPLY_KEEP;
-}
+} /* }}} */
 
 /* {{{ PHP_RSHUTDOWN_FUNCTION
  */
