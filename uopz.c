@@ -1539,6 +1539,7 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_implement, uopz_implement_arginfo)
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)
+	PHP_FALIAS(uopz_restore, uopz_delete, uopz_delete_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */
