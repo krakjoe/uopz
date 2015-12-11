@@ -19,7 +19,10 @@ uopz_function("Test", 'existing', function(){
 var_dump(Test::existing());
 ?>
 --EXPECTF--
-string(9) "{closure}"
+Fatal error: Uncaught Error: Call to protected method Test::existing() from context '' in %s:14
+Stack trace:
+#0 {main}
+  thrown in %s on line 14
 
 
 
