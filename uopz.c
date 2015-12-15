@@ -394,7 +394,8 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						nce = zend_lookup_class(Z_STR(fci.params[0]));
 
 						if (nce != oce) {
-							CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), nce);
+							if (OPLINE->op1_type == IS_CONST)
+								CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), nce);
 						}
 					} break;
 
