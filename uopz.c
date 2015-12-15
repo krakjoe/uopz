@@ -468,6 +468,45 @@ static inline void php_uopz_init_handlers(int module) {
 #undef REGISTER_ZEND_UOPCODE
 } /* }}} */
 
+typedef void (*zend_execute_function_t) (zend_execute_data *);
+typedef void (*zend_execute_internal_function_t) (zend_execute_data *, zval *);
+
+zend_execute_function_t zend_execute_function;
+zend_execute_internal_function_t zend_execute_internal_function;
+
+static inline void php_uopz_execute_ex(zend_execute_data *e) {	
+	do {
+		int result = 0;
+
+		switch (e->opline->opcode) {
+			case ZEND_DO_FCALL:
+			case ZEND_DO_UCALL:
+			case ZEND_DO_FCALL_BY_NAME:
+				if (e->call->func->type == ZEND_USER_FUNCTION)
+					zend_execute_ex = execute_ex;
+			break;
+		}
+		
+		result = zend_vm_call_opcode_handler(e);
+
+		if (result != 0) {
+			if (result < 0) {
+				return;
+			}
+
+			e = EG(current_execute_data);
+		}
+
+		zend_execute_ex = php_uopz_execute_ex;
+	} while(1);
+}
+
+static inline void php_uopz_execute_internal(zend_execute_data *e, zval *r) {
+	if (zend_execute_internal_function) {
+		zend_execute_internal_function(e, r);
+	} else execute_internal(e, r);
+}
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
@@ -500,6 +539,11 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	REGISTER_INI_ENTRIES();
 
+	zend_execute_function = zend_execute_ex;
+	zend_execute_ex = php_uopz_execute_ex;
+	zend_execute_internal_function = zend_execute_internal;
+	zend_execute_internal = php_uopz_execute_internal;
+
 	if (UOPZ(ini).overloads) {
 		php_uopz_init_handlers(module_number);
 	}
@@ -512,6 +556,9 @@ static PHP_MINIT_FUNCTION(uopz)
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
+
+	zend_execute_ex = zend_execute_function;
+	zend_execute_internal = zend_execute_internal_function;
 
 	return SUCCESS;
 } /* }}} */
