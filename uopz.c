@@ -514,7 +514,7 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 } /* }}} */
 
 static inline void php_uopz_destroy_closure(zval *zv) {
-	OBJ_RELEASE(Z_OBJ_P(zv));
+	OBJ_RELEASE(Z_PTR_P(zv));
 }
 
 /* {{{ PHP_RINIT_FUNCTION
