@@ -183,19 +183,15 @@ uopz_magic_t umagic[] = {
 /* {{{ this is awkward, but finds private functions ... so don't "fix" it ... */
 static int uopz_find_function(HashTable *table, zend_string *name, zend_function **function) {
 	Bucket *bucket;
-	zend_string *lower  = zend_string_tolower(name);
 
 	ZEND_HASH_FOREACH_BUCKET(table, bucket) {
-		if (zend_string_equals(bucket->key, lower)) {
+		if (zend_string_equals_ci(bucket->key, name)) {
 			if (function) {
 				*function = (zend_function*) Z_PTR(bucket->val);
 			}
-			zend_string_release(lower);
 			return SUCCESS;
 		}
 	} ZEND_HASH_FOREACH_END();
-
-	zend_string_release(lower);
 
 	return FAILURE;
 } /* }}} */
