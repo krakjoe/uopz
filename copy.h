@@ -208,7 +208,7 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	(*op_array->refcount) = 1;
 
 	if (op_array->fn_flags & ZEND_ACC_CLOSURE) {
-		if (zend_hash_index_update_ptr(
+		if (zend_hash_index_add_ptr(
 			&UOPZ(closures), (zend_long) copy, copy)) {
 			(*op_array->refcount)++;
 			GC_REFCOUNT((zend_object*) op_array->prototype)++;

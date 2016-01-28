@@ -513,13 +513,6 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	return SUCCESS;
 } /* }}} */
 
-static inline void php_uopz_destroy_closure(zval *zv) {
-	zend_function *function = Z_PTR_P(zv);
-	
-	destroy_op_array(
-		(zend_op_array*) function);
-}
-
 /* {{{ PHP_RINIT_FUNCTION
  */
 static PHP_RINIT_FUNCTION(uopz)
@@ -556,7 +549,7 @@ static PHP_RINIT_FUNCTION(uopz)
 	PG(report_memleaks)=0;
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
-	zend_hash_init(&UOPZ(closures), 8, NULL, php_uopz_destroy_closure, 0);
+	zend_hash_init(&UOPZ(closures), 8, NULL, NULL, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -598,8 +591,6 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 
 	zend_hash_apply(CG(class_table), php_uopz_destroy_user_functions);	
 	zend_hash_apply(CG(function_table), php_uopz_destroy_user_function);
-
-	zend_hash_destroy(&UOPZ(closures));
 
 	return SUCCESS;
 }
@@ -1029,8 +1020,18 @@ PHP_FUNCTION(uopz_undefine)
 static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool ancestry) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
-	zend_function *function = (zend_function*) zend_get_closure_method_def(closure);
+	zend_function *function = NULL;
 	zend_string *lower = zend_string_tolower(name);
+	zval clone;
+
+	/*
+		Some trickery ...
+	*/
+	ZVAL_OBJ(&clone, Z_OBJ_HANDLER_P(closure, clone_obj)(closure));
+
+	function = (zend_function*) zend_get_closure_method_def(&clone);
+
+	zend_hash_next_index_insert(&UOPZ(closures), &clone);
 
 	if (!flags) {
 		/* get flags from original function */
@@ -1113,7 +1114,7 @@ PHP_FUNCTION(uopz_function) {
 	zend_class_entry *clazz = NULL;
 	zend_long flags = 0;
 	zend_bool ancestors = 1;
-
+	
 	if (uopz_parse_parameters("SO|l", &name, &closure, zend_ce_closure, &flags) != SUCCESS &&
 		uopz_parse_parameters("CSO|lb", &clazz, &name, &closure, zend_ce_closure, &flags, &ancestors) != SUCCESS) {
 		uopz_refuse_parameters(
