@@ -35,7 +35,7 @@ $a = A::getInstance();
 $a->abstracted();
 ?>
 --EXPECTF--
-object(A)#4 (0) {
+object(A)#%d (0) {
 }
 
 Fatal error: Uncaught Error: Cannot call abstract method A::{closure}() in %s:30

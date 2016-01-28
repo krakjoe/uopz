@@ -471,45 +471,6 @@ static inline void php_uopz_init_handlers(int module) {
 #undef REGISTER_ZEND_UOPCODE
 } /* }}} */
 
-typedef void (*zend_execute_function_t) (zend_execute_data *);
-typedef void (*zend_execute_internal_function_t) (zend_execute_data *, zval *);
-
-zend_execute_function_t zend_execute_function;
-zend_execute_internal_function_t zend_execute_internal_function;
-
-static inline void php_uopz_execute_ex(zend_execute_data *e) {	
-	do {
-		int result = 0;
-
-		switch (e->opline->opcode) {
-			case ZEND_DO_FCALL:
-			case ZEND_DO_UCALL:
-			case ZEND_DO_FCALL_BY_NAME:
-				if (e->call->func->type == ZEND_USER_FUNCTION)
-					zend_execute_ex = execute_ex;
-			break;
-		}
-		
-		result = zend_vm_call_opcode_handler(e);
-
-		if (result != 0) {
-			if (result < 0) {
-				return;
-			}
-
-			e = EG(current_execute_data);
-		}
-
-		zend_execute_ex = php_uopz_execute_ex;
-	} while(1);
-}
-
-static inline void php_uopz_execute_internal(zend_execute_data *e, zval *r) {
-	if (zend_execute_internal_function) {
-		zend_execute_internal_function(e, r);
-	} else execute_internal(e, r);
-}
-
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
@@ -542,11 +503,6 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	REGISTER_INI_ENTRIES();
 
-	zend_execute_function = zend_execute_ex;
-	zend_execute_ex = php_uopz_execute_ex;
-	zend_execute_internal_function = zend_execute_internal;
-	zend_execute_internal = php_uopz_execute_internal;
-
 	if (UOPZ(ini).overloads) {
 		php_uopz_init_handlers(module_number);
 	}
@@ -560,11 +516,12 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
 
-	zend_execute_ex = zend_execute_function;
-	zend_execute_internal = zend_execute_internal_function;
-
 	return SUCCESS;
 } /* }}} */
+
+static inline void php_uopz_destroy_closure(zval *zv) {
+	OBJ_RELEASE(Z_OBJ_P(zv));
+}
 
 /* {{{ PHP_RINIT_FUNCTION
  */
@@ -583,7 +540,7 @@ static PHP_RINIT_FUNCTION(uopz)
 				ce : zend_exception_get_default();
 	zend_string_release(spl);
 
-	spl = zend_string_init(ZEND_STRL("InvalidArgumentException"), 0);	
+	spl = zend_string_init(ZEND_STRL("InvalidArgumentException"), 0);
 	spl_ce_InvalidArgumentException =
 			(ce = zend_lookup_class(spl)) ?
 				ce : zend_exception_get_default();
@@ -596,8 +553,9 @@ static PHP_RINIT_FUNCTION(uopz)
 							ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | 
 							ZEND_COMPILE_IGNORE_USER_FUNCTIONS | 
 							ZEND_COMPILE_GUARDS;
-	
+
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_init(&UOPZ(closures), 8, NULL, php_uopz_destroy_closure, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -609,6 +567,7 @@ static inline int php_uopz_destroy_user_function(zval *zv) {
 	if (function->type == ZEND_USER_FUNCTION) {
 		destroy_op_array(
 			(zend_op_array*) function);
+
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 
@@ -638,6 +597,8 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 
 	zend_hash_apply(CG(class_table), php_uopz_destroy_user_functions);	
 	zend_hash_apply(CG(function_table), php_uopz_destroy_user_function);
+
+	zend_hash_destroy(&UOPZ(closures));
 
 	return SUCCESS;
 }
@@ -728,9 +689,9 @@ static inline void uopz_copy(zend_class_entry *clazz, zend_string *name, zval **
 		if (clazz) {
 			uopz_exception(
 				"could not find the requested function (%s::%s)",
-				clazz->name->val, name->val);
+				ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
-			uopz_exception("could not find the requested function (%s)", name->val);
+			uopz_exception("could not find the requested function (%s)", ZSTR_VAL(name));
 		}
 		return;
 	}
@@ -784,14 +745,14 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	uopz_magic_t *magic = umagic;
 	zend_string *lower = zend_string_tolower(name);
-
+	
 	if (!table || !zend_hash_exists(table, lower)) {
 		if (clazz) {
 			uopz_exception(
-				"failed to delete the function %s::%s, no overload", clazz->name->val, name->val);
+				"failed to delete the function %s::%s, no overload", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
 			uopz_exception(
-				"failed to delete the function %s, no overload", name->val);
+				"failed to delete the function %s, no overload", ZSTR_VAL(name));
 		}
 		zend_string_release(lower);
 		return 0;
@@ -800,10 +761,10 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 	if (zend_hash_del(table, lower) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
-				"failed to delete the function %s::%s, delete failed", clazz->name->val, name->val);
+				"failed to delete the function %s::%s, delete failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
 			uopz_exception(
-				"failed to delete the function %s, delete failed", name->val);
+				"failed to delete the function %s, delete failed", ZSTR_VAL(name));
 		}
 		zend_string_release(lower);
 		return 0;
@@ -811,8 +772,8 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 
 	if (clazz) {
 		while (magic && magic->name) {
-			if (lower->len == magic->length &&
-				strncasecmp(lower->val, magic->name, magic->length) == SUCCESS) {
+			if (ZSTR_LEN(lower) == magic->length &&
+				strncasecmp(ZSTR_VAL(lower), magic->name, magic->length) == SUCCESS) {
 
 				switch (magic->id) {
 					case 0: clazz->constructor = NULL; break;
@@ -886,10 +847,10 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 		default:
 			if (clazz) {
 				uopz_exception(
-					"failed to redefine the constant %s::%s, type not allowed", clazz->name, name->val);
+					"failed to redefine the constant %s::%s, type not allowed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 			} else {
 				uopz_exception(
-					"failed to redefine the constant %s, type not allowed", name->val);
+					"failed to redefine the constant %s, type not allowed", ZSTR_VAL(name));
 			}
 			return 0;
 	}
@@ -905,14 +866,14 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 
 			if (zend_register_constant(&create) != SUCCESS) {
 				uopz_exception(
-					"failed to redefine the constant %s, operation failed", name->val);
+					"failed to redefine the constant %s, operation failed", ZSTR_VAL(name));
 				zval_dtor(&create.value);
 				return 0;
 			}
 		} else {
 			if (zend_declare_class_constant(clazz, ZSTR_VAL(name), ZSTR_LEN(name), variable) == FAILURE) {
 				uopz_exception(
-					"failed to redefine the constant %s::%s, update failed", clazz->name->val, name->val);
+					"failed to redefine the constant %s::%s, update failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 				return 0;
 			}
 			Z_TRY_ADDREF_P(variable);
@@ -927,7 +888,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 			ZVAL_COPY(&zconstant->value, variable);
 		} else {
 			uopz_exception(
-				"failed to redefine the internal %s, not allowed", name->val);
+				"failed to redefine the internal %s, not allowed", ZSTR_VAL(name));
 			return 0;
 		}
 	} else {
@@ -935,7 +896,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 		
 		if (zend_declare_class_constant(clazz, ZSTR_VAL(name), ZSTR_LEN(name), variable) == FAILURE) {
 			uopz_exception(
-				"failed to redefine the constant %s::%s, update failed", clazz->name->val, name->val);
+				"failed to redefine the constant %s::%s, update failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 			return 0;
 		}
 		Z_TRY_ADDREF_P(variable);
@@ -999,13 +960,13 @@ static inline zend_bool uopz_undefine(zend_class_entry *clazz, zend_string *name
 	if (!clazz) {
 		if (zconstant->module_number != PHP_USER_CONSTANT) {
 			uopz_exception(
-				"failed to undefine the internal constant %s, not allowed", name->val);
+				"failed to undefine the internal constant %s, not allowed", ZSTR_VAL(name));
 			return 0;
 		}
 
 		if (zend_hash_del(table, name) != SUCCESS) {
 			uopz_exception(
-				"failed to undefine the constant %s, delete failed", name->val);
+				"failed to undefine the constant %s, delete failed", ZSTR_VAL(name));
 			return 0;
 		}
 
@@ -1014,7 +975,7 @@ static inline zend_bool uopz_undefine(zend_class_entry *clazz, zend_string *name
 
 	if (zend_hash_del(table, name) != SUCCESS) {
 		uopz_exception(
-			"failed to undefine the constant %s::%s, delete failed", clazz->name, name->val);
+			"failed to undefine the constant %s::%s, delete failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		return 0;
 	}
 
@@ -1089,23 +1050,22 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 		zend_string_release(lower);
 
 		if (clazz) {
-			uopz_exception("failed to create function %s::%s, update failed", clazz->name->val, name->val);
+			uopz_exception("failed to create function %s::%s, update failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
-			uopz_exception("failed to create function %s, update failed", name->val);
+			uopz_exception("failed to create function %s, update failed", ZSTR_VAL(name));
 		}
 
 		return 0;
 	}
 	
 	destination->common.fn_flags = flags;
-	destination->common.prototype = destination;
 
 	if (clazz) {
 		uopz_magic_t *magic = umagic;		
 
 		while (magic && magic->name) {
-			if (name->len == magic->length &&
-				strncasecmp(name->val, magic->name, magic->length) == SUCCESS) {
+			if (ZSTR_LEN(name) == magic->length &&
+				strncasecmp(ZSTR_VAL(name), magic->name, magic->length) == SUCCESS) {
 
 				switch (magic->id) {
 					case 0: clazz->constructor = destination; break;
@@ -1218,14 +1178,14 @@ static inline zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *p
 		!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
 		uopz_exception(
 		    "%s cannot extend %s, because %s is not an interface",
-		     clazz->name->val, parent->name->val, parent->name->val);
+		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
 		return 0;
 	}
 
 	if (instanceof_function(clazz, parent)) {
 		uopz_exception(
 			"class %s already extends %s",
-			clazz->name->val, parent->name->val);
+			ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name));
 		return 0;
 	}
 
@@ -1277,7 +1237,7 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 
 	if (zend_hash_exists(CG(class_table), lower)) {
 		uopz_exception(
-			"cannot compose existing class (%s)", name->val);
+			"cannot compose existing class (%s)", ZSTR_VAL(name));
 		zend_string_release(lower);
 		return 0;
 	}
@@ -1292,7 +1252,7 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 	
 	if (!zend_hash_update_ptr(CG(class_table), lower, entry)) {
 		uopz_exception(
-			"cannot compose class (%s), update failed", name->val);
+			"cannot compose class (%s), update failed", ZSTR_VAL(name));
 		zend_string_release(lower);
 		return 0;
 	}
@@ -1337,14 +1297,14 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 					if (!uopz_function(entry, key, closure, flags, 0)) {
 						uopz_compose_bail(
 							"failed to add method %s to class %s, "
-							"previous exceptions occured", key->val, name->val);
+							"previous exceptions occured", ZSTR_VAL(key), ZSTR_VAL(name));
 					}
 				} ZEND_HASH_FOREACH_END();
 			 } else {
 				if (!uopz_function(entry, key, member, ZEND_ACC_PUBLIC, 0)) {
 			 		uopz_compose_bail(
 				 		"failed to add method %s to class %s, "
-				 		"previous exceptions occured", key->val, name->val);
+				 		"previous exceptions occured", ZSTR_VAL(key), ZSTR_VAL(name));
 				}
 				zend_string_release(key);
 			 }
@@ -1359,9 +1319,9 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 				break;
 			}
 
-			if (zend_declare_property_null(entry, key->val, key->len, Z_LVAL_P(member)) != SUCCESS) {
+			if (zend_declare_property_null(entry, ZSTR_VAL(key), ZSTR_LEN(key), Z_LVAL_P(member)) != SUCCESS) {
 				uopz_compose_bail(
-					"failed to declare property %s::$%s, engine failure", entry->name->val, key->val);
+					"failed to declare property %s::$%s, engine failure", ZSTR_VAL(entry->name), ZSTR_VAL(key));
 				break;
 			}
 		} ZEND_HASH_FOREACH_END();
@@ -1380,7 +1340,7 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 				if (parent->ce_flags & ZEND_ACC_INTERFACE) {
 					uopz_compose_bail(
 						"trait %s can not implement interface %s, not allowed",
-						entry->name->val, parent->name->val);
+						ZSTR_VAL(entry->name), ZSTR_VAL(parent->name));
 				}
 			}
 
@@ -1391,10 +1351,10 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 					} else {
 						uopz_compose_bail(
 							"interface %s may not extend %s, parent of %s already set to %s",
-							entry->name->val,
-							parent->name->val,
-							entry->name->val,
-							entry->parent->name->val);
+							ZSTR_VAL(entry->name),
+							ZSTR_VAL(parent->name),
+							ZSTR_VAL(entry->name),
+							ZSTR_VAL(entry->parent->name));
 					}
 				} else zend_do_implement_interface(entry, parent);
 			} else if (parent->ce_flags & ZEND_ACC_TRAIT) {
@@ -1405,10 +1365,10 @@ static inline zend_bool uopz_compose(zend_string *name, HashTable *classes, Hash
 				} else {
 					uopz_compose_bail(
 						"class %s may not extend %s, parent of %s already set to %s",
-						entry->name->val,
-						parent->name->val,
-						entry->name->val,
-						entry->parent->name->val);
+						ZSTR_VAL(entry->name),
+						ZSTR_VAL(parent->name),
+						ZSTR_VAL(entry->name),
+						ZSTR_VAL(entry->parent->name));
 				}
 			}
 		}
@@ -1470,11 +1430,11 @@ static inline void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_l
 		if (clazz) {
 			uopz_exception(
 			"failed to set or get flags of %s::%s, function does not exist",
-			clazz->name->val, name->val);
+			ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
 			uopz_exception(
 				"failed to set or get flags of %s, function does not exist",
-				name->val);
+				ZSTR_VAL(name));
 		}
 		return;
 	}

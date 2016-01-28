@@ -18,6 +18,8 @@
 #ifndef HAVE_UOPZ_COPY_H
 #define HAVE_UOPZ_COPY_H
 
+ZEND_EXTERN_MODULE_GLOBALS(uopz);
+
 /* {{{ */
 static HashTable* uopz_copy_statics(HashTable *old) {
 	HashTable *statics = NULL;
@@ -199,11 +201,20 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	op_array = &copy->op_array;
 	variables = op_array->vars;
 	literals = op_array->literals;
-	arg_info = op_array->arg_info;	
+	arg_info = op_array->arg_info;
 
 	op_array->function_name = zend_string_dup(op_array->function_name, 1);
 
-	op_array->prototype = copy;
+	if (op_array->fn_flags & ZEND_ACC_CLOSURE) {
+		if (!zend_hash_index_exists(&UOPZ(closures), (zend_long) op_array->prototype)) {
+			if (zend_hash_index_update_ptr(&UOPZ(closures), 
+					(zend_long) op_array->prototype, 
+					(zend_object*) op_array->prototype)) {
+				GC_REFCOUNT((zend_object*)op_array->prototype)++;
+			}
+		} else GC_REFCOUNT((zend_object*)op_array->prototype)++;
+	}
+
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
 

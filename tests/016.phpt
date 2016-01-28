@@ -59,7 +59,7 @@ $s = serialize($c);
 $u = unserialize($s);
 ?>
 --EXPECTF--
-object(C)#3 (1) {
+object(C)#%d (1) {
   ["test":protected]=>
   string(5) "value"
 }

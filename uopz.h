@@ -29,14 +29,13 @@ extern zend_module_entry uopz_module_entry;
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	zend_long	copts;
-	HashTable	overload;
 	
 	struct {
 		zend_bool	overloads;
 	} ini;
 
-	HashTable classes;
-	HashTable functions;
+	HashTable	overload;
+	HashTable	closures;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS
