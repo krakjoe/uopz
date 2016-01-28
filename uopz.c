@@ -186,9 +186,7 @@ static int uopz_find_function(HashTable *table, zend_string *name, zend_function
 	zend_string *lower  = zend_string_tolower(name);
 
 	ZEND_HASH_FOREACH_BUCKET(table, bucket) {
-		if ((ZSTR_LEN(bucket->key) == ZSTR_LEN(lower)) && 
-			(bucket->h == ZSTR_HASH(lower)) &&
-			memcmp(ZSTR_VAL(lower), ZSTR_VAL(bucket->key), ZSTR_LEN(lower)) == SUCCESS) {
+		if (zend_string_equals(bucket->key, lower)) {
 			if (function) {
 				*function = (zend_function*) Z_PTR(bucket->val);
 			}
