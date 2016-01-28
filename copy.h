@@ -204,25 +204,16 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	arg_info = op_array->arg_info;
 
 	op_array->function_name = zend_string_dup(op_array->function_name, 1);
-
-	if (op_array->fn_flags & ZEND_ACC_CLOSURE) {
-		if (!zend_hash_index_exists(&UOPZ(closures), (zend_long) op_array->prototype)) {
-			if (zend_hash_index_update_ptr(&UOPZ(closures), 
-					(zend_long) op_array->prototype, 
-					(zend_object*) op_array->prototype)) {
-				GC_REFCOUNT((zend_object*)op_array->prototype)++;
-			}
-		} else {
-			/* I know this is wrong ... */
-			GC_REFCOUNT((zend_object*)op_array->prototype)++;
-			/* I know it causes a leak ... */
-
-			/* LA LA LA LA LA */
-		}
-	}
-
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
+
+	if (op_array->fn_flags & ZEND_ACC_CLOSURE) {
+		if (zend_hash_index_update_ptr(
+			&UOPZ(closures), (zend_long) copy, copy)) {
+			(*op_array->refcount)++;
+			GC_REFCOUNT((zend_object*) op_array->prototype)++;
+		}
+	}
 
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_copy(op_array->doc_comment);

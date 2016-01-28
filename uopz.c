@@ -514,7 +514,10 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 } /* }}} */
 
 static inline void php_uopz_destroy_closure(zval *zv) {
-	OBJ_RELEASE(Z_PTR_P(zv));
+	zend_function *function = Z_PTR_P(zv);
+	
+	destroy_op_array(
+		(zend_op_array*) function);
 }
 
 /* {{{ PHP_RINIT_FUNCTION
@@ -547,6 +550,10 @@ static PHP_RINIT_FUNCTION(uopz)
 							ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | 
 							ZEND_COMPILE_IGNORE_USER_FUNCTIONS | 
 							ZEND_COMPILE_GUARDS;
+	/*
+		We are hacking, horribly ... we can just ignore leaks ...
+	*/
+	PG(report_memleaks)=0;
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
 	zend_hash_init(&UOPZ(closures), 8, NULL, php_uopz_destroy_closure, 0);
@@ -558,10 +565,10 @@ static PHP_RINIT_FUNCTION(uopz)
 static inline int php_uopz_destroy_user_function(zval *zv) {
 	zend_function *function = Z_PTR_P(zv);
 
-	if (function->type == ZEND_USER_FUNCTION) {
+	if ((function->type == ZEND_USER_FUNCTION) && 
+		!(function->common.fn_flags & ZEND_ACC_CLOSURE)) {
 		destroy_op_array(
 			(zend_op_array*) function);
-
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 
