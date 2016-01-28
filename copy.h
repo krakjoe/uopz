@@ -212,7 +212,13 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 					(zend_object*) op_array->prototype)) {
 				GC_REFCOUNT((zend_object*)op_array->prototype)++;
 			}
-		} else GC_REFCOUNT((zend_object*)op_array->prototype)++;
+		} else {
+			/* I know this is wrong ... */
+			GC_REFCOUNT((zend_object*)op_array->prototype)++;
+			/* I know it causes a leak ... */
+
+			/* LA LA LA LA LA */
+		}
 	}
 
 	op_array->refcount = emalloc(sizeof(uint32_t));
