@@ -1020,18 +1020,12 @@ PHP_FUNCTION(uopz_undefine)
 static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool ancestry) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_function *destination = NULL;
-	zend_function *function = NULL;
+	zend_function *function =  (zend_function*) zend_get_closure_method_def(closure);
 	zend_string *lower = zend_string_tolower(name);
-	zval clone;
 
-	/*
-		Some trickery ...
-	*/
-	ZVAL_OBJ(&clone, Z_OBJ_HANDLER_P(closure, clone_obj)(closure));
-
-	function = (zend_function*) zend_get_closure_method_def(&clone);
-
-	zend_hash_next_index_insert(&UOPZ(closures), &clone);
+	if (zend_hash_next_index_insert(&UOPZ(closures), closure)) {
+		Z_ADDREF_P(closure);
+	}
 
 	if (!flags) {
 		/* get flags from original function */
