@@ -562,7 +562,6 @@ static PHP_RINIT_FUNCTION(uopz)
 		We are hacking, horribly ... we can just ignore leaks ...
 	*/
 	PG(report_memleaks)=0;
-	CG(unclean_shutdown) = 1;
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
 
