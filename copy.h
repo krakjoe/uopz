@@ -203,17 +203,12 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	literals = op_array->literals;
 	arg_info = op_array->arg_info;
 
-	op_array->function_name = zend_string_dup(op_array->function_name, 1);
+	op_array->function_name = zend_string_dup(op_array->function_name, 0);
 	op_array->refcount = emalloc(sizeof(uint32_t));
-	(*op_array->refcount) = 1;
+	(*op_array->refcount) = 2;
 
-	if (op_array->fn_flags & ZEND_ACC_CLOSURE) {
-		if (zend_hash_index_add_ptr(
-			&UOPZ(closures), (zend_long) copy, copy)) {
-			(*op_array->refcount)++;
-			GC_REFCOUNT((zend_object*) op_array->prototype)++;
-		}
-	}
+	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE;	
+	op_array->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
 
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_copy(op_array->doc_comment);
@@ -238,9 +233,10 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 
 static inline zend_function* uopz_copy_internal_function(zend_function *function) {
 	zend_internal_function *copy = 
-		(zend_internal_function*) pemalloc(sizeof(zend_internal_function), 1);
+		(zend_internal_function*) zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
 	memcpy(copy, function, sizeof(zend_internal_function));
-	zend_string_addref(copy->function_name);
+	copy->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
+	copy->function_name = zend_string_dup(copy->function_name, 1);
 	return (zend_function*) copy;
 }
 

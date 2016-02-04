@@ -97,6 +97,8 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
 
+#define PHP_UOPZ_OVERRIDE 0x2000000
+
 /* {{{ */
 PHP_INI_BEGIN()
 	 STD_PHP_INI_ENTRY("uopz.overloads",  "0",    PHP_INI_SYSTEM,    OnUpdateBool,       ini.overloads,          zend_uopz_globals,        uopz_globals)
@@ -465,11 +467,24 @@ static inline void php_uopz_init_handlers(int module) {
 #undef REGISTER_ZEND_UOPCODE
 } /* }}} */
 
+typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
+
+zend_execute_internal_f zend_execute_internal_function;
+
+static inline void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
+	if (zend_execute_internal_function) {
+		zend_execute_internal_function(execute_data, return_value);
+	} else execute_internal(execute_data, return_value);
+}
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
 {
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
+
+	zend_execute_internal_function = zend_execute_internal;
+	zend_execute_internal = php_uopz_execute_internal;
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
@@ -547,9 +562,9 @@ static PHP_RINIT_FUNCTION(uopz)
 		We are hacking, horribly ... we can just ignore leaks ...
 	*/
 	PG(report_memleaks)=0;
+	CG(unclean_shutdown) = 1;
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
-	zend_hash_init(&UOPZ(closures), 8, NULL, NULL, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -1023,10 +1038,6 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 	zend_function *function =  (zend_function*) zend_get_closure_method_def(closure);
 	zend_string *lower = zend_string_tolower(name);
 
-	if (zend_hash_next_index_insert(&UOPZ(closures), closure)) {
-		Z_ADDREF_P(closure);
-	}
-
 	if (!flags) {
 		/* get flags from original function */
 		if (uopz_find_function(table, lower, &destination) == SUCCESS) {
@@ -1035,14 +1046,12 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 			/* set flags to sensible default */
 			flags = ZEND_ACC_PUBLIC;
 		}
-
-		destination = NULL;
 	}
 
-	destination = uopz_copy_function(function);	
+	function = uopz_copy_function(function);
 
-	if (!zend_hash_update_ptr(table, lower, destination)) {
-		zend_arena_release(&CG(arena), destination);
+	if (!zend_hash_update_ptr(table, lower, function)) {
+		zend_arena_release(&CG(arena), function);
 		zend_string_release(lower);
 
 		if (clazz) {
@@ -1053,8 +1062,16 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 
 		return 0;
 	}
-	
-	destination->common.fn_flags = flags;
+
+	function->common.fn_flags |= flags & ZEND_ACC_PPP_MASK;
+
+	if (flags & ZEND_ACC_STATIC) {
+		function->common.fn_flags |= ZEND_ACC_STATIC;
+	}
+
+	if (flags & ZEND_ACC_ABSTRACT) {
+		function->common.fn_flags |= ZEND_ACC_ABSTRACT;
+	}
 
 	if (clazz) {
 		uopz_magic_t *magic = umagic;		
@@ -1064,26 +1081,26 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 				strncasecmp(ZSTR_VAL(name), magic->name, magic->length) == SUCCESS) {
 
 				switch (magic->id) {
-					case 0: clazz->constructor = destination; break;
-					case 1: clazz->destructor = destination; break;
-					case 2: clazz->clone = destination; break;
-					case 3: clazz->__get = destination; break;
-					case 4: clazz->__set = destination; break;
-					case 5: clazz->__unset = destination; break;
-					case 6: clazz->__isset = destination; break;
-					case 7: clazz->__call = destination; break;
-					case 8: clazz->__callstatic = destination; break;
-					case 9: clazz->__tostring = destination; break;
-					case 10: clazz->serialize_func = destination; break;
-					case 11: clazz->unserialize_func = destination; break;
-					case 12: clazz->__debugInfo = destination; break;
+					case 0: clazz->constructor = function; break;
+					case 1: clazz->destructor = function; break;
+					case 2: clazz->clone = function; break;
+					case 3: clazz->__get = function; break;
+					case 4: clazz->__set = function; break;
+					case 5: clazz->__unset = function; break;
+					case 6: clazz->__isset = function; break;
+					case 7: clazz->__call = function; break;
+					case 8: clazz->__callstatic = function; break;
+					case 9: clazz->__tostring = function; break;
+					case 10: clazz->serialize_func = function; break;
+					case 11: clazz->unserialize_func = function; break;
+					case 12: clazz->__debugInfo = function; break;
 				}
 			}
 			magic++;
 		}
-		destination->common.scope = clazz;
+		function->common.scope = clazz;
 	} else {
-		destination->common.scope = NULL;
+		function->common.scope = NULL;
 	}
 
 	if (clazz && ancestry) {
