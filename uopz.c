@@ -573,10 +573,7 @@ static PHP_RINIT_FUNCTION(uopz)
 static inline int php_uopz_destroy_user_function(zval *zv) {
 	zend_function *function = Z_PTR_P(zv);
 
-	if ((function->type == ZEND_USER_FUNCTION) && 
-		!(function->common.fn_flags & ZEND_ACC_CLOSURE)) {
-		destroy_op_array(
-			(zend_op_array*) function);
+	if (function->type == ZEND_USER_FUNCTION) {
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 
