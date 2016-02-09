@@ -217,6 +217,7 @@ static inline void uopz_backup_dtor(zval *zv) {
 	if (backup->table) {
 		zend_hash_update_ptr(
 			backup->table, backup->name, backup->function);
+
 		zend_string_release(backup->name);
 	}
 
@@ -225,7 +226,7 @@ static inline void uopz_backup_dtor(zval *zv) {
 
 /* {{ */
 static inline void uopz_backup(HashTable *table, zend_string *name, zend_function *function) {
-	HashTable *backups = zend_hash_find_ptr(&UOPZ(backup), (zend_long) table);
+	HashTable *backups = zend_hash_index_find_ptr(&UOPZ(backup), (zend_long) table);
 	uopz_backup_t backup;
 
 	if (!backups) {
@@ -241,8 +242,9 @@ static inline void uopz_backup(HashTable *table, zend_string *name, zend_functio
 	backup.table    = table;
 	backup.name		= zend_string_copy(name);
 
-	if (zend_hash_add_mem(backups, backup.name, &backup, sizeof(uopz_backup_t))) {
-		function_add_ref(function);
+	if (!zend_hash_add_mem(backups, backup.name, &backup, sizeof(uopz_backup_t))) {
+		destroy_zend_function(backup.function);
+		zend_string_release(name);
 	}
 } /* }}} */
 
@@ -573,6 +575,8 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
 
+	zend_execute_internal = zend_execute_internal_function;
+
 	return SUCCESS;
 } /* }}} */
 
@@ -889,13 +893,21 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, zend_string *name)
 			  *backups;
 	zend_bool result = 0;
 	
-	backups = zend_hash_find_ptr(&UOPZ(backup), (zend_long) table);
+	backups = zend_hash_index_find_ptr(&UOPZ(backup), (zend_long) table);
 
 	if (backups) {
 		zend_string *lower = zend_string_tolower(name);
+		uopz_backup_t *backup = zend_hash_find_ptr(backups, lower);
 		
-		result = 
-			(zend_hash_del(backups, lower) == SUCCESS);
+		if (backup) {
+			if (zend_hash_update_ptr(
+					backup->table,
+					backup->name,
+					backup->function)) {
+				function_add_ref(backup->function);
+				result = 1;
+			}
+		}
 		
 		zend_string_release(lower);
 	}
