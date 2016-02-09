@@ -182,6 +182,12 @@ uopz_magic_t umagic[] = {
 };
 /* }}} */
 
+typedef struct _uopz_backup_t {
+	HashTable *table;
+	zend_string *name;
+	zend_function *function;
+} uopz_backup_t;
+
 /* {{{ this is awkward, but finds private functions ... so don't "fix" it ... */
 static int uopz_find_function(HashTable *table, zend_string *name, zend_function **function) {
 	Bucket *bucket;
@@ -196,6 +202,48 @@ static int uopz_find_function(HashTable *table, zend_string *name, zend_function
 	} ZEND_HASH_FOREACH_END();
 
 	return FAILURE;
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_backup_table_dtor(zval *zv) {
+	zend_hash_destroy(Z_PTR_P(zv));
+	efree(Z_PTR_P(zv));
+} /* }}} */
+
+/* {{{ */
+static inline void uopz_backup_dtor(zval *zv) {
+	uopz_backup_t *backup = (uopz_backup_t*) Z_PTR_P(zv);
+
+	if (backup->table) {
+		zend_hash_update_ptr(
+			backup->table, backup->name, backup->function);
+		zend_string_release(backup->name);
+	}
+
+	efree(backup);
+} /* }}} */
+
+/* {{ */
+static inline void uopz_backup(HashTable *table, zend_string *name, zend_function *function) {
+	HashTable *backups = zend_hash_find_ptr(&UOPZ(backup), (zend_long) table);
+	uopz_backup_t backup;
+
+	if (!backups) {
+		ALLOC_HASHTABLE(backups);
+		zend_hash_init(backups, 8, NULL, uopz_backup_dtor, 0);
+		zend_hash_index_add_ptr(
+			&UOPZ(backup), (zend_long) table, backups);
+	}
+
+	memset(&backup, 0, sizeof(uopz_backup_t));	
+
+	backup.function = uopz_copy_function(function);
+	backup.table    = table;
+	backup.name		= zend_string_copy(name);
+
+	if (zend_hash_add_mem(backups, backup.name, &backup, sizeof(uopz_backup_t))) {
+		function_add_ref(function);
+	}
 } /* }}} */
 
 /* {{{ */
@@ -564,6 +612,7 @@ static PHP_RINIT_FUNCTION(uopz)
 	PG(report_memleaks)=0;
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_init(&UOPZ(backup), 8, NULL, uopz_backup_table_dtor, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -599,6 +648,8 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	CG(compiler_options) = UOPZ(copts);
 
 	zend_hash_destroy(&UOPZ(overload));
+
+	zend_hash_destroy(&UOPZ(backup));
 
 	zend_hash_apply(CG(class_table), php_uopz_destroy_user_functions);	
 	zend_hash_apply(CG(function_table), php_uopz_destroy_user_function);
@@ -833,6 +884,54 @@ PHP_FUNCTION(uopz_delete) {
 } /* }}} */
 
 /* {{{ */
+static inline zend_bool uopz_restore(zend_class_entry *clazz, zend_string *name) {
+	HashTable *table = clazz ? &clazz->function_table : CG(function_table),
+			  *backups;
+	zend_bool result = 0;
+	
+	backups = zend_hash_find_ptr(&UOPZ(backup), (zend_long) table);
+
+	if (backups) {
+		zend_string *lower = zend_string_tolower(name);
+		
+		result = 
+			(zend_hash_del(backups, lower) == SUCCESS);
+		
+		zend_string_release(lower);
+	}
+
+	return result;
+} /* }}} */
+
+/* {{{ proto bool uopz_restore(mixed function)
+	   proto bool uopz_restore(string class, string function) */
+PHP_FUNCTION(uopz_restore) {
+	zend_string *name = NULL;
+	zend_class_entry *clazz = NULL;
+
+	switch (ZEND_NUM_ARGS()) {
+		case 2: if (uopz_parse_parameters("CS", &clazz, &name) != SUCCESS) {
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function)");
+			return;
+		} break;
+
+		case 1: if (uopz_parse_parameters("S", &name) != SUCCESS) {
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (function)");
+			return;
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
+	}
+
+	RETVAL_BOOL(uopz_restore(clazz, name));
+} /* }}} */
+
+/* {{{ */
 static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name, zval *variable) {
 	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
@@ -1037,7 +1136,10 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 	if (!flags) {
 		/* get flags from original function */
 		if (uopz_find_function(table, lower, &destination) == SUCCESS) {
-			flags = destination->common.fn_flags;
+			flags = 
+				destination->common.fn_flags;
+			/* backup existing functions */
+			uopz_backup(table, lower, destination);
 		} else {
 			/* set flags to sensible default */
 			flags = ZEND_ACC_PUBLIC;
@@ -1503,6 +1605,10 @@ ZEND_BEGIN_ARG_INFO(uopz_delete_arginfo, 1)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_restore_arginfo, 1)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_redefine_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, constant)
@@ -1550,7 +1656,7 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_implement, uopz_implement_arginfo)
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)
-	PHP_FALIAS(uopz_restore, uopz_delete, uopz_delete_arginfo)
+	PHP_FE(uopz_restore, uopz_restore_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */
