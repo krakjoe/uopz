@@ -225,7 +225,8 @@ static inline void uopz_backup_dtor(zval *zv) {
 } /* }}} */
 
 /* {{ */
-static inline void uopz_backup(HashTable *table, zend_string *name, zend_function *function) {
+static inline void uopz_backup(zend_class_entry *clazz, zend_string *name, zend_function *function) {
+	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	HashTable *backups = zend_hash_index_find_ptr(&UOPZ(backup), (zend_long) table);
 	uopz_backup_t backup;
 
@@ -238,7 +239,7 @@ static inline void uopz_backup(HashTable *table, zend_string *name, zend_functio
 
 	memset(&backup, 0, sizeof(uopz_backup_t));	
 
-	backup.function = uopz_copy_function(function);
+	backup.function = uopz_copy_function(clazz, function);
 	backup.table    = table;
 	backup.name		= zend_string_copy(name);
 
@@ -1151,14 +1152,14 @@ static inline zend_bool uopz_function(zend_class_entry *clazz, zend_string *name
 			flags = 
 				destination->common.fn_flags;
 			/* backup existing functions */
-			uopz_backup(table, lower, destination);
+			uopz_backup(clazz, lower, destination);
 		} else {
 			/* set flags to sensible default */
 			flags = ZEND_ACC_PUBLIC;
 		}
 	}
 
-	function = uopz_copy_function(function);
+	function = uopz_copy_function(clazz, function);
 
 	if (!zend_hash_update_ptr(table, lower, function)) {
 		zend_arena_release(&CG(arena), function);

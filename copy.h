@@ -23,7 +23,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 /* {{{ */
 static HashTable* uopz_copy_statics(HashTable *old) {
 	HashTable *statics = NULL;
-	
+
 	if (old) {
 		ALLOC_HASHTABLE(statics);
 		zend_hash_init(statics,
@@ -187,7 +187,7 @@ static zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg_info *
 	return info;
 } /* }}} */
 
-static inline zend_function* uopz_copy_user_function(zend_function *function) {
+static inline zend_function* uopz_copy_user_function(zend_class_entry *clazz, zend_function *function) {
 	zend_function  *copy;	
 	zend_op_array  *op_array;
 	zend_string   **variables;
@@ -231,29 +231,35 @@ static inline zend_function* uopz_copy_user_function(zend_function *function) {
 	return copy;
 }
 
-static inline zend_function* uopz_copy_internal_function(zend_function *function) {
-	zend_internal_function *copy = 
-		(zend_internal_function*) zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
-	memcpy(copy, function, sizeof(zend_internal_function));
-	copy->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
-	copy->function_name = zend_string_dup(copy->function_name, 1);
+static inline zend_function* uopz_copy_internal_function(zend_class_entry *clazz, zend_function *function) {
+	zend_internal_function *copy;
+
+	if (clazz->type & ZEND_INTERNAL_CLASS) {
+		copy = 
+			(zend_internal_function*) pemalloc(sizeof(zend_internal_function), 1);
+		memcpy(copy, function, sizeof(zend_internal_function));
+	} else {
+		copy = 
+			(zend_internal_function*) zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
+		memcpy(copy, function, sizeof(zend_internal_function));
+		copy->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
+	}
+
+	zend_string_addref(copy->function_name);
+
 	return (zend_function*) copy;
 }
 
 /* {{{ */
-static zend_function* uopz_copy_function(zend_function *function) {
+static zend_function* uopz_copy_function(zend_class_entry *clazz, zend_function *function) {
 	zend_function *copy;
 	if (function->type == ZEND_USER_FUNCTION) {
-		copy = uopz_copy_user_function(function);
+		copy = uopz_copy_user_function(clazz, function);
 	} else {
-		copy = uopz_copy_internal_function(function);
+		copy = uopz_copy_internal_function(clazz, function);
 	}
 	return copy;
 } /* }}} */
 
-/* {{{ */
-static void uopz_copy_function_ctor(zval *bucket) {
-	Z_PTR_P(bucket) = uopz_copy_function(Z_PTR_P(bucket));
-} /* }}} */
 #endif
 
