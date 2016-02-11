@@ -234,7 +234,7 @@ static inline zend_function* uopz_copy_user_function(zend_class_entry *clazz, ze
 static inline zend_function* uopz_copy_internal_function(zend_class_entry *clazz, zend_function *function) {
 	zend_internal_function *copy;
 
-	if (clazz->type & ZEND_INTERNAL_CLASS) {
+	if (clazz && clazz->type & ZEND_INTERNAL_CLASS) {
 		copy = 
 			(zend_internal_function*) pemalloc(sizeof(zend_internal_function), 1);
 		memcpy(copy, function, sizeof(zend_internal_function));
