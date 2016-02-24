@@ -32,6 +32,8 @@ static HashTable* uopz_copy_statics(HashTable *old) {
 		zend_hash_copy(
 			statics, 
 			old, (copy_ctor_func_t) zval_add_ref);
+
+		GC_FLAGS(statics) |= IS_ARRAY_IMMUTABLE;
 	}
 	
 	return statics;

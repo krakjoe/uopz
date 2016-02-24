@@ -290,8 +290,8 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 					IS_CALLABLE_CHECK_SILENT,
 					&fci, &fcc,
 					NULL, &cerror) == SUCCESS) {
-
-				fci.params = (zval*) emalloc(2 * sizeof(zval));
+				
+				fci.params = (zval*) ecalloc(2, sizeof(zval));
 				ZVAL_UNDEF(&fci.params[0]);
 				ZVAL_UNDEF(&fci.params[1]);
 				fci.param_count = 2;
@@ -316,7 +316,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						} else {
 							oce = Z_CE_P(EX_VAR(OPLINE->op2.var));
 						}
-						ZVAL_STR(&fci.params[1], oce->name);
+						ZVAL_STR(&fci.params[1], zend_string_copy(oce->name));
 					} break;
 
 					case ZEND_ADD_INTERFACE:
@@ -324,7 +324,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 						oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
 						
 						if (oce) {
-							ZVAL_STR(&fci.params[0], oce->name);
+							ZVAL_STR(&fci.params[0], zend_string_copy(oce->name));
 						}
 						oce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)));
 						
@@ -338,7 +338,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 							}
 						}
 
-						ZVAL_STR(&fci.params[1], oce->name);
+						ZVAL_STR(&fci.params[1], zend_string_copy(oce->name));
 					} break;
 
 					case ZEND_NEW: {
@@ -346,7 +346,7 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 							ZVAL_COPY(&fci.params[0], EX_CONSTANT(OPLINE->op1));
 						} else {
 							oce = Z_CE_P(EX_VAR(OPLINE->op1.var));
-							ZVAL_STR(&fci.params[0], oce->name);
+							ZVAL_STR(&fci.params[0], zend_string_copy(oce->name));
 						}
 						
 						fci.param_count = 1;
@@ -365,14 +365,14 @@ static int php_uopz_handler(ZEND_OPCODE_HANDLER_ARGS) {
 								ZVAL_COPY(&fci.params[0], name);
 							} else if (Z_TYPE_P(name) == IS_OBJECT) {
 								oce = Z_OBJCE_P(name);
-								ZVAL_STR(&fci.params[0], oce->name);
+								ZVAL_STR(&fci.params[0], zend_string_copy(oce->name));
 							} else if (Z_TYPE_P(name) == IS_STRING) {
 								oce = zend_fetch_class_by_name(Z_STR_P(name), name+1, 
 									ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
 								if (!oce) {
 									ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 								}
-								ZVAL_STR(&fci.params[0], oce->name);
+								ZVAL_STR(&fci.params[0], zend_string_copy(oce->name));
 							} else {
 								if (EG(exception)) {
 									HANDLE_EXCEPTION();
@@ -519,13 +519,21 @@ static inline void php_uopz_init_handlers(int module) {
 } /* }}} */
 
 typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
+typedef void (*zend_execute_f) (zend_execute_data *);
 
 zend_execute_internal_f zend_execute_internal_function;
+zend_execute_f zend_execute_function;
 
 static inline void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
 	if (zend_execute_internal_function) {
 		zend_execute_internal_function(execute_data, return_value);
 	} else execute_internal(execute_data, return_value);
+}
+
+static inline void php_uopz_execute(zend_execute_data *execute_data) {
+	if (zend_execute_function) {
+		zend_execute_function(execute_data);
+	} else execute_ex(execute_data);
 }
 
 /* {{{ PHP_MINIT_FUNCTION
@@ -536,6 +544,8 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	zend_execute_internal_function = zend_execute_internal;
 	zend_execute_internal = php_uopz_execute_internal;
+	zend_execute_function = zend_execute_ex;
+	zend_execute_ex = php_uopz_execute;
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
@@ -577,6 +587,7 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	UNREGISTER_INI_ENTRIES();
 
 	zend_execute_internal = zend_execute_internal_function;
+	zend_execute_ex = zend_execute_function;
 
 	return SUCCESS;
 } /* }}} */
@@ -905,7 +916,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, zend_string *name)
 					backup->table,
 					backup->name,
 					backup->function)) {
-				function_add_ref(backup->function);
+				//function_add_ref(backup->function);
 				result = 1;
 			}
 		}
