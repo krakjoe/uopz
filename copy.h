@@ -241,10 +241,14 @@ static inline zend_function* uopz_copy_internal_function(zend_class_entry *clazz
 			(zend_internal_function*) pemalloc(sizeof(zend_internal_function), 1);
 		memcpy(copy, function, sizeof(zend_internal_function));
 	} else {
-		copy = 
-			(zend_internal_function*) zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
-		memcpy(copy, function, sizeof(zend_internal_function));
-		copy->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
+		if (function->type == ZEND_USER_FUNCTION) {
+			copy = (zend_internal_function*) zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
+			memcpy(copy, function, sizeof(zend_internal_function));
+			copy->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
+		} else {
+			copy = (zend_internal_function*) malloc(sizeof(zend_internal_function));
+			memcpy(copy, function, sizeof(zend_internal_function));
+		}
 	}
 
 	zend_string_addref(copy->function_name);
