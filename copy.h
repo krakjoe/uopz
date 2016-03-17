@@ -207,7 +207,7 @@ static inline zend_function* uopz_copy_user_function(zend_class_entry *clazz, ze
 
 	op_array->function_name = zend_string_dup(op_array->function_name, 0);
 	op_array->refcount = emalloc(sizeof(uint32_t));
-	(*op_array->refcount) = 2;
+	(*op_array->refcount) = 1;
 
 	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE;	
 	op_array->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
