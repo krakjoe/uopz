@@ -560,17 +560,57 @@ typedef void (*zend_execute_f) (zend_execute_data *);
 zend_execute_internal_f zend_execute_internal_function;
 zend_execute_f zend_execute_function;
 
-static inline void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
+static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
 	if (zend_execute_internal_function) {
 		zend_execute_internal_function(execute_data, return_value);
 	} else execute_internal(execute_data, return_value);
 }
 
-static inline void php_uopz_execute(zend_execute_data *execute_data) {
+static void php_uopz_execute(zend_execute_data *execute_data) {
 	if (zend_execute_function) {
 		zend_execute_function(execute_data);
 	} else execute_ex(execute_data);
 }
+
+/* {{{ init call hooks */
+static int uopz_init_call_hook(ZEND_OPCODE_HANDLER_ARGS) {
+	switch (OPCODE) {
+		case ZEND_INIT_FCALL_BY_NAME:
+		case ZEND_INIT_FCALL:
+		case ZEND_INIT_NS_FCALL_BY_NAME: {
+			zval *function_name = EX_CONSTANT(OPLINE->op2);
+			CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
+		} break;
+
+		case ZEND_INIT_METHOD_CALL: {
+			if (OPLINE->op2_type == IS_CONST) {
+				zval *function_name = EX_CONSTANT(OPLINE->op2);
+				CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
+			}
+		} break;
+
+		case ZEND_INIT_STATIC_METHOD_CALL: {
+			if (OPLINE->op2_type == IS_CONST) {
+				zval *function_name = EX_CONSTANT(OPLINE->op2);
+				if (OPLINE->op1_type == IS_CONST) {
+					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
+				} else {
+					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
+				}
+			}
+		} break;
+	}
+
+	return ZEND_USER_OPCODE_DISPATCH;
+} /* }}} */
+
+static inline void uopz_register_init_call_hooks() {
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_init_call_hook);
+} /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
  */
@@ -578,10 +618,10 @@ static PHP_MINIT_FUNCTION(uopz)
 {
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
-	zend_execute_internal_function = zend_execute_internal;
-	zend_execute_internal = php_uopz_execute_internal;
-	zend_execute_function = zend_execute_ex;
-	zend_execute_ex = php_uopz_execute;
+	//zend_execute_internal_function = zend_execute_internal;
+	//zend_execute_internal = php_uopz_execute_internal;
+	//zend_execute_function = zend_execute_ex;
+	//zend_execute_ex = php_uopz_execute;
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
@@ -613,6 +653,8 @@ static PHP_MINIT_FUNCTION(uopz)
 		php_uopz_init_handlers(module_number);
 	}
 
+	uopz_register_init_call_hooks();
+
 	return SUCCESS;
 }
 /* }}} */
@@ -622,8 +664,8 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
 
-	zend_execute_internal = zend_execute_internal_function;
-	zend_execute_ex = zend_execute_function;
+	//zend_execute_internal = zend_execute_internal_function;
+	//zend_execute_ex = zend_execute_function;
 
 	return SUCCESS;
 } /* }}} */
