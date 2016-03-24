@@ -36,6 +36,7 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 
 	HashTable	overload;
 	HashTable	backup;
+	HashTable	closures;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS
