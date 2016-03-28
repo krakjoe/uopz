@@ -1276,11 +1276,13 @@ static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval 
 		return 0;
 	}
 
-	if (!zend_hash_index_exists(&UOPZ(closures), (zend_long) function)) {
-		closure = zend_hash_index_add(&UOPZ(closures), (zend_long) function, closure);
-	}
+	UOPZ(closures).pDestructor = NULL;
+	zend_hash_index_add(&UOPZ(closures), (zend_long) function, closure);
+	UOPZ(closures).pDestructor = ZVAL_PTR_DTOR;
+
 	Z_ADDREF_P(closure);
 
+	function->common.prototype = NULL;
 	function->common.fn_flags &= ~ZEND_ACC_CLOSURE;
 	function->common.fn_flags |= flags & ZEND_ACC_PPP_MASK;
 
