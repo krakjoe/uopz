@@ -196,8 +196,8 @@ static int uopz_find_function(HashTable *table, zend_string *name, zend_function
 		if (zend_string_equals_ci(bucket->key, name)) {
 			if (function) {
 				*function = (zend_function*) Z_PTR(bucket->val);
-				return SUCCESS;
 			}
+			return SUCCESS;
 		}
 	} ZEND_HASH_FOREACH_END();
 
@@ -210,34 +210,27 @@ static void uopz_backup_table_dtor(zval *zv) {
 	efree(Z_PTR_P(zv));
 } /* }}} */
 
-/* {{{ */
-static inline zend_bool uopz_replace_function(HashTable *table, zend_string *name, zend_function *function, zend_bool is_shutdown) {
-	zend_bool result;
-	dtor_func_t dtor;
-	zend_bool keep_current;
-	zend_function *current = zend_hash_find_ptr(table, name);
+/* {{{ uopz_closure_dtor */
+static void uopz_closure_dtor(zval *zv) {
+	zend_function *function = Z_PTR_P(zv);
+	zval *closure = zend_hash_index_find(&UOPZ(closures), (zend_long) function);
 
-	if (function == current) {
-		/* nothing to do actually */
-		return 1;
-	}
-
-	keep_current = 0;
-
-	if (current && !is_shutdown) {
-		/* see, if we have a backed up function and if it matches one being replaced, and if so - don't touch it */
-		HashTable *backups = zend_hash_index_find_ptr(&UOPZ(backup), (zend_long) table);
-		if (backups) {
-			uopz_backup_t *backup = zend_hash_find_ptr(backups, name);
-			keep_current = backup && backup->function == current;
+	if (closure) {
+		if (GC_REFCOUNT(Z_COUNTED_P(closure)) > 1) {
+			Z_DELREF_P(closure);
+		} else {
+			zend_hash_index_del(&UOPZ(closures), (zend_long) function);
 		}
 	}
-	/* in shutdown passed replacement is really a backed up function, so no need to keep current */
+} /* }}} */
 
-	if (keep_current) {
-		dtor = table->pDestructor;
-		table->pDestructor = NULL;
-	}
+/* {{{ uopz_replace_function */
+static inline zend_bool uopz_replace_function(HashTable *table, zend_string *name, zend_function *function) {
+	zend_bool result;
+	dtor_func_t dtor;
+
+	dtor = table->pDestructor;
+	table->pDestructor = uopz_closure_dtor;
 
 	if (function) {
 		result = zend_hash_update_ptr(table, name, function) != NULL;
@@ -245,9 +238,7 @@ static inline zend_bool uopz_replace_function(HashTable *table, zend_string *nam
 		result = zend_hash_del(table, name) == SUCCESS;
 	}
 
-	if (keep_current) {
-		table->pDestructor = dtor;
-	}
+	table->pDestructor = dtor;
 
 	return result;
 } /* }}} */
@@ -255,7 +246,7 @@ static inline zend_bool uopz_replace_function(HashTable *table, zend_string *nam
 /* {{{ */
 static void uopz_backup_dtor(zval *zv) {
 	uopz_backup_t *backup = (uopz_backup_t*) Z_PTR_P(zv);
-	uopz_replace_function(backup->table, backup->name, backup->function, 1);
+	uopz_replace_function(backup->table, backup->name, backup->function);
 	zend_string_release(backup->name);
 	efree(backup);
 } /* }}} */
@@ -280,8 +271,6 @@ static zend_bool uopz_backup(zend_class_entry *clazz, zend_string *name) {
 	}
 
 	if (zend_hash_exists(backups, lower)) {
-		return 0;
-	} else if (zend_hash_exists(backups, lower)) {
 		zend_string_release(lower);
 		return 0;
 	}
@@ -632,7 +621,7 @@ static int uopz_init_call_hook(ZEND_OPCODE_HANDLER_ARGS) {
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
-} /* }}} */
+}
 
 static inline void uopz_register_init_call_hooks() {
 	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_init_call_hook);
@@ -737,6 +726,7 @@ static PHP_RINIT_FUNCTION(uopz)
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
 	zend_hash_init(&UOPZ(backup), 8, NULL, uopz_backup_table_dtor, 0);
+	zend_hash_init(&UOPZ(closures), 8, NULL, ZVAL_PTR_DTOR, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -772,8 +762,8 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	CG(compiler_options) = UOPZ(copts);
 
 	zend_hash_destroy(&UOPZ(overload));
-
 	zend_hash_destroy(&UOPZ(backup));
+	zend_hash_destroy(&UOPZ(closures));
 
 	return SUCCESS;
 }
@@ -935,7 +925,7 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 
 	uopz_backup(clazz, lower);
 
-	if (!uopz_replace_function(table, lower, NULL, 0)) {
+	if (!uopz_replace_function(table, lower, NULL)) {
 		if (clazz) {
 			uopz_exception(
 				"failed to delete the function %s::%s, delete failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
@@ -1022,7 +1012,7 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, zend_string *name)
 			result = uopz_replace_function(
 					backup->table,
 					backup->name,
-					backup->function, 0);
+					backup->function);
 		}
 		
 		zend_string_release(lower);
@@ -1257,11 +1247,11 @@ PHP_FUNCTION(uopz_undefine)
 /* {{{ */
 static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool ancestry) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	zend_function *destination = NULL;
-	zend_function *function =  (zend_function*) zend_get_closure_method_def(closure);
+	zend_function *function = (zend_function*) zend_get_closure_method_def(closure);
 	zend_string *lower = zend_string_tolower(name);
 
 	if (!flags) {
+		zend_function *destination = NULL;
 		/* get flags from original function */
 		if (uopz_find_function(table, lower, &destination) == SUCCESS) {
 			flags = 
@@ -1274,11 +1264,7 @@ static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval 
 
 	uopz_backup(clazz, lower);
 
-	function = uopz_copy_function(clazz, function);
-
-	if (!uopz_replace_function(table, lower, function, 0)) {
-		destroy_zend_function(function);
-		zend_arena_release(&CG(arena), function);
+	if (!uopz_replace_function(table, lower, function)) {
 		zend_string_release(lower);
 
 		if (clazz) {
@@ -1290,6 +1276,14 @@ static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval 
 		return 0;
 	}
 
+	UOPZ(closures).pDestructor = NULL;
+	zend_hash_index_add(&UOPZ(closures), (zend_long) function, closure);
+	UOPZ(closures).pDestructor = ZVAL_PTR_DTOR;
+
+	Z_ADDREF_P(closure);
+
+	function->common.prototype = NULL;
+	function->common.fn_flags &= ~ZEND_ACC_CLOSURE;
 	function->common.fn_flags |= flags & ZEND_ACC_PPP_MASK;
 
 	if (flags & ZEND_ACC_STATIC) {
