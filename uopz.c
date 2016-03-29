@@ -1290,6 +1290,7 @@ static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval 
 		return 0;
 	}
 
+	function->common.prototype = NULL;
 	function->common.fn_flags |= flags & ZEND_ACC_PPP_MASK;
 
 	if (flags & ZEND_ACC_STATIC) {
