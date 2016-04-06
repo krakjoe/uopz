@@ -182,6 +182,12 @@ uopz_magic_t umagic[] = {
 };
 /* }}} */
 
+typedef struct _uopz_return_t {
+	zend_class_entry *clazz;
+	zend_string *function;
+	zval value;
+} uopz_return_t;
+
 typedef struct _uopz_backup_t {
 	HashTable *table;
 	zend_string *name;
@@ -590,13 +596,42 @@ typedef void (*zend_execute_f) (zend_execute_data *);
 zend_execute_internal_f zend_execute_internal_function;
 zend_execute_f zend_execute_function;
 
+static uopz_return_t* uopz_find_return(zend_function *function) {
+	uopz_return_t *ret = NULL;
+	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
+												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
+	if (returns) {
+		ret = zend_hash_find_ptr(returns, function->common.function_name);
+	}
+	
+	return ret;
+}
+
 static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
+	if (EX(func)) {
+		uopz_return_t *ureturn = uopz_find_return(EX(func));
+
+		if (ureturn) {
+			ZVAL_COPY(return_value, &ureturn->value);
+			return;
+		}
+	}
+
 	if (zend_execute_internal_function) {
 		zend_execute_internal_function(execute_data, return_value);
 	} else execute_internal(execute_data, return_value);
 }
 
 static void php_uopz_execute(zend_execute_data *execute_data) {
+	if (EX(func)) {
+		uopz_return_t *ureturn = uopz_find_return(EX(func));
+
+		if (ureturn) {
+			ZVAL_COPY(EX(return_value), &ureturn->value);
+			return;
+		}
+	}
+
 	if (zend_execute_function) {
 		zend_execute_function(execute_data);
 	} else execute_ex(execute_data);
@@ -648,10 +683,10 @@ static PHP_MINIT_FUNCTION(uopz)
 {
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
 
-	//zend_execute_internal_function = zend_execute_internal;
-	//zend_execute_internal = php_uopz_execute_internal;
-	//zend_execute_function = zend_execute_ex;
-	//zend_execute_ex = php_uopz_execute;
+	zend_execute_internal_function = zend_execute_internal;
+	zend_execute_internal = php_uopz_execute_internal;
+	zend_execute_function = zend_execute_ex;
+	zend_execute_ex = php_uopz_execute;
 
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_CONTINUE",		ZEND_USER_OPCODE_CONTINUE,		CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_USER_OPCODE_ENTER",		ZEND_USER_OPCODE_ENTER,			CONST_CS|CONST_PERSISTENT);
@@ -694,11 +729,23 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
 	UNREGISTER_INI_ENTRIES();
 
-	//zend_execute_internal = zend_execute_internal_function;
-	//zend_execute_ex = zend_execute_function;
+	zend_execute_internal = zend_execute_internal_function;
+	zend_execute_ex = zend_execute_function;
 
 	return SUCCESS;
 } /* }}} */
+
+static inline void uopz_return_dtor(zval *zv) {
+	uopz_return_t *ret = Z_PTR_P(zv);
+	
+	zend_string_release(ret->function);
+	zval_ptr_dtor(&ret->value);
+}
+
+static inline void uopz_return_table_dtor(zval *zv) {
+	zend_hash_destroy(Z_PTR_P(zv));
+	efree(Z_PTR_P(zv));
+}
 
 /* {{{ PHP_RINIT_FUNCTION
  */
@@ -737,6 +784,7 @@ static PHP_RINIT_FUNCTION(uopz)
 
 	zend_hash_init(&UOPZ(overload), 8, NULL, ZVAL_PTR_DTOR, 0);
 	zend_hash_init(&UOPZ(backup), 8, NULL, uopz_backup_table_dtor, 0);
+	zend_hash_init(&UOPZ(returns), 8, NULL, uopz_return_table_dtor, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -1134,6 +1182,111 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 
 	return 1;
 } /* }}} */
+
+static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value) {
+	HashTable *returns;
+	uopz_return_t ret;
+
+	if (clazz) {
+		returns = zend_hash_find_ptr(&UOPZ(returns), clazz->name);
+	} else returns = zend_hash_index_find_ptr(&UOPZ(returns), 0);
+	
+	if (!returns) {
+		ALLOC_HASHTABLE(returns);
+		zend_hash_init(returns, 8, NULL, uopz_return_dtor, 0);
+		if (clazz) {
+			zend_hash_update_ptr(&UOPZ(returns), clazz->name, returns);
+		} else zend_hash_index_update_ptr(&UOPZ(returns), 0, returns);
+	}
+
+	memset(&ret, 0, sizeof(uopz_return_t));
+	
+	ret.clazz = clazz;
+	ret.function = zend_string_copy(name);
+	ZVAL_COPY(&ret.value, value);
+	
+	zend_hash_update_mem(returns, name, &ret, sizeof(uopz_return_t));
+}
+
+/* {{{ proto void uopz_set_return(string class, string function, mixed value)
+	   proto void uopz_set_return(function, mixed value) */
+PHP_FUNCTION(uopz_set_return) 
+{
+	zend_string *function = NULL;
+	zval *variable = NULL;
+	zend_class_entry *clazz = NULL;
+
+	switch (ZEND_NUM_ARGS()) {
+		case 3: {
+			if (uopz_parse_parameters("CSz", &clazz, &function, &variable) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function, value)");
+				return;
+			}
+		} break;
+
+		case 2: if (uopz_parse_parameters("Sz", &function, &variable) != SUCCESS) {
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (function, variable)");
+			return;
+		} break;
+
+		default: {
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function, variable) or (function, variable)");
+			return;
+		}
+	}
+
+	uopz_set_return(clazz, function, variable);
+}
+
+static inline void uopz_unset_return(zend_class_entry *clazz, zend_string *function) {
+	HashTable *returns;
+
+	if (clazz) {
+		returns = zend_hash_find_ptr(&UOPZ(returns), clazz->name);
+	} else returns = zend_hash_index_find_ptr(&UOPZ(returns), 0);
+
+	if (!returns) {
+		return;
+	}
+	
+	zend_hash_del(returns, function);
+}
+
+/* {{{ proto void uopz_unset_return(string class, string function)
+	   proto void uopz_unset_return(string function) */
+PHP_FUNCTION(uopz_unset_return) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+
+	switch (ZEND_NUM_ARGS()) {
+		case 2: {
+			if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function)");
+				return;
+			}
+		} break;
+
+		case 1: {
+			if (uopz_parse_parameters("S", &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
+	}
+
+	uopz_unset_return(clazz, function);
+}
 
 /* {{{ proto bool uopz_redefine(string constant, mixed variable)
 	   proto bool uopz_redefine(string class, string constant, mixed variable) */
@@ -1774,6 +1927,15 @@ ZEND_BEGIN_ARG_INFO(uopz_flags_arginfo, 2)
 	ZEND_ARG_INFO(0, function)
 	ZEND_ARG_INFO(0, flags)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_set_return_arginfo, 2)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+	ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_unset_return_arginfo, 2)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ uopz_functions[]
@@ -1791,6 +1953,8 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_extend, uopz_extend_arginfo)
 	PHP_FE(uopz_compose, uopz_compose_arginfo)
 	PHP_FE(uopz_restore, uopz_restore_arginfo)
+	PHP_FE(uopz_set_return, uopz_set_return_arginfo)
+	PHP_FE(uopz_unset_return, uopz_unset_return_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */
