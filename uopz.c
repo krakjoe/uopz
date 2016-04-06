@@ -619,7 +619,7 @@ static uopz_return_t* uopz_find_return(zend_function *function) {
 	uopz_return_t *ret = NULL;
 	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
 												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
-	if (returns) {
+	if (returns && function->common.function_name) {
 		ret = zend_hash_find_ptr(returns, function->common.function_name);
 	}
 	
