@@ -164,7 +164,7 @@ typedef struct _uopz_magic_t {
 #define UOPZ_MAGIC(name, id) {name, sizeof(name)-1, id}
 #define UOPZ_MAGIC_END	     {NULL, 0, 0L}
 
-uopz_magic_t umagic[] = {
+static const uopz_magic_t umagic[] = {
 	UOPZ_MAGIC(ZEND_CONSTRUCTOR_FUNC_NAME, 0),
 	UOPZ_MAGIC(ZEND_DESTRUCTOR_FUNC_NAME, 1),
 	UOPZ_MAGIC(ZEND_CLONE_FUNC_NAME, 2),
@@ -180,6 +180,33 @@ uopz_magic_t umagic[] = {
 	UOPZ_MAGIC(ZEND_DEBUGINFO_FUNC_NAME, 12),
 	UOPZ_MAGIC_END
 };
+
+static inline void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function *function) {
+	uopz_magic_t *magic;
+
+	for (magic = (uopz_magic_t*) umagic; magic->name; magic++) {
+		if (ZSTR_LEN(name) == magic->length &&
+				strncasecmp(ZSTR_VAL(name), magic->name, magic->length) == SUCCESS) {
+
+			switch (magic->id) {
+				case 0: clazz->constructor = function; break;
+				case 1: clazz->destructor = function; break;
+				case 2: clazz->clone = function; break;
+				case 3: clazz->__get = function; break;
+				case 4: clazz->__set = function; break;
+				case 5: clazz->__unset = function; break;
+				case 6: clazz->__isset = function; break;
+				case 7: clazz->__call = function; break;
+				case 8: clazz->__callstatic = function; break;
+				case 9: clazz->__tostring = function; break;
+				case 10: clazz->serialize_func = function; break;
+				case 11: clazz->unserialize_func = function; break;
+				case 12: clazz->__debugInfo = function; break;
+			}
+			return;
+		}
+	}
+}
 /* }}} */
 
 typedef struct _uopz_return_t {
@@ -286,8 +313,6 @@ static zend_bool uopz_backup(zend_class_entry *clazz, zend_string *name) {
 	}
 
 	if (zend_hash_exists(backups, lower)) {
-		return 0;
-	} else if (zend_hash_exists(backups, lower)) {
 		zend_string_release(lower);
 		return 0;
 	}
@@ -966,7 +991,6 @@ PHP_FUNCTION(uopz_copy) {
 /* {{{ */
 static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	uopz_magic_t *magic = umagic;
 	zend_string *lower = zend_string_tolower(name);
 	
 	if (!table || !zend_hash_exists(table, lower)) {
@@ -996,29 +1020,7 @@ static inline zend_bool uopz_delete(zend_class_entry *clazz, zend_string *name) 
 	}
 
 	if (clazz) {
-		while (magic && magic->name) {
-			if (ZSTR_LEN(lower) == magic->length &&
-				strncasecmp(ZSTR_VAL(lower), magic->name, magic->length) == SUCCESS) {
-
-				switch (magic->id) {
-					case 0: clazz->constructor = NULL; break;
-					case 1: clazz->destructor = NULL; break;
-					case 2: clazz->clone = NULL; break;
-					case 3: clazz->__get = NULL; break;
-					case 4: clazz->__set = NULL; break;
-					case 5: clazz->__unset = NULL; break;
-					case 6: clazz->__isset = NULL; break;
-					case 7: clazz->__call = NULL; break;
-					case 8: clazz->__callstatic = NULL; break;
-					case 9: clazz->__tostring = NULL; break;
-					case 10: clazz->serialize_func = NULL; break;
-					case 11: clazz->unserialize_func = NULL; break;
-					case 12: clazz->__debugInfo = NULL; break;
-				}
-				break;
-			}
-			magic++;
-		}
+		uopz_handle_magic(clazz, lower, NULL);
 	}
 
 	zend_string_release(lower);
@@ -1067,10 +1069,10 @@ static inline zend_bool uopz_restore(zend_class_entry *clazz, zend_string *name)
 		uopz_backup_t *backup = zend_hash_find_ptr(backups, lower);
 		
 		if (backup) {
-			result = uopz_replace_function(
-					backup->table,
-					backup->name,
-					backup->function, 0);
+			result = uopz_replace_function(table, lower, backup->function, 0);
+			if (result && clazz) {
+				uopz_handle_magic(clazz, lower, backup->function);
+			}
 		}
 		
 		zend_string_release(lower);
@@ -1443,6 +1445,7 @@ static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval 
 		return 0;
 	}
 
+	function->common.prototype = NULL;
 	function->common.fn_flags |= flags & ZEND_ACC_PPP_MASK;
 
 	if (flags & ZEND_ACC_STATIC) {
@@ -1454,30 +1457,7 @@ static zend_bool uopz_function(zend_class_entry *clazz, zend_string *name, zval 
 	}
 
 	if (clazz) {
-		uopz_magic_t *magic = umagic;		
-
-		while (magic && magic->name) {
-			if (ZSTR_LEN(name) == magic->length &&
-				strncasecmp(ZSTR_VAL(name), magic->name, magic->length) == SUCCESS) {
-
-				switch (magic->id) {
-					case 0: clazz->constructor = function; break;
-					case 1: clazz->destructor = function; break;
-					case 2: clazz->clone = function; break;
-					case 3: clazz->__get = function; break;
-					case 4: clazz->__set = function; break;
-					case 5: clazz->__unset = function; break;
-					case 6: clazz->__isset = function; break;
-					case 7: clazz->__call = function; break;
-					case 8: clazz->__callstatic = function; break;
-					case 9: clazz->__tostring = function; break;
-					case 10: clazz->serialize_func = function; break;
-					case 11: clazz->unserialize_func = function; break;
-					case 12: clazz->__debugInfo = function; break;
-				}
-			}
-			magic++;
-		}
+		uopz_handle_magic(clazz, lower, function);
 		function->common.scope = clazz;
 	} else {
 		function->common.scope = NULL;
