@@ -120,12 +120,6 @@ typedef struct _uopz_opcode_t {
 #define UOPZ_CODE_END  		 {ZEND_NOP, NULL, 0L, 0, NULL}
 
 uopz_opcode_t uoverrides[] = {
-	UOPZ_CODE(ZEND_NEW, 1, "function(class)"),
-	UOPZ_CODE(ZEND_THROW, 1, "function(exception)"),
-	UOPZ_CODE(ZEND_FETCH_CLASS, 1, "function(class)"),
-	UOPZ_CODE(ZEND_ADD_TRAIT, 2, "function(class, trait)"),
-	UOPZ_CODE(ZEND_ADD_INTERFACE, 2, "function(class, interface)"),
-	UOPZ_CODE(ZEND_INSTANCEOF, 2, "function(object, class)"),
 	UOPZ_CODE(ZEND_EXIT, 1, "function(status)"),
 	UOPZ_CODE_END
 }; /* }}} */
