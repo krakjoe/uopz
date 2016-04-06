@@ -630,7 +630,7 @@ static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *ret
 	if (EX(func)) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
-		if (ureturn) {
+		if (ureturn && return_value) {
 			ZVAL_COPY(return_value, &ureturn->value);
 			return;
 		}
@@ -645,7 +645,7 @@ static void php_uopz_execute(zend_execute_data *execute_data) {
 	if (EX(func)) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
-		if (ureturn) {
+		if (ureturn && EX(return_value)) {
 			ZVAL_COPY(EX(return_value), &ureturn->value);
 			return;
 		}
