@@ -428,7 +428,6 @@ static inline void uopz_register_mock_handler(void) { /* {{{ */
 
 static int uopz_constant_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
-		php_printf("uncache\n");
 		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
 	}
 
