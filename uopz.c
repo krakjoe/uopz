@@ -473,6 +473,11 @@ static int uopz_constant_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
 				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
 			}
+		} else {
+			zend_execute_data *execute_data = EG(current_execute_data);
+
+			CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), 
+								  Z_CE_P(EX_VAR(OPLINE->op1.var)), NULL);
 		}
 	}
 #endif
