@@ -427,9 +427,23 @@ static inline void uopz_register_mock_handler(void) { /* {{{ */
 } /* }}} */
 
 static int uopz_constant_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
+#if PHP_VERSION_ID >= 70100
 	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
 		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
 	}
+#else
+	if (OPLINE->op1_type == IS_UNUSED) {
+		if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
+		}
+	} else {
+		if (OPLINE->op1_type == IS_CONST) {
+			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
+				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
+			}
+		}
+	}
+#endif
 
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
