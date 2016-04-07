@@ -1,34 +1,25 @@
 --TEST--
-Test exit overload
---INI--
-uopz.overloads=1
+Test uopz_set_mock (both existing)
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_overload(ZEND_EXIT, function($status = null){
-	return ZEND_USER_OPCODE_RETURN;
-});
+class Foo {}
+class Bar {}
 
-class Test {
-	public function method() {
-		exit(10);
-	}
-}
+uopz_set_mock(Foo::class, Bar::class);
 
-class Unit {
-	public function test() {
-		$test = new Test();
-		$test->method();
-		
-		return true;
-	} 
-}
-$unit = new Unit();
-var_dump($unit->test());
-uopz_overload(ZEND_EXIT, null);
-var_dump($unit->test());
-echo "failed";
+var_dump(new Foo());
+
+uopz_unset_mock(Foo::class);
+
+var_dump(new Foo());
 ?>
---EXPECT--
-bool(true)
+--EXPECTF--
+object(Bar)#%d (%d) {
+}
+object(Foo)#%d (%d) {
+}
+
+
+

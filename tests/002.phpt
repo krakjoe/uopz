@@ -1,29 +1,24 @@
 --TEST--
-Test new overload
---INI--
-uopz.overloads=1
+Test uopz_set_mock (mock existing)
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_overload(ZEND_NEW, function(&$class){
-	if ($class == "stdClass") {
-		$class = "myClass";
-	}
-});
+class Bar {}
 
-class myClass {}
+uopz_set_mock(Foo::class, Bar::class);
 
-$class = new stdClass();
+var_dump(new Foo());
 
-var_dump($class instanceof myClass);
+uopz_unset_mock(Foo::class);
 
-uopz_overload(ZEND_NEW, null);
-
-$class = new stdClass();
-
-var_dump($class instanceof stdClass);
+var_dump(new Foo());
 ?>
 --EXPECTF--
-bool(true)
-bool(true)
+object(Bar)#%d (%d) {
+}
+
+Fatal error: Uncaught Error: Class 'Foo' not found in %s:10
+Stack trace:
+#0 {main}
+  thrown in %s on line 10

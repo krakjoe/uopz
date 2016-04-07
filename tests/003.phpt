@@ -1,33 +1,15 @@
 --TEST--
-Test add trait
---INI--
-uopz.overloads=1
+Test uopz_set_mock (neither existing)
 --SKIPIF--
 <?php require_once('skipif.inc'); ?>
 --FILE--
 <?php
-uopz_overload(ZEND_ADD_TRAIT, function($class, &$trait){
-	if ($trait == "First") {
-		$trait = "Second";
-	}
-});
+uopz_set_mock(Foo::class, Bar::class);
 
-trait First {
-	public function myFirst() {}
-}
-
-trait Second {
-	public function mySecond() {}
-}
-
-class My {
-	use First;
-	
-}
-
-$my = new My();
-
-var_dump(method_exists($my, "mySecond"));
+var_dump(new Foo());
 ?>
 --EXPECTF--
-bool(true)
+Fatal error: Uncaught Error: Class 'Foo' not found in %s:4
+Stack trace:
+#0 {main}
+  thrown in %s on line 4
