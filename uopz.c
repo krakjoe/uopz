@@ -338,7 +338,7 @@ static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *e
 	}
 
 	fci.retval = return_value;
-	fci.params = ZEND_CALL_ARG(execute_data, 1);
+	fci.params = EX_VAR_NUM(0);
 	fci.param_count = EX_NUM_ARGS();
 
 	zend_call_function(&fci, &fcc);
@@ -437,22 +437,10 @@ static int uopz_mock_new_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
 		} else {
 			clazz = ce->name;
 		}
-	} else if (OPLINE->op1_type == IS_UNUSED) {
-		ce = zend_fetch_class(NULL, OPLINE->op1.num);
-		
-		if (ce) {
-			clazz = ce->name;
+
+		if ((mock = zend_hash_find_ptr(&UOPZ(mocks), clazz))) {
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), zend_lookup_class(mock));
 		}
-	} else {
-		clazz = Z_CE_P(EX_VAR(OPLINE->op1.var))->name;
-	}
-
-	if (clazz && (mock = zend_hash_find_ptr(&UOPZ(mocks), clazz))) {
-		zend_class_entry *ce = zend_lookup_class(mock);
-
-		if (OPLINE->op1_type == IS_CONST) {
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), ce);
-		} else Z_CE_P(EX_VAR(OPLINE->op1.var)) = ce;
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
