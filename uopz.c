@@ -448,7 +448,11 @@ static int uopz_mock_new_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 	if (clazz && (mock = zend_hash_find_ptr(&UOPZ(mocks), clazz))) {
-		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), zend_lookup_class(mock));
+		zend_class_entry *ce = zend_lookup_class(mock);
+
+		if (OPLINE->op1_type == IS_CONST) {
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), ce);
+		} else Z_CE_P(EX_VAR(OPLINE->op1.var)) = ce;
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
