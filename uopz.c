@@ -331,7 +331,7 @@ static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *e
 	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
 
 	zend_create_closure(&closure, (zend_function*) overload, 
-		EX(called_scope), EX(called_scope), Z_OBJ(EX(This)) ? &EX(This) : NULL);
+		ureturn->clazz, ureturn->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
 	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
 		uopz_exception("cannot use return value set for %s as function: %s",
