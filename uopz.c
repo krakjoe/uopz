@@ -427,7 +427,6 @@ static inline void uopz_register_init_call_hooks() {
 static int uopz_mock_new_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_string *clazz = NULL, *mock = NULL;
 	zend_class_entry *ce = NULL;
-	zend_execute_data *execute_data = EG(current_execute_data);
 
 	if (OPLINE->op1_type == IS_CONST) {
  		 ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)));
