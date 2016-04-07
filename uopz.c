@@ -327,8 +327,13 @@ static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *e
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
 	char *error = NULL;
+	zval closure;	
+	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
 
-	if (zend_fcall_info_init(&ureturn->value, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
+	zend_create_closure(&closure, (zend_function*) overload, 
+		EX(called_scope), EX(called_scope), Z_OBJ(EX(This)) ? &EX(This) : NULL);
+
+	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
 		uopz_exception("cannot use return value set for %s as function: %s",
 			ZSTR_VAL(EX(func)->common.function_name), error);
 		if (error) {
@@ -337,11 +342,19 @@ static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *e
 		return;
 	}
 
-	fci.retval = return_value;
-	fci.params = EX_VAR_NUM(0);
-	fci.param_count = EX_NUM_ARGS();
+	if (zend_fcall_info_argp(&fci, EX_NUM_ARGS(), EX_VAR_NUM(0)) != SUCCESS) {
+		uopz_exception("cannot set arguments for %s",
+			ZSTR_VAL(EX(func)->common.function_name));
+		return;
+	}
 
-	zend_call_function(&fci, &fcc);
+	fci.retval= return_value;
+	
+	if (zend_call_function(&fci, &fcc) == SUCCESS) {
+		zend_fcall_info_args_clear(&fci, 1);	
+	}
+
+	zval_ptr_dtor(&closure);
 }
 
 static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
@@ -919,6 +932,12 @@ PHP_FUNCTION(uopz_set_return)
 		uopz_parse_parameters("Sz|l", &function, &variable, &execute) != SUCCESS) {
 		uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function, variable [, execute]) or (function, variable [, execute])");
+		return;
+	}
+
+	if (execute && !instanceof_function(Z_OBJCE_P(variable), zend_ce_closure)) {
+		uopz_refuse_paramters(
+			"only closures are accepted as executable return values");
 		return;
 	}
 
