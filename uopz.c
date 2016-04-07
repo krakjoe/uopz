@@ -469,6 +469,10 @@ static int uopz_constant_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
 			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
 		}
 	} else {
+		if (!OPLINE->op2.var) {
+			return ZEND_USER_OPCODE_DISPATCH;
+		}
+
 		if (OPLINE->op1_type == IS_CONST) {
 			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
 				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
