@@ -153,9 +153,10 @@ static inline void uopz_handle_magic(zend_class_entry *clazz, zend_string *name,
 /* }}} */
 
 typedef struct _uopz_return_t {
+	zval value;
+	zend_bool execute;
 	zend_class_entry *clazz;
 	zend_string *function;
-	zval value;
 } uopz_return_t;
 
 typedef struct _uopz_backup_t {
@@ -318,8 +319,29 @@ static uopz_return_t* uopz_find_return(zend_function *function) {
 	if (returns && function->common.function_name) {
 		ret = zend_hash_find_ptr(returns, function->common.function_name);
 	}
-	
+
 	return ret;
+}
+
+static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value) {
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+	char *error = NULL;
+
+	if (zend_fcall_info_init(&ureturn->value, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
+		uopz_exception("cannot use return value set for %s as function: %s",
+			ZSTR_VAL(EX(func)->common.function_name), error);
+		if (error) {
+			efree(error);
+		}
+		return;
+	}
+
+	fci.retval = return_value;
+	fci.params = ZEND_CALL_ARG(execute_data, 1);
+	fci.param_count = EX_NUM_ARGS();
+
+	zend_call_function(&fci, &fcc);
 }
 
 static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) {
@@ -327,6 +349,11 @@ static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *ret
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
 		if (ureturn && return_value) {
+			if (ureturn->execute) {
+				php_uopz_execute_return(ureturn, execute_data, return_value);
+				return;
+			}
+
 			ZVAL_COPY(return_value, &ureturn->value);
 			return;
 		}
@@ -342,6 +369,11 @@ static void php_uopz_execute(zend_execute_data *execute_data) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
 		if (ureturn && EX(return_value)) {
+			if (ureturn->execute) {
+				php_uopz_execute_return(ureturn, execute_data, EX(return_value));
+				return;
+			}
+
 			ZVAL_COPY(EX(return_value), &ureturn->value);
 			return;
 		}
@@ -848,7 +880,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 	return 1;
 } /* }}} */
 
-static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value) {
+static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute) {
 	HashTable *returns;
 	uopz_return_t ret;
 
@@ -869,6 +901,7 @@ static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, z
 	ret.clazz = clazz;
 	ret.function = zend_string_copy(name);
 	ZVAL_COPY(&ret.value, value);
+	ret.execute = execute;
 	
 	zend_hash_update_mem(returns, name, &ret, sizeof(uopz_return_t));
 } /* }}} */
@@ -880,30 +913,16 @@ PHP_FUNCTION(uopz_set_return)
 	zend_string *function = NULL;
 	zval *variable = NULL;
 	zend_class_entry *clazz = NULL;
+	zend_long execute = 0;
 
-	switch (ZEND_NUM_ARGS()) {
-		case 3: {
-			if (uopz_parse_parameters("CSz", &clazz, &function, &variable) != SUCCESS) {
-				uopz_refuse_parameters(
-					"unexpected parameter combination, expected (class, function, value)");
-				return;
-			}
-		} break;
-
-		case 2: if (uopz_parse_parameters("Sz", &function, &variable) != SUCCESS) {
-			uopz_refuse_parameters(
-				"unexpected parameter combination, expected (function, variable)");
-			return;
-		} break;
-
-		default: {
-			uopz_refuse_parameters(
-				"unexpected parameter combination, expected (class, function, variable) or (function, variable)");
-			return;
-		}
+	if (uopz_parse_parameters("CSz|l", &clazz, &function, &variable, &execute) != SUCCESS &&
+		uopz_parse_parameters("Sz|l", &function, &variable, &execute) != SUCCESS) {
+		uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function, variable [, execute]) or (function, variable [, execute])");
+		return;
 	}
 
-	uopz_set_return(clazz, function, variable);
+	uopz_set_return(clazz, function, variable, execute);
 } /* }}} */
 
 static inline void uopz_unset_return(zend_class_entry *clazz, zend_string *function) { /* {{{ */
