@@ -426,6 +426,19 @@ static inline void uopz_register_mock_handler(void) { /* {{{ */
 	zend_set_user_opcode_handler(ZEND_NEW, uopz_mock_new_handler);
 } /* }}} */
 
+static int uopz_constant_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
+	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
+		php_printf("uncache\n");
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
+	}
+
+	return ZEND_USER_OPCODE_DISPATCH;
+} /* }}} */
+
+static inline void uopz_register_constant_hook(void) { /* {{{ */
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, uopz_constant_handler);
+} /* }}} */
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 static PHP_MINIT_FUNCTION(uopz)
@@ -463,6 +476,8 @@ static PHP_MINIT_FUNCTION(uopz)
 
 	uopz_register_init_call_hooks();
 	uopz_register_mock_handler();
+	uopz_register_constant_hook();
+
 	return SUCCESS;
 }
 /* }}} */
@@ -519,6 +534,9 @@ static PHP_RINIT_FUNCTION(uopz)
 
 	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | 
 							ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | 
+#ifdef ZEND_COMPILE_NO_PERSISTENT_CONSTANT_SUBSTITUTION
+							ZEND_COMPILE_NO_PERSISTENT_CONSTANT_SUBSTITUTION |
+#endif
 							ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | 
 							ZEND_COMPILE_IGNORE_USER_FUNCTIONS | 
 							ZEND_COMPILE_GUARDS;
