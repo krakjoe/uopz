@@ -1355,7 +1355,7 @@ PHP_FUNCTION(uopz_set_hook)
 	
 	switch (ZEND_NUM_ARGS()) {
 		case 3: {
-			if (uopz_parse_parameters("CSz", &clazz, &function, &hook) != SUCCESS) {
+			if (uopz_parse_parameters("CSO", &clazz, &function, &hook, zend_ce_closure) != SUCCESS) {
 				uopz_refuse_parameters(
 					"unexpected parameter combination, expected (class, function, hook)");
 				return;
@@ -1363,7 +1363,7 @@ PHP_FUNCTION(uopz_set_hook)
 		} break;
 
 		case 2: {
-			if (uopz_parse_parameters("Sz", &function, &hook) != SUCCESS) {
+			if (uopz_parse_parameters("SO", &function, &hook, zend_ce_closure) != SUCCESS) {
 				uopz_refuse_parameters(
 					"unexpected parameter combination, expected (function, hook)");
 				return;
