@@ -135,8 +135,8 @@ static int uopz_find_function(HashTable *table, zend_string *name, zend_function
 		if (zend_string_equals_ci(bucket->key, name)) {
 			if (function) {
 				*function = (zend_function*) Z_PTR(bucket->val);
-				return SUCCESS;
 			}
+			return SUCCESS;
 		}
 	} ZEND_HASH_FOREACH_END();
 
@@ -873,6 +873,21 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute) {
 	HashTable *returns;
 	uopz_return_t ret;
+	
+
+	if (uopz_find_function(clazz ? &clazz->function_table : CG(function_table), name, NULL) != SUCCESS) {
+		if (clazz) {
+			uopz_exception(
+				"failed to set return for %s::%s, the method does not exist",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+		} else {
+			uopz_exception(
+				"failed to set return for %s, the function does not exist",
+				ZSTR_VAL(name));
+		}
+		return;
+	}
 
 	if (clazz) {
 		returns = zend_hash_find_ptr(&UOPZ(returns), clazz->name);
