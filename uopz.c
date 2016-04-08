@@ -1053,6 +1053,129 @@ PHP_FUNCTION(uopz_unset_mock)
 	uopz_unset_mock(clazz);
 } /* }}} */
 
+static inline void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
+	zend_function *entry;
+	
+	if (clazz) {
+		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
+			return;
+		}
+	} else {
+		if (uopz_find_function(CG(function_table), function, &entry) != SUCCESS) {
+			return;
+		}
+	}
+
+	if (entry->type != ZEND_USER_FUNCTION) {
+		return;
+	}
+
+	if (!entry->op_array.static_variables) {
+		return;
+	}
+
+	array_init(return_value);
+	zend_hash_copy(Z_ARRVAL_P(return_value), 
+		entry->op_array.static_variables, 
+		(copy_ctor_func_t) zval_addref_p);
+} /* }}} */
+
+/* {{{ proto array uopz_get_static(string class, string method)
+			 array uopz_get_static(string function) */
+PHP_FUNCTION(uopz_get_static) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 2: {
+			if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function)");
+				return;
+			}
+		} break;
+
+		case 1: {
+			if (uopz_parse_parameters("S", &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
+	}
+
+	uopz_get_static(clazz, function, return_value);
+} /* }}} */
+
+static inline void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */
+	zend_function *entry;
+	
+	if (clazz) {
+		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
+			return;
+		}
+	} else {
+		if (uopz_find_function(CG(function_table), function, &entry) != SUCCESS) {
+			return;
+		}
+	}
+
+	if (entry->type != ZEND_USER_FUNCTION) {
+		return;
+	}
+
+	if (!entry->op_array.static_variables) {
+		return;
+	}
+
+	zend_hash_clean(entry->op_array.static_variables);
+	
+	zend_hash_copy(
+		entry->op_array.static_variables, 
+		Z_ARRVAL_P(statics),
+		(copy_ctor_func_t) zval_addref_p);
+} /* }}} */
+
+/* {{{ proto array uopz_set_static(string class, string method, array statics)
+			 array uopz_set_static(string function, array statics) */
+PHP_FUNCTION(uopz_set_static) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+	zval *statics = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 3: {
+			if (uopz_parse_parameters("CSz", &clazz, &function, &statics) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function, statics)");
+				return;
+			}
+		} break;
+
+		case 2: {
+			if (uopz_parse_parameters("Sz", &function, &statics) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function, statics)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function, statics) or (function, statics)");
+			return;
+	}
+
+	uopz_set_static(clazz, function, statics);
+} /* }}} */
+
 /* {{{ proto bool uopz_redefine(string constant, mixed variable)
 	   proto bool uopz_redefine(string class, string constant, mixed variable) */
 PHP_FUNCTION(uopz_redefine)
@@ -1683,6 +1806,15 @@ ZEND_BEGIN_ARG_INFO(uopz_unset_mock_arginfo, 2)
 	ZEND_ARG_INFO(0, clazz)
 	ZEND_ARG_INFO(0, mock)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_set_static_arginfo, 3)
+	ZEND_ARG_INFO(0, clazz)
+	ZEND_ARG_INFO(0, function)
+	ZEND_ARG_INFO(0, statics)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_get_static_arginfo, 2)
+	ZEND_ARG_INFO(0, clazz)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ uopz_functions[]
@@ -1703,6 +1835,8 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_unset_return, uopz_unset_return_arginfo)
 	PHP_FE(uopz_set_mock, uopz_set_mock_arginfo)
 	PHP_FE(uopz_unset_mock, uopz_unset_mock_arginfo)
+	PHP_FE(uopz_set_static, uopz_set_static_arginfo)
+	PHP_FE(uopz_get_static, uopz_get_static_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */

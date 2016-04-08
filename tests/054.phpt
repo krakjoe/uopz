@@ -39,12 +39,6 @@ var_dump($bar->bar());
 uopz_unset_return(Foo::class, "bar");
 
 var_dump($bar->bar());
-
-uopz_set_return(Exception::class, "__toString", "0");
-
-$ex = new Exception("");
-
-var_dump((string) $ex);
 ?>
 --EXPECTF--
 int(0)
@@ -53,4 +47,3 @@ int(0)
 bool(false)
 int(0)
 bool(false)
-string(1) "0"
