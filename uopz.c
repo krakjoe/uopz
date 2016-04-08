@@ -269,22 +269,30 @@ static inline void php_uopz_function_dtor(zval *zv) {
 } /* }}} */
 
 static uopz_return_t* uopz_find_return(zend_function *function) {
-	uopz_return_t *ret = NULL;
 	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
 												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
 	if (returns && function->common.function_name) {
-		ret = zend_hash_find_ptr(returns, function->common.function_name);
+		Bucket *bucket;
+		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
+			if (zend_string_equals(function->common.function_name, bucket->key)) {
+				return Z_PTR(bucket->val);
+			}
+		} ZEND_HASH_FOREACH_END();
 	}
 
-	return ret;
+	return NULL;
 }
 
 static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value) { /* {{{ */
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
 	char *error = NULL;
-	zval closure;
+	zval closure, 
+		 rv,
+		 *result = return_value ? return_value : &rv;
 	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
+
+	ZVAL_UNDEF(&rv);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
 
@@ -306,10 +314,16 @@ static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *e
 		goto _exit_php_uopz_execute_return;
 	}
 
-	fci.retval= return_value;
+	fci.retval= result;
 	
 	if (zend_call_function(&fci, &fcc) == SUCCESS) {
-		zend_fcall_info_args_clear(&fci, 1);	
+		zend_fcall_info_args_clear(&fci, 1);
+
+		if (!return_value) {
+			if (!Z_ISUNDEF(rv)) {
+				zval_ptr_dtor(&rv);
+			}
+		}
 	}
 
 _exit_php_uopz_execute_return:
@@ -322,7 +336,7 @@ static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *ret
 	if (EX(func)) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
-		if (ureturn && return_value) {
+		if (ureturn) {
 			if ((ureturn->flags & UOPZ_RETURN_EXECUTE)) {
 				if ((ureturn->flags & UOPZ_RETURN_BUSY)) {
 					goto _php_uopz_execute_internal;
@@ -332,7 +346,9 @@ static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *ret
 				return;
 			}
 
-			ZVAL_COPY(return_value, &ureturn->value);
+			if (return_value) {
+				ZVAL_COPY(return_value, &ureturn->value);
+			}
 			return;
 		}
 	}
@@ -347,7 +363,7 @@ static void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ */
 	if (EX(func)) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
-		if (ureturn && EX(return_value)) {
+		if (ureturn) {
 			if ((ureturn->flags & UOPZ_RETURN_EXECUTE)) {
 				if ((ureturn->flags & UOPZ_RETURN_BUSY)) {
 					goto _php_uopz_execute;
@@ -357,7 +373,9 @@ static void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ */
 				return;
 			}
 
-			ZVAL_COPY(EX(return_value), &ureturn->value);
+			if (EX(return_value)) {
+				ZVAL_COPY(EX(return_value), &ureturn->value);
+			}
 			return;
 		}
 	}
