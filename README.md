@@ -10,8 +10,9 @@ It supports the following activities:
 
  - Intercepting function execution
  - Intercepting object creation
- - Hooking into function executing
+ - Hooking into function execution
  - Manipulation of function statics
+ - Manipulation of function flags
  - Redefinition of constants
  - Deletion of constants
  - Runtime composition and modification of classes
