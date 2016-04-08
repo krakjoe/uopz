@@ -896,6 +896,31 @@ static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, z
 	zend_hash_update_mem(returns, name, &ret, sizeof(uopz_return_t));
 } /* }}} */
 
+static inline zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /* {{{ */
+{ 
+	if (!clazz) {
+		return 0;
+	}
+
+	if (zend_string_equals_literal_ci(function, "__construct") ||
+		zend_string_equals_literal_ci(function, "__destruct") ||
+		zend_string_equals_literal_ci(function, "__clone") ||
+		zend_string_equals_literal_ci(function, "__get") ||
+		zend_string_equals_literal_ci(function, "__set") ||
+		zend_string_equals_literal_ci(function, "__unset") ||
+		zend_string_equals_literal_ci(function, "__isset") ||
+		zend_string_equals_literal_ci(function, "__call") ||
+		zend_string_equals_literal_ci(function, "__callstatic") ||
+		zend_string_equals_literal_ci(function, "__tostring") ||
+		zend_string_equals_literal_ci(function, "__debuginfo") ||
+		zend_string_equals_literal_ci(function, "__serialize") ||
+		zend_string_equals_literal_ci(function, "__unserialize") ||
+		zend_string_equals_literal_ci(function, "__sleep") ||
+		zend_string_equals_literal_ci(function, "__wakeup")) {
+		return 1;
+	}
+} /* }}} */
+
 /* {{{ proto void uopz_set_return(string class, string function, mixed value)
 	   proto void uopz_set_return(function, mixed value) */
 PHP_FUNCTION(uopz_set_return) 
@@ -915,6 +940,12 @@ PHP_FUNCTION(uopz_set_return)
 	if (execute && !instanceof_function(Z_OBJCE_P(variable), zend_ce_closure)) {
 		uopz_refuse_parameters(
 			"only closures are accepted as executable return values");
+		return;
+	}
+
+	if (uopz_is_magic_method(clazz, function)) {
+		uopz_refuse_parameters(
+			"will not override magic methods, too magical");
 		return;
 	}
 
