@@ -274,10 +274,12 @@ static inline void php_uopz_function_dtor(zval *zv) {
 static uopz_return_t* uopz_find_return(zend_function *function) {
 	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
 												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
+
 	if (returns && function->common.function_name) {
 		Bucket *bucket;
+
 		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
-			if (zend_string_equals(function->common.function_name, bucket->key)) {
+			if (zend_string_equals_ci(function->common.function_name, bucket->key)) {
 				return Z_PTR(bucket->val);
 			}
 		} ZEND_HASH_FOREACH_END();
