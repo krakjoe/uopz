@@ -992,7 +992,7 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 	return 1;
 } /* }}} */
 
-static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute) {
+static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute) { /* {{{ */
 	HashTable *returns;
 	uopz_return_t ret;
 	zend_string *key = zend_string_tolower(name);
