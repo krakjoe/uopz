@@ -873,6 +873,15 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute) {
 	HashTable *returns;
 	uopz_return_t ret;
+	
+
+	if (clazz && uopz_find_function(clazz ? &clazz->function_table : CG(function_table), name, NULL) != SUCCESS) {
+		uopz_exception(
+			"failed to set return for %s::%s, the method does not exist",
+			ZSTR_VAL(clazz->name),
+			ZSTR_VAL(name));
+		return;
+	}
 
 	if (clazz) {
 		returns = zend_hash_find_ptr(&UOPZ(returns), clazz->name);
