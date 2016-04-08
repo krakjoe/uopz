@@ -53,6 +53,9 @@ typedef struct _uopz_return_t {
 	zend_string *function;
 } uopz_return_t;
 
+#define UOPZ_RETURN_IS_EXECUTABLE(u) (((u)->flags & UOPZ_RETURN_EXECUTE) == UOPZ_RETURN_EXECUTE)
+#define UOPZ_RETURN_IS_BUSY(u) (((u)->flags & UOPZ_RETURN_BUSY) == UOPZ_RETURN_BUSY)
+
 typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
 typedef void (*zend_execute_f) (zend_execute_data *);
 
@@ -292,6 +295,8 @@ static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *e
 		 *result = return_value ? return_value : &rv;
 	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
 
+	zend_execute_data *prev_execute_data = execute_data;
+
 	ZVAL_UNDEF(&rv);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
@@ -330,6 +335,8 @@ _exit_php_uopz_execute_return:
 	zval_ptr_dtor(&closure);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
+
+	EG(current_execute_data) = prev_execute_data;
 } /* }}} */
 
 static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) { /* {{{ */
@@ -337,8 +344,8 @@ static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *ret
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
 		if (ureturn) {
-			if ((ureturn->flags & UOPZ_RETURN_EXECUTE)) {
-				if ((ureturn->flags & UOPZ_RETURN_BUSY)) {
+			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
+				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
 					goto _php_uopz_execute_internal;
 				}
 
@@ -364,8 +371,8 @@ static void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ */
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
 		if (ureturn) {
-			if ((ureturn->flags & UOPZ_RETURN_EXECUTE)) {
-				if ((ureturn->flags & UOPZ_RETURN_BUSY)) {
+			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
+				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
 					goto _php_uopz_execute;
 				}
 
