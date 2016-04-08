@@ -4,146 +4,18 @@ UOPZ
 
 [![Build Status](https://travis-ci.org/krakjoe/uopz.svg?branch=master)](https://travis-ci.org/krakjoe/uopz)
 
-The ```uopz``` extension exposes Zend engine functionality normally used at compilation and execution time in order to allow modification of the internal structures that represent PHP code.
+The ```uopz``` extension is focused on providing utilities to aid with unit testing PHP code.
 
 It supports the following activities:
 
- - Overloading some Zend opcodes including exit/new and composure opcodes
- - Renaming functions and methods
- - Deletion of functions and methods
- - Copying of functions and methods
+ - Intercepting function execution
+ - Intercepting object creation
+ - Manipulation of function statics
  - Redefinition of constants
  - Deletion of constants
  - Runtime composition and modification of classes
 
-*Note: All of the above activities are compatible with opcache, including overloading ZEND_EXIT*
-
-Overloadable Opcodes
-====================
-*A select few, **useful**, opcodes can be overloaded*
-
-The following opcodes can be overloaded by ```uopz```:
-
- - ZEND_EXIT
- - ZEND_NEW
- - ZEND_THROW
- - ZEND_FETCH_CLASS
- - ZEND_ADD_TRAIT
- - ZEND_ADD_INTERFACE
- - ZEND_INSTANCEOF
-
-An opcode handler has the following prototype:
-
-```
-integer function (&$op1 = null, &$op2 = null)
-```
-
-Any modifications to ```op1``` and ```op2``` by the handler will effect Zend's behaviour.
-
-**Note:** You must set `uopz.overloads=1` in your `php.ini` in order to be able to overload opcodes. Failing to do so will result in a `Fatal error: Uncaught exception 'RuntimeException' with message 'overloads are disabled by configuration'`.
-
-Overloading Exit
-================
-*ZEND_EXIT is a little different ...*
-
-We have to treat ```ZEND_EXIT``` differently, opcache will, by default, optimize away the dead code after an unconditional ```ZEND_EXIT```, during test execution and hackery this is less than optimal. You don't want to disable CFG based optimization in opcache ! 
-
-Returning ```ZEND_USER_OPCODE_RETURN``` from a ```ZEND_EXIT``` overload will result in execution in the outer context continuing, which is all that is required for testing.
-
-*See ```tests/001.phpt``` for detail.*
-
-Returning from Overload
-=======================
-*Change stuff and return nothing, or ...*
-
-It will usually be the case that an overload does not need to return anything, simply changing the parameters will have the desired effect.
-
-There are howeever, some geeky options, the following values can be returned from overloaded handlers:
-
- - ZEND_USER_OPCODE_CONTINUE    -> advance 1 opcode and continuue
- - ZEND_USER_OPCODE_ENTER       -> enter into new op_array without recursion
- - ZEND_USER_OPCODE_LEAVE       -> return to calling op_array within the same executor
- - ZEND_USER_OPCODE_DISPATCH    -> call original opcode handler
- - ZEND_USER_OPCODE_DISPATCH_TO -> dispatch to a specific handler (OR'd with ZEND opcode constant)
- - ZEND_USER_OPCODE_RETURN      ->  exit from executor (return from function)
-
-By default, uopz dispatches to the proper handler for the current opcode.
-
-Overload Example
-================
-*How to use overloading ...*
-
-The following example code shows how to overload ```ZEND_EXIT``` with ```uopz```:
-
-```php
-<?php
-uopz_overload(ZEND_EXIT, function($status = 0){});
-
-class Test {
-	public function method() {
-		exit();
-	}
-}
-
-class Unit {
-	public function test() {
-		$test = new Test();
-		$test->method();
-		
-		return true;
-	} 
-}
-$unit = new Unit();
-var_dump($unit->test());
-uopz_overload(ZEND_EXIT, null);
-var_dump($unit->test());
-echo "failed";
-?>
-```
-
-Will produce the following:
-    
-    bool(true)
-
-*Note: Setting an overload to ```null``` effectively removes the overload.*
-
-The next example shows an overload of ```ZEND_ADD_INTERFACE```:
-
-```php
-<?php
-interface IDefault {
-    public function iAmDefault();
-}
-
-interface IOther extends IDefault {
-    public function iAmOther();
-}
-
-uopz_overload(ZEND_ADD_INTERFACE, function($class, &$interface){
-    if ($interface == "IDefault") {
-        $interface = "IOther";
-    }
-});
-
-class IClass implements IDefault {
-
-    public function iAmDefault() {}
-    public function iAmOther() {}
-}
-
-var_dump(
-    class_implements("IClass"));
-?>
-```
-
-Will produce the following:
-
-    array(2) {
-        ["IOther"]=>
-        string(6) "IOther"
-        ["IDefault"]=>
-        string(8) "IDefault"
-    }
+*Note: All of the above activities are compatible with opcache*
 
 Composition Example
 ===================
@@ -225,57 +97,79 @@ API
 
 ```php
 /**
-* Overload $opcode with $overload handler
-* @param int opcode          a ZEND_* opcode
-* @param callable overload   the handler to invoke
-**/
-void uopz_overload(int opcode, Callable overload);
-
-/**
-* Declare $class::$method as $handler
+* Provide a return value for an existing function
 * @param string class
 * @param string function
-* @param Closure handler
-* @param int modifiers
-* @param bool ancestry
-* Note: if the method does not exist it will be created
+* @param mixed value
+* @param bool execute
+* If value is a Closure and execute flag is set, the Closure will
+* be executed in place of the existing function
 **/
-void uopz_function(string class, string method, Closure handler [, int modifiers = false [, bool ancestry = true]]);
+void uopz_set_return(string class, string function, mixed value [, bool execute = 0]);
 
 /**
-* Declare $function as $handler
+* Provide a return value for an existing function
 * @param string function
-* @param Closure handler
-* @param int modifiers
-* Note: if the function does not exist it will be created
+* @param mixed value
+* @param bool execute
+* If value is a Closure and execute flag is set, the Closure will
+* be executed in place of the existing function
 **/
-void uopz_function(string function, Closure handler [, int modifiers = 0]);
+void uopz_set_return(string function, mixed value [, bool execute = 0]);
 
 /**
-* Delete $class::$method, created by uopz_function
+* Unset a previously set return value
 * @param string class
-* @param string method
-**/
-void uopz_delete(string class, string method);
-
-/**
-* Delete $function, created by uopz_function
 * @param string function
 **/
-void uopz_delete(string function);
+void uopz_unset_return(string class, string function);
 
 /**
-* Copy a method to a closure
+* Unset a previously set return value
+* @param string function
+**/
+void uopz_unset_return(string function);
+
+/**
+* Use mock in place of class for new objects
 * @param string class
-* @param string method
+* @param string mock
 **/
-void uopz_copy(string class, string method);
+void uopz_set_mock(string class, string mock);
 
 /**
-* Copy a function to a closure
+* Unset previously set mock
+* @param string class
+**/
+void uopz_unset_mock(string class);
+
+/**
+* Set static variables in method scope
+* @param string class
+* @param string function
+* @param array static
+**/
+void uopz_set_static(string class, string function, array static);
+
+/**
+* Set static variables in function scope
+* @param string function
+* @param array static
+**/
+void uopz_set_static(string function, array static);
+
+/**
+* Get static variables from method scope
+* @param string class
 * @param string function
 **/
-void uopz_copy(string function);
+void uopz_get_static(string class, string function) : array;
+
+/**
+* Get static variables from function scope
+* @param string function
+**/
+void uopz_get_static(string function) : array;
 
 /**
 * Redefine $class::$constant to $value
