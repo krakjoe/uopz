@@ -1316,7 +1316,7 @@ static inline void uopz_set_hook(zend_class_entry *clazz, zend_string *name, zva
 
 	if (clazz && uopz_find_function(&clazz->function_table, key, NULL) != SUCCESS) {
 		uopz_exception(
-			"failed to set return for %s::%s, the method does not exist",
+			"failed to set hook for %s::%s, the method does not exist",
 			ZSTR_VAL(clazz->name),
 			ZSTR_VAL(name));
 		zend_string_release(key);
