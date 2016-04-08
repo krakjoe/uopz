@@ -43,52 +43,21 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
-#define MAX_OPCODE 163
-#undef EX
-#define EX(element) EG(current_execute_data)->element
-#define OPLINE EX(opline)
-#define OPCODE OPLINE->opcode
+#define UOPZ_RETURN_EXECUTE 0x00000001
+#define UOPZ_RETURN_BUSY	0x00000010
 
-#define ZEND_VM_GET_OP1_IN(as, i) do {\
-	if ((OPLINE->op1_type != IS_UNUSED) &&\
-		(op1 = zend_get_zval_ptr(\
-			OPLINE->op1_type, &OPLINE->op1, execute_data, &free_op1, as TSRMLS_CC))) {\
-		ZVAL_COPY(&fci.params[i], op1); \
-	} else { \
-		ZVAL_COPY(&fci.params[i], &EG(uninitialized_zval)); \
-	}\
-} while(0)
-#define ZEND_VM_GET_OP1(as) ZEND_VM_GET_OP1_IN(as, 0)
+typedef struct _uopz_return_t {
+	zval value;
+	zend_uchar flags;
+	zend_class_entry *clazz;
+	zend_string *function;
+} uopz_return_t;
 
-#define ZEND_VM_GET_OP2_IN(as, i) do {\
-	if ((OPLINE->op2_type != IS_UNUSED) &&\
-		(op2 = zend_get_zval_ptr(\
-			OPLINE->op2_type, &OPLINE->op2, execute_data, &free_op2, as TSRMLS_CC))) {\
-		ZVAL_COPY(&fci.params[i], op2); \
-	} else {\
-		ZVAL_COPY(&fci.params[i], &EG(uninitialized_zval)); \
-	}\
-} while(0)
-#define ZEND_VM_GET_OP2(as) ZEND_VM_GET_OP2_IN(as, 1)
+typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
+typedef void (*zend_execute_f) (zend_execute_data *);
 
-#define ZEND_VM_CONTINUE()         return 0
-
-#define HANDLE_EXCEPTION() \
-	EX(opline) = OPLINE; \
-	ZEND_VM_CONTINUE()
-
-#define ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION() \
-	OPLINE = EX(opline) + 1; \
-	ZEND_VM_CONTINUE()
-
-#define ZEND_VM_SET_OPCODE(new_op) \
-	OPLINE = new_op
-
-#define ZEND_VM_JMP(new_op) \
-	if (EXPECTED(!EG(exception))) { \
-		ZEND_VM_SET_OPCODE(new_op); \
-	} \
-	ZEND_VM_CONTINUE()
+zend_execute_internal_f zend_execute_internal_function;
+zend_execute_f zend_execute_function;
 
 #define uopz_parse_parameters(spec, ...) zend_parse_parameters_ex\
 	(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), spec, ##__VA_ARGS__)
@@ -151,16 +120,6 @@ static inline void uopz_handle_magic(zend_class_entry *clazz, zend_string *name,
 	}
 }
 /* }}} */
-
-#define UOPZ_RETURN_EXECUTE 0x00000001
-#define UOPZ_RETURN_BUSY	0x00000010
-
-typedef struct _uopz_return_t {
-	zval value;
-	zend_uchar flags;
-	zend_class_entry *clazz;
-	zend_string *function;
-} uopz_return_t;
 
 typedef struct _uopz_backup_t {
 	HashTable *table;
@@ -309,12 +268,6 @@ static inline void php_uopz_function_dtor(zval *zv) {
 	destroy_op_array((zend_op_array*) Z_PTR_P(zv));
 } /* }}} */
 
-typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
-typedef void (*zend_execute_f) (zend_execute_data *);
-
-zend_execute_internal_f zend_execute_internal_function;
-zend_execute_f zend_execute_function;
-
 static uopz_return_t* uopz_find_return(zend_function *function) {
 	uopz_return_t *ret = NULL;
 	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
@@ -416,26 +369,26 @@ _php_uopz_execute:
 } /* }}} */
 
 /* {{{ init call hooks */
-static int uopz_init_call_hook(ZEND_OPCODE_HANDLER_ARGS) {
-	switch (OPCODE) {
+static int uopz_init_call_hook(zend_execute_data *execute_data) {
+	switch (EX(opline)->opcode) {
 		case ZEND_INIT_FCALL_BY_NAME:
 		case ZEND_INIT_FCALL:
 		case ZEND_INIT_NS_FCALL_BY_NAME: {
-			zval *function_name = EX_CONSTANT(OPLINE->op2);
+			zval *function_name = EX_CONSTANT(EX(opline)->op2);
 			CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
 		} break;
 
 		case ZEND_INIT_METHOD_CALL: {
-			if (OPLINE->op2_type == IS_CONST) {
-				zval *function_name = EX_CONSTANT(OPLINE->op2);
+			if (EX(opline)->op2_type == IS_CONST) {
+				zval *function_name = EX_CONSTANT(EX(opline)->op2);
 				CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
 			}
 		} break;
 
 		case ZEND_INIT_STATIC_METHOD_CALL: {
-			if (OPLINE->op2_type == IS_CONST) {
-				zval *function_name = EX_CONSTANT(OPLINE->op2);
-				if (OPLINE->op1_type == IS_CONST) {
+			if (EX(opline)->op2_type == IS_CONST) {
+				zval *function_name = EX_CONSTANT(EX(opline)->op2);
+				if (EX(opline)->op1_type == IS_CONST) {
 					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
 				} else {
 					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
@@ -455,23 +408,31 @@ static inline void uopz_register_init_call_hooks() {
 	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_init_call_hook);
 } /* }}} */
 
-static int uopz_mock_new_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
+static int uopz_mock_new_handler(zend_execute_data *execute_data) { /* {{{ */
 	zend_string *clazz = NULL, *mock = NULL;
 	zend_class_entry *ce = NULL;
+	zend_execute_data *prev_execute_data = execute_data;
 
-	if (OPLINE->op1_type == IS_CONST) {
- 		 ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)));
+	if (EX(opline)->op1_type == IS_CONST) {
+ 		 ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)));
 		
 		if (UNEXPECTED(ce == NULL)) {
-			clazz = Z_STR_P(EX_CONSTANT(OPLINE->op1));
+			clazz = Z_STR_P(EX_CONSTANT(EX(opline)->op1));
 		} else {
 			clazz = ce->name;
 		}
 
 		if ((mock = zend_hash_find_ptr(&UOPZ(mocks), clazz))) {
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op1)), zend_lookup_class(mock));
+			zend_class_entry *ce = 
+				zend_lookup_class(mock);
+
+			if (ce)	 {			
+				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), ce);
+			}
 		}
 	}
+
+	EG(current_execute_data) = prev_execute_data;
 
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
@@ -480,30 +441,28 @@ static inline void uopz_register_mock_handler(void) { /* {{{ */
 	zend_set_user_opcode_handler(ZEND_NEW, uopz_mock_new_handler);
 } /* }}} */
 
-static int uopz_constant_handler(ZEND_OPCODE_HANDLER_ARGS) { /* {{{ */
+static int uopz_constant_handler(zend_execute_data *execute_data) { /* {{{ */
 #if PHP_VERSION_ID >= 70100
-	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
-		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
+	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 	}
 #else
-	if (OPLINE->op1_type == IS_UNUSED) {
-		if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
+	if (EX(opline)->op1_type == IS_UNUSED) {
+		if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 		}
 	} else {
-		if (!OPLINE->op2.var) {
+		if (!EX(opline)->op2.var) {
 			return ZEND_USER_OPCODE_DISPATCH;
 		}
 
-		if (OPLINE->op1_type == IS_CONST) {
-			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)))) {
-				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), NULL);
+		if (EX(opline)->op1_type == IS_CONST) {
+			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
+				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 			}
 		} else {
-			zend_execute_data *execute_data = EG(current_execute_data);
-
-			CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(OPLINE->op2)), 
-								  Z_CE_P(EX_VAR(OPLINE->op1.var)), NULL);
+			CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), 
+								  Z_CE_P(EX_VAR(EX(opline)->op1.var)), NULL);
 		}
 	}
 #endif
