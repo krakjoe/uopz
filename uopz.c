@@ -873,13 +873,14 @@ static inline zend_bool uopz_redefine(zend_class_entry *clazz, zend_string *name
 static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute) {
 	HashTable *returns;
 	uopz_return_t ret;
-	
+	zend_string *key = zend_string_tolower(name);
 
-	if (clazz && uopz_find_function(clazz ? &clazz->function_table : CG(function_table), name, NULL) != SUCCESS) {
+	if (clazz && uopz_find_function(&clazz->function_table, key, NULL) != SUCCESS) {
 		uopz_exception(
 			"failed to set return for %s::%s, the method does not exist",
 			ZSTR_VAL(clazz->name),
 			ZSTR_VAL(name));
+		zend_string_release(key);
 		return;
 	}
 
@@ -902,7 +903,8 @@ static inline void uopz_set_return(zend_class_entry *clazz, zend_string *name, z
 	ZVAL_COPY(&ret.value, value);
 	ret.flags = execute ? UOPZ_RETURN_EXECUTE : 0;
 	
-	zend_hash_update_mem(returns, name, &ret, sizeof(uopz_return_t));
+	zend_hash_update_mem(returns, key, &ret, sizeof(uopz_return_t));
+	zend_string_release(key);
 } /* }}} */
 
 static inline zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /* {{{ */
