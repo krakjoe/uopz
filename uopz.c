@@ -1097,8 +1097,14 @@ static inline void uopz_unset_return(zend_class_entry *clazz, zend_string *funct
 	if (!returns) {
 		return;
 	}
-	
-	zend_hash_del(returns, function);
+
+	{
+		zend_string *key = zend_string_tolower(function);
+
+		zend_hash_del(returns, key);
+
+		zend_string_release(key);
+	}
 } /* }}} */
 
 /* {{{ proto void uopz_unset_return(string class, string function)
@@ -1389,8 +1395,14 @@ static inline void uopz_unset_hook(zend_class_entry *clazz, zend_string *functio
 	if (!hooks) {
 		return;
 	}
-	
-	zend_hash_del(hooks, function);
+
+	{
+		zend_string *key = zend_string_tolower(function);
+		
+		zend_hash_del(hooks, key);
+
+		zend_string_release(key);
+	}
 } /* }}} */
 
 /* {{{ proto void uopz_set_hook(string class, string function)
