@@ -919,6 +919,8 @@ static inline zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_strin
 		zend_string_equals_literal_ci(function, "__wakeup")) {
 		return 1;
 	}
+
+	return 0;
 } /* }}} */
 
 /* {{{ proto void uopz_set_return(string class, string function, mixed value)
