@@ -913,7 +913,7 @@ PHP_FUNCTION(uopz_set_return)
 	}
 
 	if (execute && !instanceof_function(Z_OBJCE_P(variable), zend_ce_closure)) {
-		uopz_refuse_paramters(
+		uopz_refuse_parameters(
 			"only closures are accepted as executable return values");
 		return;
 	}
