@@ -10,6 +10,7 @@ It supports the following activities:
 
  - Intercepting function execution
  - Intercepting object creation
+ - Hooking into function executing
  - Manipulation of function statics
  - Redefinition of constants
  - Deletion of constants
@@ -96,6 +97,32 @@ void uopz_get_static(string class, string function) : array;
 * @param string function
 **/
 void uopz_get_static(string function) : array;
+
+/**
+* Execute hook when entering class::function
+* @param string class
+* @param string function
+**/
+void uopz_set_hook(string class, string function, Closure hook);
+
+/**
+* Execute hook when entering function
+* @param string function
+**/
+void uopz_set_hook(string function, Closure hook);
+
+/**
+* Remove previously set hook on class::function
+* @param string class
+* @param string function
+**/
+void uopz_unset_hook(string class, string function);
+
+/**
+* Remove previously set hook on function
+* @param string class
+**/
+void uopz_unset_hook(string function);
 
 /**
 * Redefine $class::$constant to $value

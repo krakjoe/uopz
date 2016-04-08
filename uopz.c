@@ -56,6 +56,13 @@ typedef struct _uopz_return_t {
 #define UOPZ_RETURN_IS_EXECUTABLE(u) (((u)->flags & UOPZ_RETURN_EXECUTE) == UOPZ_RETURN_EXECUTE)
 #define UOPZ_RETURN_IS_BUSY(u) (((u)->flags & UOPZ_RETURN_BUSY) == UOPZ_RETURN_BUSY)
 
+typedef struct _uopz_hook_t {
+	zval closure;
+	zend_class_entry *clazz;
+	zend_string *function;
+	zend_bool busy;
+} uopz_hook_t;
+
 typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
 typedef void (*zend_execute_f) (zend_execute_data *);
 
@@ -271,6 +278,23 @@ static inline void php_uopz_function_dtor(zval *zv) {
 	destroy_op_array((zend_op_array*) Z_PTR_P(zv));
 } /* }}} */
 
+static uopz_hook_t* uopz_find_hook(zend_function *function) {
+	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(hooks), function->common.scope->name) :
+												  zend_hash_index_find_ptr(&UOPZ(hooks), 0);
+
+	if (returns && function->common.function_name) {
+		Bucket *bucket;
+
+		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
+			if (zend_string_equals_ci(function->common.function_name, bucket->key)) {
+				return Z_PTR(bucket->val);
+			}
+		} ZEND_HASH_FOREACH_END();
+	}
+
+	return NULL;
+}
+
 static uopz_return_t* uopz_find_return(zend_function *function) {
 	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
 												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
@@ -341,8 +365,68 @@ _exit_php_uopz_execute_return:
 	EG(current_execute_data) = prev_execute_data;
 } /* }}} */
 
-static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) { /* {{{ */
+static void php_uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /* {{{ */
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+	char *error = NULL;
+	zval closure, rv;
+	const zend_function *overload = zend_get_closure_method_def(&uhook->closure);
+
+	zend_execute_data *prev_execute_data = execute_data;
+
+	ZVAL_UNDEF(&rv);
+
+	uhook->busy = 1;
+
+	zend_create_closure(&closure, (zend_function*) overload, 
+		uhook->clazz, uhook->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
+
+	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
+		uopz_exception("cannot use hook set for %s as function: %s",
+			ZSTR_VAL(EX(func)->common.function_name), error);
+		if (error) {
+			efree(error);
+		}
+		goto _exit_php_uopz_execute_hook;
+	}
+
+	if (zend_fcall_info_argp(&fci, EX_NUM_ARGS(), EX_VAR_NUM(0)) != SUCCESS) {
+		uopz_exception("cannot set arguments for %s hook",
+			ZSTR_VAL(EX(func)->common.function_name));
+		goto _exit_php_uopz_execute_hook;
+	}
+
+	fci.retval= &rv;
+	
+	if (zend_call_function(&fci, &fcc) == SUCCESS) {
+		zend_fcall_info_args_clear(&fci, 1);
+		if (!Z_ISUNDEF(rv)) {
+			zval_ptr_dtor(&rv);
+		}
+	}
+
+_exit_php_uopz_execute_hook:
+	zval_ptr_dtor(&closure);
+
+	uhook->busy = 0;
+
+	EG(current_execute_data) = prev_execute_data;
+} /* }}} */
+
+static inline void uopz_run_hooks(zend_execute_data *execute_data) { /* {{{ */
 	if (EX(func)) {
+		uopz_hook_t *uhook = uopz_find_hook(EX(func));
+
+		if (uhook && !uhook->busy) {
+			php_uopz_execute_hook(uhook, execute_data);
+		}
+	}
+} /* }}} */
+
+static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) { /* {{{ */
+	uopz_run_hooks(execute_data);
+
+	if (EX(func) ) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
 		if (ureturn) {
@@ -369,6 +453,8 @@ _php_uopz_execute_internal:
 } /* }}} */
 
 static void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ */
+	uopz_run_hooks(execute_data);
+
 	if (EX(func)) {
 		uopz_return_t *ureturn = uopz_find_return(EX(func));
 
@@ -560,7 +646,14 @@ static inline void uopz_return_dtor(zval *zv) {
 	zval_ptr_dtor(&ret->value);
 }
 
-static inline void uopz_return_table_dtor(zval *zv) {
+static inline void uopz_hook_dtor(zval *zv) {
+	uopz_hook_t *hook = Z_PTR_P(zv);
+	
+	zend_string_release(hook->function);
+	zval_ptr_dtor(&hook->closure);
+}
+
+static inline void uopz_table_dtor(zval *zv) {
 	zend_hash_destroy(Z_PTR_P(zv));
 	efree(Z_PTR_P(zv));
 }
@@ -608,8 +701,9 @@ static PHP_RINIT_FUNCTION(uopz)
 	PG(report_memleaks)=0;
 
 	zend_hash_init(&UOPZ(backup), 8, NULL, uopz_backup_table_dtor, 0);
-	zend_hash_init(&UOPZ(returns), 8, NULL, uopz_return_table_dtor, 0);
+	zend_hash_init(&UOPZ(returns), 8, NULL, uopz_table_dtor, 0);
 	zend_hash_init(&UOPZ(mocks), 8, NULL, uopz_mock_table_dtor, 0);
+	zend_hash_init(&UOPZ(hooks), 8, NULL, uopz_table_dtor, 0);
 
 	return SUCCESS;
 } /* }}} */
@@ -623,6 +717,7 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	zend_hash_destroy(&UOPZ(backup));
 	zend_hash_destroy(&UOPZ(mocks));
 	zend_hash_destroy(&UOPZ(returns));
+	zend_hash_destroy(&UOPZ(hooks));
 
 	return SUCCESS;
 }
@@ -1212,6 +1307,123 @@ PHP_FUNCTION(uopz_set_static)
 	}
 
 	uopz_set_static(clazz, function, statics);
+} /* }}} */
+
+static inline void uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closure) { /* {{{ */
+	HashTable *hooks;
+	uopz_hook_t hook;
+	zend_string *key = zend_string_tolower(name);
+
+	if (clazz && uopz_find_function(&clazz->function_table, key, NULL) != SUCCESS) {
+		uopz_exception(
+			"failed to set return for %s::%s, the method does not exist",
+			ZSTR_VAL(clazz->name),
+			ZSTR_VAL(name));
+		zend_string_release(key);
+		return;
+	}
+
+	if (clazz) {
+		hooks = zend_hash_find_ptr(&UOPZ(hooks), clazz->name);
+	} else hooks = zend_hash_index_find_ptr(&UOPZ(hooks), 0);
+	
+	if (!hooks) {
+		ALLOC_HASHTABLE(hooks);
+		zend_hash_init(hooks, 8, NULL, uopz_hook_dtor, 0);
+		if (clazz) {
+			zend_hash_update_ptr(&UOPZ(hooks), clazz->name, hooks);
+		} else zend_hash_index_update_ptr(&UOPZ(hooks), 0, hooks);
+	}
+
+	memset(&hook, 0, sizeof(uopz_hook_t));
+	
+	hook.clazz = clazz;
+	hook.function = zend_string_copy(name);
+	ZVAL_COPY(&hook.closure, closure);
+
+	zend_hash_update_mem(hooks, key, &hook, sizeof(uopz_hook_t));
+	zend_string_release(key);
+} /* }}} */
+
+/* {{{ proto void uopz_set_hook(string class, string function, Closure hook)
+			 void uopz_set_hook(string function, Closure hook) */
+PHP_FUNCTION(uopz_set_hook) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+	zval *hook = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 3: {
+			if (uopz_parse_parameters("CSz", &clazz, &function, &hook) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function, hook)");
+				return;
+			}
+		} break;
+
+		case 2: {
+			if (uopz_parse_parameters("Sz", &function, &hook) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function, hook)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function, hook) or (function, hook)");
+			return;
+	}
+
+	uopz_set_hook(clazz, function, hook);
+} /* }}} */
+
+static inline void uopz_unset_hook(zend_class_entry *clazz, zend_string *function) { /* {{{ */
+	HashTable *hooks;
+
+	if (clazz) {
+		hooks = zend_hash_find_ptr(&UOPZ(hooks), clazz->name);
+	} else hooks = zend_hash_index_find_ptr(&UOPZ(hooks), 0);
+
+	if (!hooks) {
+		return;
+	}
+	
+	zend_hash_del(hooks, function);
+} /* }}} */
+
+/* {{{ proto void uopz_set_hook(string class, string function)
+			 void uopz_set_hook(string function) */
+PHP_FUNCTION(uopz_unset_hook) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 2: {
+			if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function)");
+				return;
+			}
+		} break;
+
+		case 1: {
+			if (uopz_parse_parameters("S", &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
+	}
+
+	uopz_unset_hook(clazz, function);
 } /* }}} */
 
 /* {{{ proto bool uopz_redefine(string constant, mixed variable)
@@ -1853,6 +2065,15 @@ ZEND_BEGIN_ARG_INFO(uopz_get_static_arginfo, 2)
 	ZEND_ARG_INFO(0, clazz)
 	ZEND_ARG_INFO(0, function)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_set_hook_arginfo, 3)
+	ZEND_ARG_INFO(0, clazz)
+	ZEND_ARG_INFO(0, function)
+	ZEND_ARG_INFO(0, statics)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_unset_hook_arginfo, 2)
+	ZEND_ARG_INFO(0, clazz)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ uopz_functions[]
@@ -1875,6 +2096,8 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_unset_mock, uopz_unset_mock_arginfo)
 	PHP_FE(uopz_set_static, uopz_set_static_arginfo)
 	PHP_FE(uopz_get_static, uopz_get_static_arginfo)
+	PHP_FE(uopz_set_hook, uopz_set_hook_arginfo)
+	PHP_FE(uopz_unset_hook, uopz_unset_hook_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */
