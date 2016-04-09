@@ -53,6 +53,12 @@ void uopz_set_return(string function, mixed value [, bool execute = 0]);
 void uopz_unset_return(string class, string function);
 
 /**
+* Unset a previously set return value
+* @param string function
+**/
+void uopz_unset_return(string function);
+
+/**
 * Get a previously set return value
 * @param string class
 * @param string function
@@ -64,12 +70,6 @@ void uopz_get_return(string class, string function);
 * @param string function
 **/
 void uopz_get_return(string function);
-
-/**
-* Unset a previously set return value
-* @param string function
-**/
-void uopz_unset_return(string function);
 
 /**
 * Use mock in place of class for new objects
