@@ -19,6 +19,15 @@ It supports the following activities:
 
 *Note: All of the above activities are compatible with opcache*
 
+PHP 7
+====
+
+PHP 7 is a different animal to PHP 5, making uopz work for PHP 7 was difficult, and required huge internal changes to uopz.
+
+This has brought about a new API that should allow nearly all the same dark magic as in PHP 5.
+
+Sorry for breaking BC ...
+
 API
 ===
 *The PHP API for ```uopz```*
