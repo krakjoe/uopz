@@ -53,6 +53,19 @@ void uopz_set_return(string function, mixed value [, bool execute = 0]);
 void uopz_unset_return(string class, string function);
 
 /**
+* Get a previously set return value
+* @param string class
+* @param string function
+**/
+void uopz_get_return(string class, string function);
+
+/**set_
+* Get a previously set return value
+* @param string function
+**/
+void uopz_get_return(string function);
+
+/**
 * Unset a previously set return value
 * @param string function
 **/
@@ -61,15 +74,22 @@ void uopz_unset_return(string function);
 /**
 * Use mock in place of class for new objects
 * @param string class
-* @param string mock
+* @param mixed mock
+* Mock can be an object, or the name of a class
 **/
-void uopz_set_mock(string class, string mock);
+void uopz_set_mock(string class, mixed mock);
 
 /**
 * Unset previously set mock
 * @param string class
 **/
 void uopz_unset_mock(string class);
+
+/**
+* Get previously set mock for class
+* @param string class
+**/
+void uopz_get_mock(string class);
 
 /**
 * Set static variables in method scope
@@ -121,9 +141,22 @@ void uopz_unset_hook(string class, string function);
 
 /**
 * Remove previously set hook on function
-* @param string class
+* @param string function
 **/
 void uopz_unset_hook(string function);
+
+/**
+* Get previously set hook on class::function
+* @param string class
+* @param string function
+**/
+void uopz_get_hook(string class, string function);
+
+/**
+* Get previously set hook on function
+* @param string function
+**/
+void uopz_get_hook(string function);
 
 /**
 * Redefine $class::$constant to $value

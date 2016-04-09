@@ -522,32 +522,48 @@ static inline void uopz_register_init_call_hooks() {
 } /* }}} */
 
 static int uopz_mock_new_handler(zend_execute_data *execute_data) { /* {{{ */
-	zend_string *clazz = NULL, *mock = NULL;
-	zend_class_entry *ce = NULL;
 	zend_execute_data *prev_execute_data = execute_data;
+	int UOPZ_VM_ACTION = ZEND_USER_OPCODE_DISPATCH;
+	
+	if (EXPECTED(EX(opline)->op1_type == IS_CONST)) {
+		zend_string *key;
+		zend_string *clazz = NULL;
+		zval *mock = NULL;
+		zend_class_entry *ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)));
 
-	if (EX(opline)->op1_type == IS_CONST) {
- 		 ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)));
-		
 		if (UNEXPECTED(ce == NULL)) {
 			clazz = Z_STR_P(EX_CONSTANT(EX(opline)->op1));
 		} else {
 			clazz = ce->name;
 		}
 
-		if ((mock = zend_hash_find_ptr(&UOPZ(mocks), clazz))) {
-			zend_class_entry *ce = 
-				zend_lookup_class(mock);
+		key = zend_string_tolower(clazz);
 
-			if (ce)	 {			
-				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), ce);
+		if (UNEXPECTED((mock = zend_hash_find(&UOPZ(mocks), key)))) {
+			switch (Z_TYPE_P(mock)) {
+				case IS_OBJECT:
+					ZVAL_COPY(
+						EX_VAR(EX(opline)->result.var), mock);
+					EX(opline) = 
+						OP_JMP_ADDR(EX(opline), EX(opline)->op2);
+					UOPZ_VM_ACTION = ZEND_USER_OPCODE_CONTINUE;
+				break;
+
+				case IS_STRING:
+					ce = zend_lookup_class(Z_STR_P(mock));
+					if (EXPECTED(ce))	 {
+						CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), ce);
+					}
+				break;
 			}
 		}
+
+		zend_string_release(key);
 	}
 
 	EG(current_execute_data) = prev_execute_data;
 
-	return ZEND_USER_OPCODE_DISPATCH;
+	return UOPZ_VM_ACTION;
 } /* }}} */
 
 static inline void uopz_register_mock_handler(void) { /* {{{ */
@@ -659,7 +675,7 @@ static inline void uopz_table_dtor(zval *zv) {
 }
 
 static inline void uopz_mock_table_dtor(zval *zv) {
-	zend_string_release(Z_PTR_P(zv));
+	zval_ptr_dtor(zv);
 }
 
 /* {{{ PHP_RINIT_FUNCTION
@@ -1140,27 +1156,93 @@ PHP_FUNCTION(uopz_unset_return)
 	uopz_unset_return(clazz, function);
 } /* }}} */
 
-static inline void uopz_set_mock(zend_string *clazz, zend_string *mock) { /* {{{ */
-	if (zend_hash_exists(&UOPZ(mocks), clazz)) {
-		uopz_exception(
-			"cannot create create mock %s for %s",
-			ZSTR_VAL(mock), ZSTR_VAL(clazz));
+static inline void uopz_get_return(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
+	HashTable *returns;
+	uopz_return_t *ureturn;
+
+	if (clazz) {
+		returns = zend_hash_find_ptr(&UOPZ(returns), clazz->name);
+	} else returns = zend_hash_index_find_ptr(&UOPZ(returns), 0);
+
+	if (!returns) {
 		return;
 	}
 
-	if (zend_hash_add_ptr(&UOPZ(mocks), clazz, mock)) {
-		zend_string_addref(mock);
+	ureturn = zend_hash_find_ptr(returns, function);
+
+	if (!ureturn) {
+		return;
 	}
+	
+	ZVAL_COPY(return_value, &ureturn->value);
 } /* }}} */
 
-/* {{{ proto void uopz_set_mock(string class, string mock) */
+/* {{{ proto mixed uopz_get_return(string class, string function)
+	   proto mixed uopz_get_return(string function) */
+PHP_FUNCTION(uopz_get_return) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+
+	switch (ZEND_NUM_ARGS()) {
+		case 2: {
+			if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function)");
+				return;
+			}
+		} break;
+
+		case 1: {
+			if (uopz_parse_parameters("S", &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
+	}
+
+	uopz_get_return(clazz, function, return_value);
+} /* }}} */
+
+static inline void uopz_set_mock(zend_string *clazz, zval *mock) { /* {{{ */
+	zend_string *key = zend_string_tolower(clazz);
+	
+	if (zend_hash_exists(&UOPZ(mocks), key)) {
+		uopz_exception(
+			"cannot create mock for %s",
+			ZSTR_VAL(clazz));
+		zend_string_release(key);
+		return;
+	}
+
+	if (zend_hash_update(&UOPZ(mocks), key, mock)) {
+		zval_copy_ctor(mock);
+	}
+
+	zend_string_release(key);
+} /* }}} */
+
+/* {{{ proto void uopz_set_mock(string class, mixed mock) */
 PHP_FUNCTION(uopz_set_mock) 
 {
-	zend_string *clazz = NULL, *mock = NULL;
+	zend_string *clazz = NULL;
+	zval *mock = NULL;
 
-	if (uopz_parse_parameters("SS", &clazz, &mock) != SUCCESS) {
+	if (uopz_parse_parameters("Sz", &clazz, &mock) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (class, mock), classes not found ?");
+		return;
+	}
+
+	if (!mock || (Z_TYPE_P(mock) != IS_STRING && Z_TYPE_P(mock) != IS_OBJECT)) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, mock is expected to be a string, or an object");
 		return;
 	}
 
@@ -1168,14 +1250,18 @@ PHP_FUNCTION(uopz_set_mock)
 } /* }}} */
 
 static inline void uopz_unset_mock(zend_string *clazz) { /* {{{ */
-	if (!zend_hash_exists(&UOPZ(mocks), clazz)) {
+	zend_string *key = zend_string_tolower(clazz);
+	
+	if (!zend_hash_exists(&UOPZ(mocks), key)) {
 		uopz_exception(
 			"cannot delete mock %s, does not exists",
 			ZSTR_VAL(clazz));
+		zend_string_release(key);
 		return;
 	}
 
-	zend_hash_del(&UOPZ(mocks), clazz);
+	zend_hash_del(&UOPZ(mocks), key);
+	zend_string_release(key);
 } /* }}} */
 
 /* {{{ proto void uopz_unset_mock(string mock) */
@@ -1190,6 +1276,33 @@ PHP_FUNCTION(uopz_unset_mock)
 	}
 
 	uopz_unset_mock(clazz);
+} /* }}} */
+
+static inline void uopz_get_mock(zend_string *clazz, zval *return_value) { /* {{{ */
+	zval *mock = NULL;
+	zend_string *key = zend_string_tolower(clazz);
+	
+	if (!(mock = zend_hash_find(&UOPZ(mocks), key))) {
+		zend_string_release(key);
+		return;
+	}
+
+	ZVAL_COPY(return_value, mock);
+	zend_string_release(key);
+} /* }}} */
+
+/* {{{ proto void uopz_get_mock(string mock) */
+PHP_FUNCTION(uopz_get_mock) 
+{
+	zend_string *clazz = NULL;
+
+	if (uopz_parse_parameters("S", &clazz) != SUCCESS) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, expected (clazz), class not found ?");
+		return;
+	}
+
+	uopz_get_mock(clazz, return_value);
 } /* }}} */
 
 static inline void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
@@ -1436,6 +1549,60 @@ PHP_FUNCTION(uopz_unset_hook)
 	}
 
 	uopz_unset_hook(clazz, function);
+} /* }}} */
+
+static inline void uopz_get_hook(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
+	HashTable *hooks;
+	uopz_hook_t *uhook;
+	
+	if (clazz) {
+		hooks = zend_hash_find_ptr(&UOPZ(hooks), clazz->name);
+	} else hooks = zend_hash_index_find_ptr(&UOPZ(hooks), 0);
+
+	if (!hooks) {
+		return;
+	}
+
+	uhook = zend_hash_find_ptr(hooks, function);
+
+	if (!uhook) {
+		return;
+	}
+
+	ZVAL_COPY(return_value, &uhook->closure);
+} /* }}} */
+
+/* {{{ proto Closure uopz_get_hook(string class, string function)
+			 Closure uopz_get_hook(string function) */
+PHP_FUNCTION(uopz_get_hook) 
+{
+	zend_string *function = NULL;
+	zend_class_entry *clazz = NULL;
+	
+	switch (ZEND_NUM_ARGS()) {
+		case 2: {
+			if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (class, function)");
+				return;
+			}
+		} break;
+
+		case 1: {
+			if (uopz_parse_parameters("S", &function) != SUCCESS) {
+				uopz_refuse_parameters(
+					"unexpected parameter combination, expected (function)");
+				return;
+			}
+		} break;
+
+		default:
+			uopz_refuse_parameters(
+				"unexpected parameter combination, expected (class, function) or (function)");
+			return;
+	}
+
+	uopz_get_hook(clazz, function, return_value);
 } /* }}} */
 
 /* {{{ proto bool uopz_redefine(string constant, mixed variable)
@@ -2060,11 +2227,19 @@ ZEND_BEGIN_ARG_INFO(uopz_unset_return_arginfo, 2)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, function)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_get_return_arginfo, 2)
+	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_set_mock_arginfo, 2)
 	ZEND_ARG_INFO(0, clazz)
 	ZEND_ARG_INFO(0, mock)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(uopz_unset_mock_arginfo, 2)
+	ZEND_ARG_INFO(0, clazz)
+	ZEND_ARG_INFO(0, mock)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_get_mock_arginfo, 2)
 	ZEND_ARG_INFO(0, clazz)
 	ZEND_ARG_INFO(0, mock)
 ZEND_END_ARG_INFO()
@@ -2086,6 +2261,10 @@ ZEND_BEGIN_ARG_INFO(uopz_unset_hook_arginfo, 2)
 	ZEND_ARG_INFO(0, clazz)
 	ZEND_ARG_INFO(0, function)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(uopz_get_hook_arginfo, 2)
+	ZEND_ARG_INFO(0, clazz)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ uopz_functions[]
@@ -2104,12 +2283,15 @@ static const zend_function_entry uopz_functions[] = {
 	PHP_FE(uopz_restore, uopz_restore_arginfo)
 	PHP_FE(uopz_set_return, uopz_set_return_arginfo)
 	PHP_FE(uopz_unset_return, uopz_unset_return_arginfo)
+	PHP_FE(uopz_get_return, uopz_get_return_arginfo)
 	PHP_FE(uopz_set_mock, uopz_set_mock_arginfo)
 	PHP_FE(uopz_unset_mock, uopz_unset_mock_arginfo)
+	PHP_FE(uopz_get_mock, uopz_get_mock_arginfo)
 	PHP_FE(uopz_set_static, uopz_set_static_arginfo)
 	PHP_FE(uopz_get_static, uopz_get_static_arginfo)
 	PHP_FE(uopz_set_hook, uopz_set_hook_arginfo)
 	PHP_FE(uopz_unset_hook, uopz_unset_hook_arginfo)
+	PHP_FE(uopz_get_hook, uopz_get_hook_arginfo)
 	{NULL, NULL, NULL}
 };
 /* }}} */
