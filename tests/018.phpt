@@ -1,15 +1,21 @@
 --TEST--
-Test uopz_get_mock
+uopz_undefine
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class Bar {}
+class Foo {
+	const BAR = 1;
+}
 
-uopz_set_mock(Foo::class, new Bar);
+var_dump(FOO::BAR);
 
-var_dump(uopz_get_mock(Foo::class));
+uopz_undefine(Foo::class, "BAR");
+
+$reflector = new ReflectionClass(Foo::class);
+
+var_dump(count($reflector->getConstants()));
 ?>
 --EXPECT--
-object(Bar)#1 (0) {
-}
+int(1)
+int(0)

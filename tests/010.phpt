@@ -1,16 +1,28 @@
 --TEST--
-Test delete
+uopz_get_hook
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-uopz_function("_My_strlen", function($string) {
-	return strlen($string) * 5;
-});
+class Foo {
+	public function method($arg) {
+		
+	}
+}
 
-var_dump(uopz_delete("_my_strlen"));
+var_dump(uopz_set_hook(Foo::class, "method", function($arg){
+	var_dump($arg);
+	var_dump($this);
+}));
+
+var_dump(uopz_get_hook(Foo::class, "method"));
 ?>
 --EXPECT--
 bool(true)
-
-
+object(Closure)#1 (1) {
+  ["parameter"]=>
+  array(1) {
+    ["$arg"]=>
+    string(10) "<required>"
+  }
+}

@@ -1,48 +1,24 @@
 --TEST--
-Test compose
+uopz_extend
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class My {
-	public function is() {}
-}
+class Foo {}
+class Bar {}
 
-interface IMy {
-	public function is();
-}
+uopz_extend(Foo::class, Bar::class);
 
-trait myTrait {
-	public function myOtherTrait() {
-		
-	}
-}
+$foo = new Foo;
 
-uopz_compose("CreatedClass", [
-	"My", 
-	"IMy", 
-	"myTrait"
-]);
+var_dump($foo instanceof Bar);
 
-if (class_exists("CreatedClass")) {
-	$test = new CreatedClass();
-
-	var_dump(
-		class_uses($test),
-		class_parents($test),
-		class_implements($test));
+try {
+	uopz_extend(Foo::class, Bar::class);
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
 }
 ?>
 --EXPECT--
-array(1) {
-  ["myTrait"]=>
-  string(7) "myTrait"
-}
-array(1) {
-  ["My"]=>
-  string(2) "My"
-}
-array(1) {
-  ["IMy"]=>
-  string(3) "IMy"
-}
+bool(true)
+string(29) "class Foo already extends Bar"

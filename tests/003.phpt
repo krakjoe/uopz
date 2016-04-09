@@ -1,15 +1,30 @@
 --TEST--
-Test uopz_set_mock (neither existing)
+uopz_unset_return
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-uopz_set_mock(Foo::class, Bar::class);
+class Foo {
+	public function bar() {
+		return false;	
+	}
+}
 
-var_dump(new Foo());
+var_dump(uopz_set_return(Foo::class, "bar", true));
+
+$foo = new Foo();
+
+var_dump($foo->bar());
+
+var_dump(uopz_unset_return(Foo::class, "bar"));
+
+var_dump($foo->bar());
+
+var_dump(uopz_unset_return(Foo::class, "nope"));
 ?>
---EXPECTF--
-Fatal error: Uncaught Error: Class 'Foo' not found in %s:4
-Stack trace:
-#0 {main}
-  thrown in %s on line 4
+--EXPECT--
+bool(true)
+bool(true)
+bool(true)
+bool(false)
+bool(false)

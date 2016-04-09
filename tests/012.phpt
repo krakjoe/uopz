@@ -1,24 +1,38 @@
 --TEST--
-Test implement
+uopz_add_function
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class My {
-	public function is() {}
+class Foo {
+	public function exists() {}
 }
 
-interface IMy {
-	public function is();
+uopz_add_function(Foo::class, "METHOD", function(){
+	return $this->priv();
+});
+
+uopz_add_function(Foo::class, "PRIV", function(){
+	return true;
+}, ZEND_ACC_PRIVATE); 
+
+$foo = new Foo();
+
+var_dump($foo->method());
+
+try {
+	var_dump($foo->priv());
+} catch(Error $e) {
+	var_dump($e->getMessage());	
 }
 
-uopz_implement("My", "IMy");
-
-$my = new My();
-
-var_dump($my instanceof IMy);
+try {
+	uopz_add_function(Foo::class, "exists", function() {});
+} catch(Exception $e) {
+	var_dump($e->getMessage());
+}
 ?>
 --EXPECT--
 bool(true)
-
-
+string(50) "Call to private method Foo::priv() from context ''"
+string(69) "uopz will not replace existing functions, use uopz_set_return instead"

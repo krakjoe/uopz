@@ -22,19 +22,13 @@
 extern zend_module_entry uopz_module_entry;
 #define phpext_uopz_ptr &uopz_module_entry
 
-#define PHP_UOPZ_VERSION "4.0.0"
+#define PHP_UOPZ_VERSION "5.0.0"
 #define PHP_UOPZ_EXTNAME "uopz"
-
-#define UOPZ_NUM_TYPES 18
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	zend_long	copts;
-	
-	struct {
-		zend_bool	overloads;
-	} ini;
 
-	HashTable	overload;
+	HashTable   functions;
 	HashTable	backup;
 	HashTable	returns;
 	HashTable	mocks;

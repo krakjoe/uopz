@@ -1,25 +1,35 @@
 --TEST--
-Test uopz_set_mock (both existing)
+uopz_set_return
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class Foo {}
-class Bar {}
+class Foo {
+	public function bar() {
+		return false;	
+	}
+}
 
-uopz_set_mock(Foo::class, Bar::class);
+var_dump(uopz_set_return(Foo::class, "bar", true));
 
-var_dump(new Foo());
+$foo = new Foo();
 
-uopz_unset_mock(Foo::class);
+var_dump($foo->bar());
 
-var_dump(new Foo());
+uopz_set_return(Foo::class, "bar", function() {
+	return 2;
+}, true);
+
+var_dump($foo->bar());
+
+try {
+	uopz_set_return(Foo::class, "nope", 1);
+} catch(Throwable $t) {
+	var_dump($t->getMessage());
+}
 ?>
---EXPECTF--
-object(Bar)#%d (%d) {
-}
-object(Foo)#%d (%d) {
-}
-
-
-
+--EXPECT--
+bool(true)
+bool(true)
+int(2)
+string(61) "failed to set return for Foo::nope, the method does not exist"

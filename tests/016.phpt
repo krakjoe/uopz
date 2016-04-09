@@ -1,75 +1,16 @@
 --TEST--
-Test magic methods
+uopz_flags
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class A {
-	protected $test = "value";
-	
-	protected function other() {
-		return $this;
-	}
+class Foo {
+	public function method() {}
 }
 
-uopz_compose("C", ["A"], [
-	"__construct" => function(){
-		echo "do not execute\n";
-	},
-	"serialize" => function() {
-		echo "serializing\n";
-		return "hello world";
-	},
-	"unserialize" => function($data) {
-		echo "unserializing\n";
-		var_dump($data);
-	}
-]);
-
-uopz_function("C", "__toString", function(){
-	return "converting to string\n";
-});
-
-uopz_function("C", "__construct", function(){
-	var_dump($this);
-});
-
-uopz_function("C", "__callStatic", function($method, $args) {
-	echo "calling static method\n";
-	var_dump($method, $args);
-});
-
-uopz_function("C", "__sleep", function(){
-	echo "sleeping\n";
-	return [];
-});
-
-uopz_function("C", "__wakeup", function(){
-	echo "waking\n";
-	return [];
-});
-
-uopz_implement("C", "Serializable");
-
-
-$c = new C();
-echo (string)$c;
-C::none("argument");
-$s = serialize($c);
-$u = unserialize($s);
+var_dump((bool) (uopz_flags(Foo::class, "method", ZEND_ACC_PRIVATE) & ZEND_ACC_PRIVATE));
+var_dump((bool) (uopz_flags(Foo::class, "method", PHP_INT_MAX) & ZEND_ACC_PRIVATE));
 ?>
---EXPECTF--
-object(C)#%d (1) {
-  ["test":protected]=>
-  string(5) "value"
-}
-converting to string
-calling static method
-string(4) "none"
-array(1) {
-  [0]=>
-  string(8) "argument"
-}
-serializing
-unserializing
-string(11) "hello world"
+--EXPECT--
+bool(false)
+bool(true)

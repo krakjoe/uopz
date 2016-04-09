@@ -1,24 +1,56 @@
 --TEST--
-Test redefine class constant
+uopz_get_static
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class Test {
-	const CON = 1;
+class Foo {
+	public function method() {
+		static $vars = [
+			1,2,3,4,5];
+
+		$vars[] = 6;
+	}
 }
 
-uopz_redefine("Test", "CON", 10);
-var_dump(Test::CON);
-uopz_redefine("Test", "CON", 40);
-var_dump(Test::CON);
-uopz_undefine("Test", "CON");
-uopz_redefine("Test", "CON", 60);
-var_dump(Test::CON);
+$foo = new Foo();
+
+var_dump(uopz_get_static(Foo::class, "method"));
+
+$foo->method();
+
+var_dump(uopz_get_static(Foo::class, "method"));
 ?>
 --EXPECT--
-int(10)
-int(40)
-int(60)
-
-
+array(1) {
+  ["vars"]=>
+  array(5) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
+    [2]=>
+    int(3)
+    [3]=>
+    int(4)
+    [4]=>
+    int(5)
+  }
+}
+array(1) {
+  ["vars"]=>
+  array(6) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
+    [2]=>
+    int(3)
+    [3]=>
+    int(4)
+    [4]=>
+    int(5)
+    [5]=>
+    int(6)
+  }
+}

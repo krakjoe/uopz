@@ -1,32 +1,26 @@
 --TEST--
-Test uopz_set_hook/uopz_unset_hook
+uopz_set_hook
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
 class Foo {
-	public function __construct() {
-		$this->method();
-	}
-
-	private function method() {
-		echo "After Hook\n";
+	public function method($arg) {
+		
 	}
 }
 
-uopz_set_hook(Foo::class, "method", function(){
-	echo "In Hook\n";
-});
+var_dump(uopz_set_hook(Foo::class, "method", function($arg){
+	var_dump($arg);
+	var_dump($this);
+}));
 
-new Foo;
+$foo = new Foo();
 
-uopz_unset_hook(Foo::class, "method");
-
-new Foo;
+$foo->method(true);
 ?>
 --EXPECT--
-In Hook
-After Hook
-After Hook
-
-
+bool(true)
+bool(true)
+object(Foo)#2 (0) {
+}

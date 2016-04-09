@@ -1,20 +1,19 @@
 --TEST--
-Test uopz_set_mock with objects
+uopz_redefine
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class Foo {}
-class Bar {}
+class Foo {
+	const BAR = 1;
+}
 
-uopz_set_mock(Foo::class, new Bar);
+var_dump(FOO::BAR);
 
-var_dump(new Foo);
+uopz_redefine(Foo::class, "BAR", 2);
 
-var_dump(new Foo);
+var_dump(FOO::BAR);
 ?>
 --EXPECT--
-object(Bar)#1 (0) {
-}
-object(Bar)#1 (0) {
-}
+int(1)
+int(2)

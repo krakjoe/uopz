@@ -1,26 +1,29 @@
 --TEST--
-Test undefine/redefine
+uopz_unset_hook
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-define ("MY", 1);
-uopz_undefine("MY");
-var_dump(defined("MY"));
-class Upper {
-	const NUM = 10;
+class Foo {
+	public function method() {
+		return false;
+	}
 }
-class Lower extends Upper {}
 
-uopz_undefine("Lower", "NUM");
+var_dump(uopz_set_hook(Foo::class, "method", function(){
+	var_dump(true);
+}));
 
-var_dump(@constant("Lower::NUM"),
-		 @constant("Upper::NUM"));
+$foo = new Foo();
+
+var_dump($foo->method());
+
+uopz_unset_hook(Foo::class, "method");
+
+var_dump($foo->method());
 ?>
 --EXPECT--
+bool(true)
+bool(true)
 bool(false)
-NULL
-NULL
-
-
-
+bool(false)

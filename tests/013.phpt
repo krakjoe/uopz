@@ -1,35 +1,38 @@
 --TEST--
-Test extend
+uopz_del_function
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class My {
-	
+class Foo {
+	public function exists() {}
 }
 
-trait MyTrait {
-	public function is() {
-		
-	}
+var_dump(uopz_add_function(Foo::class, "method", function(){
+	return true;
+}));
+
+$foo = new Foo();
+
+var_dump($foo->method());
+
+var_dump(uopz_del_function(Foo::class, "method"));
+
+try {
+	$foo->method();
+} catch(Throwable $e) {
+	var_dump($e->getMessage());	
 }
 
-uopz_extend("My", "MyTrait");
-
-$my = new My();
-
-var_dump(method_exists($my, "is"), 
-		 class_parents($my), 
-		 class_uses($my));
+try {
+	uopz_del_function(Foo::class, "exists");
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
 ?>
 --EXPECT--
 bool(true)
-array(0) {
-}
-array(1) {
-  ["MyTrait"]=>
-  string(7) "MyTrait"
-}
-
-
-
+bool(true)
+bool(true)
+string(38) "Call to undefined method Foo::method()"
+string(48) "cannot delete function, it was not added by uopz"

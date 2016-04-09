@@ -1,44 +1,24 @@
 --TEST--
-Test override
+uopz_implement
 --SKIPIF--
-<?php require_once('skipif.inc'); ?>
+<?php include("skipif.inc") ?>
 --FILE--
 <?php
-class A {
-	protected $data = 'protected'; 
-	
-	public function foo () { 
-		return __METHOD__;
-	}
+interface Foo {}
+class Bar {}
+
+uopz_implement(Bar::class, Foo::class);
+
+$bar = new Bar;
+
+var_dump($bar instanceof Foo);
+
+try {
+	uopz_implement(Bar::class, Foo::class);
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
 }
-
-uopz_compose("B", ["A"], [
-	"__construct" => function() { 
-		var_dump($this, 	
-				 $this->data); 
-	},
-	"foo" => function() {
-		return "overriden";
-	},
-	"FoF" => function() {
-		return true;
-	},
-	"myClosure" => [
-		ZEND_ACC_STATIC | ZEND_ACC_PUBLIC => function() {
-			return __FUNCTION__;
-		}
-	]
-]);
-
-$b = new B();
-var_dump($b->foo(), $b->fof(), B::myClosure());
-
---EXPECTF--
-object(B)#%d (1) {
-  ["data":protected]=>
-  string(9) "protected"
-}
-string(9) "protected"
-string(9) "overriden"
+?>
+--EXPECT--
 bool(true)
-string(9) "{closure}"
+string(54) "the class provided (Bar) already has the interface Foo"
