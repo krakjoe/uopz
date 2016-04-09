@@ -544,8 +544,14 @@ static int uopz_mock_new_handler(zend_execute_data *execute_data) { /* {{{ */
 				case IS_OBJECT:
 					ZVAL_COPY(
 						EX_VAR(EX(opline)->result.var), mock);
+#if PHP_VERSION_ID < 70100
 					EX(opline) = 
 						OP_JMP_ADDR(EX(opline), EX(opline)->op2);
+#else
+					if (EX(opline)->extended_value == 0 && (EX(opline)+1)->opcode == ZEND_DO_FCALL) {
+						EX(opline) += 2;	
+					}
+#endif
 					UOPZ_VM_ACTION = ZEND_USER_OPCODE_CONTINUE;
 				break;
 
