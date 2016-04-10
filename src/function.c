@@ -24,6 +24,7 @@
 
 #include "util.h"
 #include "function.h"
+#include "copy.h"
 
 #include <Zend/zend_closures.h>
 
@@ -56,7 +57,9 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		return 0;
 	}
 
-	function = (zend_function*) zend_get_closure_method_def(closure);
+	zval_copy_ctor(closure);
+
+	function = uopz_copy_closure(clazz, (zend_function*) zend_get_closure_method_def(closure), flags);
 
 	if (!zend_hash_update_ptr(table, key, (void*) function)) {
 		uopz_exception(
@@ -66,12 +69,8 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		return 0;
 	}
 
-	function->common.fn_flags |= flags;
-	function->common.scope = clazz;
-	function_add_ref(function);
-
 	uopz_handle_magic(clazz, name, function);
-	zval_copy_ctor(closure);
+
 	zend_string_release(key);
 
 	return 1;

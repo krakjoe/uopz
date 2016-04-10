@@ -12,7 +12,7 @@ if test "$PHP_UOPZ" != "no"; then
     PHP_SUBST(EXTRA_CFLAGS)
   fi
 
-  PHP_NEW_EXTENSION(uopz, uopz.c src/util.c src/return.c src/hook.c src/constant.c src/function.c src/class.c src/handlers.c src/executors.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+  PHP_NEW_EXTENSION(uopz, uopz.c src/util.c src/copy.c src/return.c src/hook.c src/constant.c src/function.c src/class.c src/handlers.c src/executors.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
   PHP_ADD_INCLUDE($ext_builddir)
 fi

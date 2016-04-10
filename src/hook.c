@@ -130,8 +130,6 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 	zval closure, rv;
 	const zend_function *overload = zend_get_closure_method_def(&uhook->closure);
 
-	zend_execute_data *prev_execute_data = execute_data;
-
 	ZVAL_UNDEF(&rv);
 
 	uhook->busy = 1;
@@ -167,8 +165,6 @@ _exit_uopz_execute_hook:
 	zval_ptr_dtor(&closure);
 
 	uhook->busy = 0;
-
-	EG(current_execute_data) = prev_execute_data;
 } /* }}} */
 
 void uopz_hook_free(zval *zv) { /* {{{ */

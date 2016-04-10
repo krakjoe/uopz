@@ -7,7 +7,7 @@ if (PHP_UOPZ != "no") {
 	EXTENSION("uopz", "uopz.c handlers.c executors.c");
 	ADD_SOURCES(
     	"ext/uopz/src",
-		"util.c return.c hook.c constant.c function.c class.c handlers.c executors.c", 
+		"util.c copy.c return.c hook.c constant.c function.c class.c handlers.c executors.c", 
 		"uopz"
     );
 }

@@ -134,8 +134,6 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 		 *result = return_value ? return_value : &rv;
 	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
 
-	zend_execute_data *prev_execute_data = execute_data;
-
 	ZVAL_UNDEF(&rv);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
@@ -174,8 +172,6 @@ _exit_uopz_execute_return:
 	zval_ptr_dtor(&closure);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
-
-	EG(current_execute_data) = prev_execute_data;
 } /* }}} */
 
 void uopz_return_free(zval *zv) { /* {{{ */
