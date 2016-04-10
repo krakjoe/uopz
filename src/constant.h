@@ -16,36 +16,13 @@
   +----------------------------------------------------------------------+
  */
 
-#ifndef UOPZ_H
-#define UOPZ_H
+#ifndef UOPZ_CONSTANT_H
+#define UOPZ_CONSTANT_H
 
-extern zend_module_entry uopz_module_entry;
-#define phpext_uopz_ptr &uopz_module_entry
+zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zval *variable);
+zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name);
 
-#define PHP_UOPZ_VERSION "5.0.0"
-#define PHP_UOPZ_EXTNAME "uopz"
-
-ZEND_BEGIN_MODULE_GLOBALS(uopz)
-	zend_long	copts;
-
-	HashTable   functions;
-	HashTable	returns;
-	HashTable	mocks;
-	HashTable   hooks;
-ZEND_END_MODULE_GLOBALS(uopz)
-
-#ifdef ZTS
-#define UOPZ(v) TSRMG(uopz_globals_id, zend_uopz_globals *, v)
-#else
-#define UOPZ(v) (uopz_globals.v)
-#endif
-
-extern zend_class_entry* spl_ce_RuntimeException;
-
-#define uopz_exception(message, ...) zend_throw_exception_ex\
-	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
-
-#endif	/* UOPZ_H */
+#endif	/* UOPZ_CONSTANT_H */
 
 /*
  * Local variables:

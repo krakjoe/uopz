@@ -16,14 +16,32 @@
   +----------------------------------------------------------------------+
  */
 
-#ifndef UOPZ_HANDLERS_H
-#define UOPZ_HANDLERS_H
+#ifndef UOPZ_RETURN_H
+#define UOPZ_RETURN_H
 
-int uopz_call_handler(zend_execute_data *execute_data);
-int uopz_constant_handler(zend_execute_data *execute_data);
-int uopz_mock_handler(zend_execute_data *execute_data);
+typedef struct _uopz_return_t {
+	zval value;
+	zend_uchar flags;
+	zend_class_entry *clazz;
+	zend_string *function;
+} uopz_return_t;
 
-#endif	/* UOPZ_HANDLERS_H */
+#define UOPZ_RETURN_EXECUTE 0x00000001
+#define UOPZ_RETURN_BUSY	0x00000010
+
+#define UOPZ_RETURN_IS_EXECUTABLE(u) (((u)->flags & UOPZ_RETURN_EXECUTE) == UOPZ_RETURN_EXECUTE)
+#define UOPZ_RETURN_IS_BUSY(u) (((u)->flags & UOPZ_RETURN_BUSY) == UOPZ_RETURN_BUSY)
+
+zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *value, zend_bool execute);
+zend_bool uopz_unset_return(zend_class_entry *clazz, zend_string *function);
+void uopz_get_return(zend_class_entry *clazz, zend_string *function, zval *return_value);
+
+uopz_return_t* uopz_find_return(zend_function *function);
+void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value);
+
+void uopz_return_free(zval *zv);
+
+#endif	/* UOPZ_RETURN_H */
 
 /*
  * Local variables:

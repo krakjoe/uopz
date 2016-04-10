@@ -16,39 +16,17 @@
   +----------------------------------------------------------------------+
  */
 
-#ifndef UOPZ_EXECUTORS_H
-#define UOPZ_EXECUTORS_H
+#ifndef UOPZ_FUNCTION_H
+#define UOPZ_FUNCTION_H
 
-typedef struct _uopz_return_t {
-	zval value;
-	zend_uchar flags;
-	zend_class_entry *clazz;
-	zend_string *function;
-} uopz_return_t;
+zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags);
+zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name);
 
-#define UOPZ_RETURN_EXECUTE 0x00000001
-#define UOPZ_RETURN_BUSY	0x00000010
+void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zval *return_value);
+void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics);
+void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value);
 
-#define UOPZ_RETURN_IS_EXECUTABLE(u) (((u)->flags & UOPZ_RETURN_EXECUTE) == UOPZ_RETURN_EXECUTE)
-#define UOPZ_RETURN_IS_BUSY(u) (((u)->flags & UOPZ_RETURN_BUSY) == UOPZ_RETURN_BUSY)
-
-typedef struct _uopz_hook_t {
-	zval closure;
-	zend_class_entry *clazz;
-	zend_string *function;
-	zend_bool busy;
-} uopz_hook_t;
-
-typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
-typedef void (*zend_execute_f) (zend_execute_data *);
-
-void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value);
-void php_uopz_execute(zend_execute_data *execute_data);
-
-extern zend_execute_internal_f zend_execute_internal_function;
-extern zend_execute_f zend_execute_function;
-
-#endif	/* UOPZ_HANDLERS_H */
+#endif	/* UOPZ_FUNCTION_H */
 
 /*
  * Local variables:

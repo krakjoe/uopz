@@ -24,6 +24,34 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
+int uopz_call_handler(zend_execute_data *execute_data);
+int uopz_constant_handler(zend_execute_data *execute_data);
+int uopz_mock_handler(zend_execute_data *execute_data);
+
+void uopz_handlers_init(void) {
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_call_handler);
+
+	zend_set_user_opcode_handler(ZEND_NEW, uopz_mock_handler);
+
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, uopz_constant_handler);
+}
+
+void uopz_handlers_shutdown(void) {
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, NULL);
+
+	zend_set_user_opcode_handler(ZEND_NEW, NULL);
+
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, NULL);
+}
+
 int uopz_call_handler(zend_execute_data *execute_data) { /* {{{ */
 	switch (EX(opline)->opcode) {
 		case ZEND_INIT_FCALL_BY_NAME:

@@ -16,36 +16,25 @@
   +----------------------------------------------------------------------+
  */
 
-#ifndef UOPZ_H
-#define UOPZ_H
+#ifndef UOPZ_HOOK_H
+#define UOPZ_HOOK_H
 
-extern zend_module_entry uopz_module_entry;
-#define phpext_uopz_ptr &uopz_module_entry
+typedef struct _uopz_hook_t {
+	zval closure;
+	zend_class_entry *clazz;
+	zend_string *function;
+	zend_bool busy;
+} uopz_hook_t;
 
-#define PHP_UOPZ_VERSION "5.0.0"
-#define PHP_UOPZ_EXTNAME "uopz"
+zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closure);
+zend_bool uopz_unset_hook(zend_class_entry *clazz, zend_string *function);
+void uopz_get_hook(zend_class_entry *clazz, zend_string *function, zval *return_value);
 
-ZEND_BEGIN_MODULE_GLOBALS(uopz)
-	zend_long	copts;
+uopz_hook_t* uopz_find_hook(zend_function *function);
+void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data);
 
-	HashTable   functions;
-	HashTable	returns;
-	HashTable	mocks;
-	HashTable   hooks;
-ZEND_END_MODULE_GLOBALS(uopz)
-
-#ifdef ZTS
-#define UOPZ(v) TSRMG(uopz_globals_id, zend_uopz_globals *, v)
-#else
-#define UOPZ(v) (uopz_globals.v)
-#endif
-
-extern zend_class_entry* spl_ce_RuntimeException;
-
-#define uopz_exception(message, ...) zend_throw_exception_ex\
-	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
-
-#endif	/* UOPZ_H */
+void uopz_hook_free(zval *zv);
+#endif	/* UOPZ_HOOK_H */
 
 /*
  * Local variables:

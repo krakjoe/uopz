@@ -16,36 +16,25 @@
   +----------------------------------------------------------------------+
  */
 
-#ifndef UOPZ_H
-#define UOPZ_H
+#ifndef UOPZ_UTIL_H
+#define UOPZ_UTIL_H
 
-extern zend_module_entry uopz_module_entry;
-#define phpext_uopz_ptr &uopz_module_entry
+void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function *function);
+int uopz_find_function(HashTable *table, zend_string *name, zend_function **function);
 
-#define PHP_UOPZ_VERSION "5.0.0"
-#define PHP_UOPZ_EXTNAME "uopz"
+zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function);
 
-ZEND_BEGIN_MODULE_GLOBALS(uopz)
-	zend_long	copts;
+int uopz_clean_function(zval *zv);
+int uopz_clean_class(zval *zv);
 
-	HashTable   functions;
-	HashTable	returns;
-	HashTable	mocks;
-	HashTable   hooks;
-ZEND_END_MODULE_GLOBALS(uopz)
+void uopz_request_init(void);
+void uopz_request_shutdown(void);
 
-#ifdef ZTS
-#define UOPZ(v) TSRMG(uopz_globals_id, zend_uopz_globals *, v)
-#else
-#define UOPZ(v) (uopz_globals.v)
-#endif
+static inline void uopz_zval_dtor(zval *zv) { /* {{{ */
+	zval_ptr_dtor(zv);
+} /* }}} */
 
-extern zend_class_entry* spl_ce_RuntimeException;
-
-#define uopz_exception(message, ...) zend_throw_exception_ex\
-	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
-
-#endif	/* UOPZ_H */
+#endif	/* UOPZ_UTIL_H */
 
 /*
  * Local variables:
