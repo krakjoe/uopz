@@ -26,8 +26,6 @@
 #include "hook.h"
 #include "executors.h"
 
-#include <Zend/zend_closures.h>
-
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
 typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
