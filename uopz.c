@@ -359,6 +359,54 @@ _php_uopz_execute:
 	} else execute_ex(execute_data);
 } /* }}} */
 
+/* {{{ init call hooks */
+static int uopz_init_call_hook(zend_execute_data *execute_data) {
+	switch (EX(opline)->opcode) {
+		case ZEND_INIT_FCALL_BY_NAME:
+		case ZEND_INIT_FCALL:
+		case ZEND_INIT_NS_FCALL_BY_NAME: {
+			zval *function_name = EX_CONSTANT(EX(opline)->op2);
+			CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
+		} break;
+
+		case ZEND_INIT_METHOD_CALL: {
+			if (EX(opline)->op2_type == IS_CONST) {
+				zval *function_name = EX_CONSTANT(EX(opline)->op2);
+				CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
+			}
+		} break;
+
+		case ZEND_INIT_STATIC_METHOD_CALL: {
+			if (EX(opline)->op2_type == IS_CONST) {
+				zval *function_name = EX_CONSTANT(EX(opline)->op2);
+				if (EX(opline)->op1_type == IS_CONST) {
+					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
+				} else {
+					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
+				}
+			}
+		} break;
+	}
+
+	return ZEND_USER_OPCODE_DISPATCH;
+} /* }}} */
+
+static inline void uopz_register_init_call_handlers() {
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, uopz_init_call_hook);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_init_call_hook);
+} /* }}} */
+
+static inline void uopz_unregister_init_call_handlers() {
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, NULL);
+} /* }}} */
+
 static int uopz_mock_new_handler(zend_execute_data *execute_data) { /* {{{ */
 	zend_execute_data *prev_execute_data = execute_data;
 	int UOPZ_VM_ACTION = ZEND_USER_OPCODE_DISPATCH;
@@ -475,6 +523,7 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_FINAL", 				ZEND_ACC_FINAL,					CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_ABSTRACT", 			ZEND_ACC_ABSTRACT,				CONST_CS|CONST_PERSISTENT);
 
+	uopz_register_init_call_handlers();
 	uopz_register_mock_handler();
 	uopz_register_constant_handler();
 
@@ -488,6 +537,7 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	zend_execute_internal = zend_execute_internal_function;
 	zend_execute_ex = zend_execute_function;
 
+	uopz_unregister_init_call_handlers();
 	uopz_unregister_mock_handler();
 	uopz_unregister_constant_handler();
 
