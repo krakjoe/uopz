@@ -25,7 +25,6 @@
 #include "ext/standard/info.h"
 #include "Zend/zend_closures.h"
 #include "Zend/zend_exceptions.h"
-#include "Zend/zend_string.h"
 #include "Zend/zend_inheritance.h"
 
 #ifdef HAVE_SPL
