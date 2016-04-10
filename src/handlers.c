@@ -165,6 +165,8 @@ int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		zend_string_release(key);
 	}
 
+	EG(current_execute_data) = prev_execute_data;
+
 	return UOPZ_VM_ACTION;
 } /* }}} */
 
