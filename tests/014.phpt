@@ -21,4 +21,4 @@ try {
 ?>
 --EXPECT--
 bool(true)
-string(29) "class Foo already extends Bar"
+string(44) "the class provided (Foo) already extends Bar"

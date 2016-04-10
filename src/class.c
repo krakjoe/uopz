@@ -42,7 +42,7 @@ void uopz_unset_mock(zend_string *clazz) { /* {{{ */
 	
 	if (!zend_hash_exists(&UOPZ(mocks), key)) {
 		uopz_exception(
-			"cannot delete mock %s, does not exists",
+			"the class provided (%s) has no mock set",
 			ZSTR_VAL(clazz));
 		zend_string_release(key);
 		return;
@@ -74,14 +74,14 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
 	if ((clazz->ce_flags & ZEND_ACC_INTERFACE) &&
 		!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
 		uopz_exception(
-		    "%s cannot extend %s, because %s is not an interface",
+		    "the class provided (%s) cannot extend %s, because %s is not an interface",
 		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
 		return 0;
 	}
 
 	if (instanceof_function(clazz, parent)) {
 		uopz_exception(
-			"class %s already extends %s",
+			"the class provided (%s) already extends %s",
 			ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name));
 		return 0;
 	}
