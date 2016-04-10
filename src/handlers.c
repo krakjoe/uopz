@@ -35,27 +35,23 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
 
 void uopz_handlers_init(void) {
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL, uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_call_handler);
-
-	zend_set_user_opcode_handler(ZEND_NEW, uopz_mock_handler);
-
-	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, uopz_constant_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME,		uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL,				uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME,	uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL,			uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL,	uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_NEW,						uopz_mock_handler);
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT,			uopz_constant_handler);
 }
 
 void uopz_handlers_shutdown(void) {
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, NULL);
-
-	zend_set_user_opcode_handler(ZEND_NEW, NULL);
-
-	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME,		NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL,				NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME,	NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL,			NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL,	NULL);
+	zend_set_user_opcode_handler(ZEND_NEW,						NULL);
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT,			NULL);
 }
 
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -100,10 +96,6 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 		}
 	} else {
-		if (!EX(opline)->op2.var) {
-			return ZEND_USER_OPCODE_DISPATCH;
-		}
-
 		if (EX(opline)->op1_type == IS_CONST) {
 			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
 				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
@@ -119,7 +111,6 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 } /* }}} */
 
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
-	zend_execute_data *prev_execute_data = execute_data;
 	int UOPZ_VM_ACTION = ZEND_USER_OPCODE_DISPATCH;
 
 	if (EXPECTED(EX(opline)->op1_type == IS_CONST)) {
@@ -164,8 +155,6 @@ int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 		zend_string_release(key);
 	}
-
-	EG(current_execute_data) = prev_execute_data;
 
 	return UOPZ_VM_ACTION;
 } /* }}} */
