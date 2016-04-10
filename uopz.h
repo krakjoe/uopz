@@ -29,7 +29,6 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	zend_long	copts;
 
 	HashTable   functions;
-	HashTable	backup;
 	HashTable	returns;
 	HashTable	mocks;
 	HashTable   hooks;

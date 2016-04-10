@@ -604,7 +604,6 @@ static PHP_RINIT_FUNCTION(uopz)
 							ZEND_COMPILE_GUARDS;
 
 	zend_hash_init(&UOPZ(functions), 8, NULL, uopz_table_dtor, 0);
-	zend_hash_init(&UOPZ(backup), 8, NULL, uopz_backup_table_dtor, 0);
 	zend_hash_init(&UOPZ(returns), 8, NULL, uopz_table_dtor, 0);
 	zend_hash_init(&UOPZ(mocks), 8, NULL, uopz_zval_dtor, 0);
 	zend_hash_init(&UOPZ(hooks), 8, NULL, uopz_table_dtor, 0);
@@ -678,7 +677,6 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	zend_hash_apply(CG(function_table), php_uopz_clean_function);
 
 	zend_hash_destroy(&UOPZ(functions));
-	zend_hash_destroy(&UOPZ(backup));
 	zend_hash_destroy(&UOPZ(mocks));
 	zend_hash_destroy(&UOPZ(returns));
 	zend_hash_destroy(&UOPZ(hooks));
