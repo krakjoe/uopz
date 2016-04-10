@@ -167,8 +167,6 @@ _exit_uopz_execute_hook:
 	zval_ptr_dtor(&closure);
 
 	uhook->busy = 0;
-
-	EG(current_execute_data) = prev_execute_data;
 } /* }}} */
 
 void uopz_hook_free(zval *zv) { /* {{{ */

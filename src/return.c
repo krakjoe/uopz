@@ -174,8 +174,6 @@ _exit_uopz_execute_return:
 	zval_ptr_dtor(&closure);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
-
-	EG(current_execute_data) = prev_execute_data;
 } /* }}} */
 
 void uopz_return_free(zval *zv) { /* {{{ */
