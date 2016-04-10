@@ -22,11 +22,17 @@
 #include "php.h"
 #include "uopz.h"
 
+#ifdef ZEND_VM_FP_GLOBAL_REG
+#	define UOPZ_OPCODE_HANDLER_ARGS
+#else
+#	define UOPZ_OPCODE_HANDLER_ARGS zend_execute_data *execute_data
+#endif
+
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-int uopz_call_handler(zend_execute_data *execute_data);
-int uopz_constant_handler(zend_execute_data *execute_data);
-int uopz_mock_handler(zend_execute_data *execute_data);
+int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
 
 void uopz_handlers_init(void) {
 	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_call_handler);
@@ -52,7 +58,7 @@ void uopz_handlers_shutdown(void) {
 	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, NULL);
 }
 
-int uopz_call_handler(zend_execute_data *execute_data) { /* {{{ */
+int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	switch (EX(opline)->opcode) {
 		case ZEND_INIT_FCALL_BY_NAME:
 		case ZEND_INIT_FCALL:
@@ -83,7 +89,7 @@ int uopz_call_handler(zend_execute_data *execute_data) { /* {{{ */
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
 
-int uopz_constant_handler(zend_execute_data *execute_data) { /* {{{ */	
+int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 #if PHP_VERSION_ID >= 70100
 	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
 		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
@@ -112,7 +118,7 @@ int uopz_constant_handler(zend_execute_data *execute_data) { /* {{{ */
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
 
-int uopz_mock_handler(zend_execute_data *execute_data) { /* {{{ */
+int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_execute_data *prev_execute_data = execute_data;
 	int UOPZ_VM_ACTION = ZEND_USER_OPCODE_DISPATCH;
 
