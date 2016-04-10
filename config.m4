@@ -12,5 +12,5 @@ if test "$PHP_UOPZ" != "no"; then
     PHP_SUBST(EXTRA_CFLAGS)
   fi
 
-  PHP_NEW_EXTENSION(uopz, uopz.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+  PHP_NEW_EXTENSION(uopz, uopz.c handlers.c executors.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 fi

@@ -39,34 +39,10 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #endif
 
 #include "uopz.h"
+#include "handlers.h"
+#include "executors.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
-
-#define UOPZ_RETURN_EXECUTE 0x00000001
-#define UOPZ_RETURN_BUSY	0x00000010
-
-typedef struct _uopz_return_t {
-	zval value;
-	zend_uchar flags;
-	zend_class_entry *clazz;
-	zend_string *function;
-} uopz_return_t;
-
-#define UOPZ_RETURN_IS_EXECUTABLE(u) (((u)->flags & UOPZ_RETURN_EXECUTE) == UOPZ_RETURN_EXECUTE)
-#define UOPZ_RETURN_IS_BUSY(u) (((u)->flags & UOPZ_RETURN_BUSY) == UOPZ_RETURN_BUSY)
-
-typedef struct _uopz_hook_t {
-	zval closure;
-	zend_class_entry *clazz;
-	zend_string *function;
-	zend_bool busy;
-} uopz_hook_t;
-
-typedef void (*zend_execute_internal_f) (zend_execute_data *, zval *);
-typedef void (*zend_execute_f) (zend_execute_data *);
-
-zend_execute_internal_f zend_execute_internal_function;
-zend_execute_f zend_execute_function;
 
 #define uopz_parse_parameters(spec, ...) zend_parse_parameters_ex\
 	(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), spec, ##__VA_ARGS__)
@@ -146,362 +122,8 @@ static int uopz_find_function(HashTable *table, zend_string *name, zend_function
 } /* }}} */
 
 /* {{{ */
-static void uopz_backup_table_dtor(zval *zv) {
-	zend_hash_destroy(Z_PTR_P(zv));
-	efree(Z_PTR_P(zv));
-} /* }}} */
-
-/* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
 
-} /* }}} */
-
-static uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
-	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(hooks), function->common.scope->name) :
-												  zend_hash_index_find_ptr(&UOPZ(hooks), 0);
-
-	if (returns && function->common.function_name) {
-		Bucket *bucket;
-
-		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
-			if (zend_string_equals_ci(function->common.function_name, bucket->key)) {
-				return Z_PTR(bucket->val);
-			}
-		} ZEND_HASH_FOREACH_END();
-	}
-
-	return NULL;
-} /* }}} */
-
-static uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
-	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
-												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
-
-	if (returns && function->common.function_name) {
-		Bucket *bucket;
-
-		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
-			if (zend_string_equals_ci(function->common.function_name, bucket->key)) {
-				return Z_PTR(bucket->val);
-			}
-		} ZEND_HASH_FOREACH_END();
-	}
-
-	return NULL;
-} /* }}} */
-
-static void php_uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value) { /* {{{ */
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-	char *error = NULL;
-	zval closure, 
-		 rv,
-		 *result = return_value ? return_value : &rv;
-	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
-
-	zend_execute_data *prev_execute_data = execute_data;
-
-	ZVAL_UNDEF(&rv);
-
-	ureturn->flags ^= UOPZ_RETURN_BUSY;
-
-	zend_create_closure(&closure, (zend_function*) overload, 
-		ureturn->clazz, ureturn->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
-
-	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
-		uopz_exception("cannot use return value set for %s as function: %s",
-			ZSTR_VAL(EX(func)->common.function_name), error);
-		if (error) {
-			efree(error);
-		}
-		goto _exit_php_uopz_execute_return;
-	}
-
-	if (zend_fcall_info_argp(&fci, EX_NUM_ARGS(), EX_VAR_NUM(0)) != SUCCESS) {
-		uopz_exception("cannot set arguments for %s",
-			ZSTR_VAL(EX(func)->common.function_name));
-		goto _exit_php_uopz_execute_return;
-	}
-
-	fci.retval= result;
-	
-	if (zend_call_function(&fci, &fcc) == SUCCESS) {
-		zend_fcall_info_args_clear(&fci, 1);
-
-		if (!return_value) {
-			if (!Z_ISUNDEF(rv)) {
-				zval_ptr_dtor(&rv);
-			}
-		}
-	}
-
-_exit_php_uopz_execute_return:
-	zval_ptr_dtor(&closure);
-
-	ureturn->flags ^= UOPZ_RETURN_BUSY;
-
-	EG(current_execute_data) = prev_execute_data;
-} /* }}} */
-
-static void php_uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /* {{{ */
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-	char *error = NULL;
-	zval closure, rv;
-	const zend_function *overload = zend_get_closure_method_def(&uhook->closure);
-
-	zend_execute_data *prev_execute_data = execute_data;
-
-	ZVAL_UNDEF(&rv);
-
-	uhook->busy = 1;
-
-	zend_create_closure(&closure, (zend_function*) overload, 
-		uhook->clazz, uhook->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
-
-	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
-		uopz_exception("cannot use hook set for %s as function: %s",
-			ZSTR_VAL(EX(func)->common.function_name), error);
-		if (error) {
-			efree(error);
-		}
-		goto _exit_php_uopz_execute_hook;
-	}
-
-	if (zend_fcall_info_argp(&fci, EX_NUM_ARGS(), EX_VAR_NUM(0)) != SUCCESS) {
-		uopz_exception("cannot set arguments for %s hook",
-			ZSTR_VAL(EX(func)->common.function_name));
-		goto _exit_php_uopz_execute_hook;
-	}
-
-	fci.retval= &rv;
-	
-	if (zend_call_function(&fci, &fcc) == SUCCESS) {
-		zend_fcall_info_args_clear(&fci, 1);
-		if (!Z_ISUNDEF(rv)) {
-			zval_ptr_dtor(&rv);
-		}
-	}
-
-_exit_php_uopz_execute_hook:
-	zval_ptr_dtor(&closure);
-
-	uhook->busy = 0;
-
-	EG(current_execute_data) = prev_execute_data;
-} /* }}} */
-
-static inline void uopz_run_hooks(zend_execute_data *execute_data) { /* {{{ */
-	if (EX(func)) {
-		uopz_hook_t *uhook = uopz_find_hook(EX(func));
-
-		if (uhook && !uhook->busy) {
-			php_uopz_execute_hook(uhook, execute_data);
-		}
-	}
-} /* }}} */
-
-static void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) { /* {{{ */
-	uopz_run_hooks(execute_data);
-
-	if (EX(func) ) {
-		uopz_return_t *ureturn = uopz_find_return(EX(func));
-
-		if (ureturn) {
-			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
-				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
-					goto _php_uopz_execute_internal;
-				}
-
-				php_uopz_execute_return(ureturn, execute_data, return_value);
-				return;
-			}
-
-			if (return_value) {
-				ZVAL_COPY(return_value, &ureturn->value);
-			}
-			return;
-		}
-	}
-
-_php_uopz_execute_internal:
-	if (zend_execute_internal_function) {
-		zend_execute_internal_function(execute_data, return_value);
-	} else execute_internal(execute_data, return_value);
-} /* }}} */
-
-static void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ */
-	uopz_run_hooks(execute_data);
-
-	if (EX(func)) {
-		uopz_return_t *ureturn = uopz_find_return(EX(func));
-
-		if (ureturn) {
-			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
-				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
-					goto _php_uopz_execute;
-				}
-
-				php_uopz_execute_return(ureturn, execute_data, EX(return_value));
-				return;
-			}
-
-			if (EX(return_value)) {
-				ZVAL_COPY(EX(return_value), &ureturn->value);
-			}
-			return;
-		}
-	}
-
-_php_uopz_execute:
-	if (zend_execute_function) {
-		zend_execute_function(execute_data);
-	} else execute_ex(execute_data);
-} /* }}} */
-
-/* {{{ init call hooks */
-static int uopz_init_call_hook(zend_execute_data *execute_data) {
-	switch (EX(opline)->opcode) {
-		case ZEND_INIT_FCALL_BY_NAME:
-		case ZEND_INIT_FCALL:
-		case ZEND_INIT_NS_FCALL_BY_NAME: {
-			zval *function_name = EX_CONSTANT(EX(opline)->op2);
-			CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
-		} break;
-
-		case ZEND_INIT_METHOD_CALL: {
-			if (EX(opline)->op2_type == IS_CONST) {
-				zval *function_name = EX_CONSTANT(EX(opline)->op2);
-				CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
-			}
-		} break;
-
-		case ZEND_INIT_STATIC_METHOD_CALL: {
-			if (EX(opline)->op2_type == IS_CONST) {
-				zval *function_name = EX_CONSTANT(EX(opline)->op2);
-				if (EX(opline)->op1_type == IS_CONST) {
-					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
-				} else {
-					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
-				}
-			}
-		} break;
-	}
-
-	return ZEND_USER_OPCODE_DISPATCH;
-} /* }}} */
-
-static inline void uopz_register_init_call_handlers() {
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_init_call_hook);
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL, uopz_init_call_hook);
-	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, uopz_init_call_hook);
-	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, uopz_init_call_hook);
-	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_init_call_hook);
-} /* }}} */
-
-static inline void uopz_unregister_init_call_handlers() {
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, NULL);
-} /* }}} */
-
-static int uopz_mock_new_handler(zend_execute_data *execute_data) { /* {{{ */
-	zend_execute_data *prev_execute_data = execute_data;
-	int UOPZ_VM_ACTION = ZEND_USER_OPCODE_DISPATCH;
-	
-	if (EXPECTED(EX(opline)->op1_type == IS_CONST)) {
-		zend_string *key;
-		zend_string *clazz = NULL;
-		zval *mock = NULL;
-		zend_class_entry *ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)));
-
-		if (UNEXPECTED(ce == NULL)) {
-			clazz = Z_STR_P(EX_CONSTANT(EX(opline)->op1));
-		} else {
-			clazz = ce->name;
-		}
-
-		key = zend_string_tolower(clazz);
-
-		if (UNEXPECTED((mock = zend_hash_find(&UOPZ(mocks), key)))) {
-			switch (Z_TYPE_P(mock)) {
-				case IS_OBJECT:
-					ZVAL_COPY(
-						EX_VAR(EX(opline)->result.var), mock);
-#if PHP_VERSION_ID < 70100
-					EX(opline) = 
-						OP_JMP_ADDR(EX(opline), EX(opline)->op2);
-#else
-					if (EX(opline)->extended_value == 0 && 
-						(EX(opline)+1)->opcode == ZEND_DO_FCALL) {
-						EX(opline) += 2;
-					}
-#endif
-					UOPZ_VM_ACTION = ZEND_USER_OPCODE_CONTINUE;
-				break;
-
-				case IS_STRING:
-					ce = zend_lookup_class(Z_STR_P(mock));
-					if (EXPECTED(ce))	 {
-						CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), ce);
-					}
-				break;
-			}
-		}
-
-		zend_string_release(key);
-	}
-
-	EG(current_execute_data) = prev_execute_data;
-
-	return UOPZ_VM_ACTION;
-} /* }}} */
-
-static inline void uopz_register_mock_handler(void) { /* {{{ */
-	zend_set_user_opcode_handler(ZEND_NEW, uopz_mock_new_handler);
-} /* }}} */
-
-static inline void uopz_unregister_mock_handler(void) { /* {{{ */
-	zend_set_user_opcode_handler(ZEND_NEW, NULL);
-} /* }}} */
-
-static int uopz_constant_handler(zend_execute_data *execute_data) { /* {{{ */	
-#if PHP_VERSION_ID >= 70100
-	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
-		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
-	}
-#else
-	if (EX(opline)->op1_type == IS_UNUSED) {
-		if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
-		}
-	} else {
-		if (!EX(opline)->op2.var) {
-			return ZEND_USER_OPCODE_DISPATCH;
-		}
-
-		if (EX(opline)->op1_type == IS_CONST) {
-			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
-				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
-			}
-		} else {
-			CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), 
-								  Z_CE_P(EX_VAR(EX(opline)->op1.var)), NULL);
-		}
-	}
-#endif
-
-	return ZEND_USER_OPCODE_DISPATCH;
-} /* }}} */
-
-static inline void uopz_register_constant_handler(void) { /* {{{ */
-	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, uopz_constant_handler);
-} /* }}} */
-
-static inline void uopz_unregister_constant_handler(void) { /* {{{ */
-	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, NULL);
 } /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
@@ -523,9 +145,15 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_FINAL", 				ZEND_ACC_FINAL,					CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_ABSTRACT", 			ZEND_ACC_ABSTRACT,				CONST_CS|CONST_PERSISTENT);
 
-	uopz_register_init_call_handlers();
-	uopz_register_mock_handler();
-	uopz_register_constant_handler();
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, uopz_call_handler);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, uopz_call_handler);
+
+	zend_set_user_opcode_handler(ZEND_NEW, uopz_mock_handler);
+
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, uopz_constant_handler);
 
 	return SUCCESS;
 }
@@ -537,9 +165,15 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	zend_execute_internal = zend_execute_internal_function;
 	zend_execute_ex = zend_execute_function;
 
-	uopz_unregister_init_call_handlers();
-	uopz_unregister_mock_handler();
-	uopz_unregister_constant_handler();
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_FCALL, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL, NULL);
+	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL, NULL);
+
+	zend_set_user_opcode_handler(ZEND_NEW, NULL);
+
+	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT, NULL);
 
 	return SUCCESS;
 } /* }}} */
@@ -594,8 +228,7 @@ static PHP_RINIT_FUNCTION(uopz)
 
 	UOPZ(copts) = CG(compiler_options);
 
-	CG(compiler_options) |= ZEND_COMPILE_HANDLE_OP_ARRAY | 
-							ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | 
+	CG(compiler_options) |= ZEND_COMPILE_NO_CONSTANT_SUBSTITUTION | 
 #ifdef ZEND_COMPILE_NO_PERSISTENT_CONSTANT_SUBSTITUTION
 							ZEND_COMPILE_NO_PERSISTENT_CONSTANT_SUBSTITUTION |
 #endif
