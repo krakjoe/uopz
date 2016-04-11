@@ -31,7 +31,7 @@ void uopz_set_mock(zend_string *clazz, zval *mock) { /* {{{ */
 	zend_string *key = zend_string_tolower(clazz);
 
 	if (zend_hash_update(&UOPZ(mocks), key, mock)) {
-		zval_copy_ctor(mock);
+		Z_ADDREF_P(mock);
 	}
 
 	zend_string_release(key);
