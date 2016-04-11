@@ -65,6 +65,10 @@ zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *valu
 	zend_hash_update_mem(returns, key, &ret, sizeof(uopz_return_t));
 	zend_string_release(key);
 
+	if (clazz && clazz->parent) {
+		return uopz_set_return(clazz->parent, name, value, execute);
+	}
+
 	return 1;
 } /* }}} */
 

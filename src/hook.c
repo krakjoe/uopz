@@ -63,6 +63,10 @@ zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closur
 
 	zend_hash_update_mem(hooks, key, &hook, sizeof(uopz_hook_t));
 	zend_string_release(key);
+
+	if (clazz && clazz->parent) {
+		return uopz_set_hook(clazz->parent, name, closure);
+	}
 	
 	return 1;
 } /* }}} */
