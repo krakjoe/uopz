@@ -66,7 +66,9 @@ zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *valu
 	zend_string_release(key);
 
 	if (clazz && clazz->parent) {
-		return uopz_set_return(clazz->parent, name, value, execute);
+		if (uopz_find_method(clazz->parent, name, NULL) == SUCCESS) {
+			return uopz_set_return(clazz->parent, name, value, execute);
+		}
 	}
 
 	return 1;

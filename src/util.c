@@ -87,6 +87,10 @@ void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function
 	}
 } /* }}} */
 
+int uopz_find_method(zend_class_entry *ce, zend_string *name, zend_function **function) { /* {{{ */
+	return uopz_find_function(&ce->function_table, name, function);
+} /* }}} */
+
 int uopz_find_function(HashTable *table, zend_string *name, zend_function **function) { /* {{{ */
 	Bucket *bucket;
 

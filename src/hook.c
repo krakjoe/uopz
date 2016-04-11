@@ -65,7 +65,9 @@ zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closur
 	zend_string_release(key);
 
 	if (clazz && clazz->parent) {
-		return uopz_set_hook(clazz->parent, name, closure);
+		if (uopz_find_method(clazz->parent, name, NULL) == SUCCESS) {
+			return uopz_set_hook(clazz->parent, name, closure);	
+		}
 	}
 	
 	return 1;
