@@ -234,9 +234,11 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		ureturn = uopz_find_return(call->func);
 
 		if (ureturn) {
+			const zend_op *opline = EX(opline);
 			zval *return_value = EX_VAR(EX(opline)->result.var);
 
 			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
+
 				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
 					goto _uopz_return_handler_dispatch;
 				}
@@ -245,7 +247,7 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 				EX(call) = call->prev_execute_data;
 				zend_vm_stack_free_call_frame(call);
-				EX(opline)++;
+				EX(opline) = opline + 1;
 
 				return ZEND_USER_OPCODE_CONTINUE;
 			}
@@ -253,10 +255,10 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (return_value) {
 				ZVAL_COPY(return_value, &ureturn->value);
 			}
-			
+
 			EX(call) = call->prev_execute_data;
 			zend_vm_stack_free_call_frame(call);
-			EX(opline)++;
+			EX(opline) = opline + 1;
 
 			return ZEND_USER_OPCODE_CONTINUE;
 		}
