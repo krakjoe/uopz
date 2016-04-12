@@ -27,8 +27,10 @@
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
+#	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU
 #else
 #	define UOPZ_OPCODE_HANDLER_ARGS zend_execute_data *execute_data
+#	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU execute_data
 #endif
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
@@ -38,26 +40,46 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS);
 
+typedef int (*uopz_opcode_handler_t) (UOPZ_OPCODE_HANDLER_ARGS);
+
+uopz_opcode_handler_t uopz_init_fcall_by_name_handler;
+uopz_opcode_handler_t uopz_init_fcall_handler;
+uopz_opcode_handler_t uopz_init_ns_fcall_by_name_handler;
+uopz_opcode_handler_t uopz_init_method_call_handler;
+uopz_opcode_handler_t uopz_init_static_method_call_handler;
+uopz_opcode_handler_t uopz_new_handler;
+uopz_opcode_handler_t uopz_fetch_constant_handler;
+uopz_opcode_handler_t uopz_do_fcall_handler;
+
+#define UOPZ_SET_HANDLER(h, o, n) do { \
+	(h) = zend_get_user_opcode_handler((o)); \
+	zend_set_user_opcode_handler((o), (n)); \
+} while (0)
+
+#define UOPZ_UNSET_HANDLER(h, o) do { \
+	zend_set_user_opcode_handler(o, h); \
+} while (0)
+
 void uopz_handlers_init(void) {
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME,		uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL,				uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME,	uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL,			uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL,	uopz_call_handler);
-	zend_set_user_opcode_handler(ZEND_NEW,						uopz_mock_handler);
-	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT,			uopz_constant_handler);
-	zend_set_user_opcode_handler(ZEND_DO_FCALL,					uopz_return_handler);
+	UOPZ_SET_HANDLER(uopz_init_fcall_by_name_handler,		ZEND_INIT_FCALL_BY_NAME, 		uopz_call_handler);
+	UOPZ_SET_HANDLER(uopz_init_fcall_handler,				ZEND_INIT_FCALL, 				uopz_call_handler);
+	UOPZ_SET_HANDLER(uopz_init_ns_fcall_by_name_handler,	ZEND_INIT_NS_FCALL_BY_NAME, 	uopz_call_handler);
+	UOPZ_SET_HANDLER(uopz_init_method_call_handler,			ZEND_INIT_METHOD_CALL,			uopz_call_handler);
+	UOPZ_SET_HANDLER(uopz_init_static_method_call_handler,	ZEND_INIT_STATIC_METHOD_CALL,	uopz_call_handler);
+	UOPZ_SET_HANDLER(uopz_new_handler,						ZEND_NEW,						uopz_mock_handler);
+	UOPZ_SET_HANDLER(uopz_fetch_constant_handler,			ZEND_FETCH_CONSTANT,			uopz_constant_handler);
+	UOPZ_SET_HANDLER(uopz_do_fcall_handler,					ZEND_DO_FCALL,					uopz_return_handler);
 }
 
 void uopz_handlers_shutdown(void) {
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME,		NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_FCALL,				NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_NS_FCALL_BY_NAME,	NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_METHOD_CALL,			NULL);
-	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL,	NULL);
-	zend_set_user_opcode_handler(ZEND_NEW,						NULL);
-	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT,			NULL);
-	zend_set_user_opcode_handler(ZEND_DO_FCALL,					NULL);
+	UOPZ_UNSET_HANDLER(uopz_init_fcall_by_name_handler,		ZEND_INIT_FCALL_BY_NAME);
+	UOPZ_UNSET_HANDLER(uopz_init_fcall_handler,				ZEND_INIT_FCALL);
+	UOPZ_UNSET_HANDLER(uopz_init_ns_fcall_by_name_handler,	ZEND_INIT_NS_FCALL_BY_NAME);
+	UOPZ_UNSET_HANDLER(uopz_init_method_call_handler,		ZEND_INIT_METHOD_CALL);
+	UOPZ_UNSET_HANDLER(uopz_init_static_method_call_handler,ZEND_INIT_STATIC_METHOD_CALL);
+	UOPZ_UNSET_HANDLER(uopz_new_handler,					ZEND_NEW);
+	UOPZ_UNSET_HANDLER(uopz_fetch_constant_handler,			ZEND_FETCH_CONSTANT);
+	UOPZ_UNSET_HANDLER(uopz_do_fcall_handler,				ZEND_DO_FCALL);
 }
 
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -88,6 +110,24 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		} break;
 	}
 
+	switch (EX(opline)->opcode) {
+		case ZEND_INIT_FCALL_BY_NAME:
+			if (uopz_init_fcall_by_name_handler)
+				return uopz_init_fcall_by_name_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+		case ZEND_INIT_FCALL:
+			if (uopz_init_fcall_handler)
+				return uopz_init_fcall_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+		case ZEND_INIT_NS_FCALL_BY_NAME:
+			if (uopz_init_ns_fcall_by_name_handler)
+				return uopz_init_ns_fcall_by_name_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+		case ZEND_INIT_METHOD_CALL:
+			if (uopz_init_method_call_handler)
+				return uopz_init_method_call_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+		case ZEND_INIT_STATIC_METHOD_CALL:
+			if (uopz_init_static_method_call_handler)
+				return uopz_init_static_method_call_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+	}
+
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
 
@@ -112,6 +152,10 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 	}
 #endif
+
+	if (uopz_fetch_constant_handler) {
+		return uopz_fetch_constant_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
@@ -162,6 +206,12 @@ int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		zend_string_release(key);
 	}
 
+	if (UOPZ_VM_ACTION == ZEND_USER_OPCODE_DISPATCH) {
+		if (uopz_new_handler) {
+			return uopz_new_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+		}
+	}
+
 	return UOPZ_VM_ACTION;
 } /* }}} */
 
@@ -188,7 +238,7 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
 				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
-					return ZEND_USER_OPCODE_DISPATCH;
+					goto _uopz_return_handler_dispatch;
 				}
 
 				uopz_execute_return(ureturn, call, return_value);
@@ -210,6 +260,11 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 			return ZEND_USER_OPCODE_CONTINUE;
 		}
+	}
+
+_uopz_return_handler_dispatch:
+	if (uopz_do_fcall_handler) {
+		return uopz_do_fcall_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
