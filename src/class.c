@@ -132,18 +132,57 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 
 void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
 	zend_class_entry *scope = EG(scope);
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zend_property_info *info;
 
-	EG(scope) = Z_OBJCE_P(object);
+	do {
+		EG(scope) = ce;
+
+		info = zend_get_property_info(ce, Z_STR_P(member), 1);
+	
+		if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+			break;
+		}
+
+		ce = ce->parent;
+	} while (ce);
+
+	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+		EG(scope) = info->ce;
+	} else {
+		EG(scope) = Z_OBJCE_P(object);
+	}
+
 	Z_OBJ_HT_P(object)
 		->write_property(object, member, value, NULL);
+
 	EG(scope) = scope;
 } /* }}} */
 
 void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 	zend_class_entry *scope = EG(scope);
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zend_property_info *info;
 	zval *prop;
 
-	EG(scope) = Z_OBJCE_P(object);
+	do {
+		EG(scope) = ce;
+
+		info = zend_get_property_info(ce, Z_STR_P(member), 1);
+	
+		if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+			break;
+		}
+
+		ce = ce->parent;
+	} while (ce);
+
+	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+		EG(scope) = info->ce;
+	} else {
+		EG(scope) = Z_OBJCE_P(object);
+	}
+	
 	prop = Z_OBJ_HT_P(object)
 		->read_property(object, member, BP_VAR_R, NULL, prop);
 	EG(scope) = scope;
@@ -157,10 +196,29 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 
 void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
 	zend_class_entry *scope = EG(scope);
+	zend_class_entry *seek = ce;
+	zend_property_info *info;
 	zval *prop;
 
-	EG(scope) = ce;
-	prop = zend_std_get_static_property(ce, property, 1);
+	do {
+		EG(scope) = seek;
+
+		info = zend_get_property_info(seek, property, 1);
+	
+		if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+			break;
+		}
+
+		seek = seek->parent;
+	} while (seek);
+
+	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+		EG(scope) = info->ce;
+	} else {
+		EG(scope) = ce;
+	}
+
+	prop = zend_std_get_static_property(EG(scope), property, 1);
 	EG(scope) = scope;
 
 	if (!prop) {
@@ -173,10 +231,29 @@ void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval 
 
 void uopz_get_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
 	zend_class_entry *scope = EG(scope);
+	zend_class_entry *seek = ce;
+	zend_property_info *info;
 	zval *prop;
+
+	do {
+		EG(scope) = seek;
+
+		info = zend_get_property_info(seek, property, 1);
 	
-	EG(scope) = ce;
-	prop = zend_std_get_static_property(ce, property, 1);
+		if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+			break;
+		}
+
+		seek = seek->parent;
+	} while (seek);
+
+	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
+		EG(scope) = info->ce;
+	} else {
+		EG(scope) = ce;
+	}
+
+	prop = zend_std_get_static_property(EG(scope), property, 1);
 	EG(scope) = scope;
 
 	if (!prop) {
