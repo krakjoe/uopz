@@ -33,6 +33,13 @@
 #	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU execute_data
 #endif
 
+
+#if PHP_VERSION_ID >= 70100
+#	define RETURN_VALUE_USED(opline) ((opline)->result_type != IS_UNUSED)
+#else
+#	define RETURN_VALUE_USED(opline) (!((opline)->result_type & EXT_TYPE_UNUSED))
+#endif
+
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS);
@@ -235,10 +242,10 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 		if (ureturn) {
 			const zend_op *opline = EX(opline);
-			zval *return_value = EX_VAR(EX(opline)->result.var);
+			zval rv, *return_value = RETURN_VALUE_USED(opline) ? 
+				EX_VAR(EX(opline)->result.var) : &rv;
 
 			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
-
 				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
 					goto _uopz_return_handler_dispatch;
 				}
@@ -249,10 +256,14 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				zend_vm_stack_free_call_frame(call);
 				EX(opline) = opline + 1;
 
+				if (!RETURN_VALUE_USED(opline)) {
+					zval_ptr_dtor(&rv);
+				}
+
 				return ZEND_USER_OPCODE_CONTINUE;
 			}
 
-			if (return_value) {
+			if (RETURN_VALUE_USED(opline)) {
 				ZVAL_COPY(return_value, &ureturn->value);
 			}
 
