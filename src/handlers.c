@@ -173,7 +173,7 @@ static inline void uopz_run_hook(zend_function *function, zend_execute_data *exe
 	}
 } /* }}} */
 
-int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) {
+int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_execute_data *call = EX(call);
 
 	if (call) {
@@ -194,8 +194,9 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) {
 				uopz_execute_return(ureturn, call, return_value);
 
 				EX(call) = call->prev_execute_data;
+				zend_vm_stack_free_call_frame(call);
 				EX(opline)++;
-				
+
 				return ZEND_USER_OPCODE_CONTINUE;
 			}
 
@@ -204,6 +205,7 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) {
 			}
 			
 			EX(call) = call->prev_execute_data;
+			zend_vm_stack_free_call_frame(call);
 			EX(opline)++;
 
 			return ZEND_USER_OPCODE_CONTINUE;
@@ -211,7 +213,8 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) {
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
-}
+} /* }}} */
+
 #endif	/* UOPZ_HANDLERS_H */
 
 /*

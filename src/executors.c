@@ -22,8 +22,6 @@
 #include "php.h"
 #include "uopz.h"
 
-#include "return.h"
-#include "hook.h"
 #include "executors.h"
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
