@@ -475,6 +475,66 @@ static PHP_FUNCTION(uopz_flags)
 	uopz_flags(clazz, name, flags, return_value);
 } /* }}} */
 
+/* {{{ proto void uopz_set_property(object instance, string property, mixed value) 
+			 void uopz_set_property(string class, string property, mixed value) */
+static PHP_FUNCTION(uopz_set_property) 
+{
+	zval *scope = NULL;
+	zval *prop  = NULL;
+	zval *value = NULL;
+
+	if (uopz_parse_parameters("zzz", &scope, &prop, &value) != SUCCESS ||
+		!scope || !prop || !value ||
+		(Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) ||
+		Z_TYPE_P(prop) != IS_STRING) {
+		uopz_refuse_parameters(
+			"unexpected paramter combination, expected "
+			"(class, property, value) or (object, property, value)");
+		return;
+	}
+
+	if (Z_TYPE_P(scope) == IS_OBJECT) {
+		uopz_set_property(scope, prop, value);
+	} else {
+		zend_class_entry *ce = zend_lookup_class(Z_STR_P(scope));
+		
+		if (!ce) {
+			return;
+		}
+
+		uopz_set_static_property(ce, Z_STR_P(prop), value);
+	}
+} /* }}} */
+
+/* {{{ proto mixed uopz_get_property(object instance, string property) 
+	   proto mixed uopz_get_property(string class, string property) */
+static PHP_FUNCTION(uopz_get_property) {
+	zval *scope = NULL;
+	zval *prop  = NULL;
+
+	if (uopz_parse_parameters("zz", &scope, &prop) != SUCCESS ||
+		!scope || !prop ||
+		(Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) ||
+		Z_TYPE_P(prop) != IS_STRING) {
+		uopz_refuse_parameters(
+			"unexpected paramter combination, expected "
+			"(class, property) or (object, property)");
+		return;
+	}
+
+	if (Z_TYPE_P(scope) == IS_OBJECT) {
+		uopz_get_property(scope, prop, return_value);
+	} else {
+		zend_class_entry *ce = zend_lookup_class(Z_STR_P(scope));
+		
+		if (!ce) {
+			return;
+		}
+
+		uopz_get_static_property(ce, Z_STR_P(prop), return_value);
+	}
+} /* }}} */
+
 /* {{{ uopz_functions[]
  */
 #define UOPZ_FE(f) PHP_FE(f, NULL)
@@ -497,6 +557,8 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_flags)
 	UOPZ_FE(uopz_redefine)
 	UOPZ_FE(uopz_undefine)
+	UOPZ_FE(uopz_set_property)
+	UOPZ_FE(uopz_get_property)
 	{NULL, NULL, NULL}
 };
 #undef UOPZ_FE

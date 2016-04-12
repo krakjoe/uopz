@@ -260,6 +260,36 @@ function uopz_flags(string class, string method [, int flags]) : int;
  * Note: use ZEND_ACC_FETCH as flags to get flags
  */
 function uopz_flags(string function, [, int flags]) : int;
+
+/**
+* Set instance property
+* @param object instance
+* @param string property
+* @param mixed value
+*/
+function uopz_set_property(object instance, string property, mixed value);
+
+/**
+* Set static class property
+* @param string class
+* @param string property
+* @param mixed value
+*/
+function uopz_set_property(string class, string property, mixed value);
+
+/**
+* Get instance property
+* @param object instance
+* @param string property
+*/
+function uopz_get_property(object instance, string property) : mixed;
+
+/**
+* Get static class property
+* @param string class
+* @param string property
+*/
+function uopz_get_property(string class, string property) : mixed;
 ```
 
 Installation

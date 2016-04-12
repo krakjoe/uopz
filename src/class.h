@@ -26,6 +26,12 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent);
 zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface);
 void uopz_get_mock(zend_string *clazz, zval *return_value);
 
+void uopz_set_property(zval *object, zval *member, zval *value);
+void uopz_get_property(zval *object, zval *member, zval *value);
+
+void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval *value);
+void uopz_get_static_property(zend_class_entry *ce, zend_string *property, zval *value);
+
 #endif	/* UOPZ_CLASS_H */
 
 /*

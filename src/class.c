@@ -130,6 +130,62 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 	return instanceof_function(clazz, interface);
 } /* }}} */
 
+void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
+	zend_class_entry *scope = EG(scope);
+
+	EG(scope) = Z_OBJCE_P(object);
+	Z_OBJ_HT_P(object)
+		->write_property(object, member, value, NULL);
+	EG(scope) = scope;
+} /* }}} */
+
+void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
+	zend_class_entry *scope = EG(scope);
+	zval *prop;
+
+	EG(scope) = Z_OBJCE_P(object);
+	prop = Z_OBJ_HT_P(object)
+		->read_property(object, member, BP_VAR_R, NULL, prop);
+	EG(scope) = scope;
+
+	if (!prop) {
+		return;
+	}
+
+	ZVAL_COPY(value, prop);
+} /* }}} */
+
+void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
+	zend_class_entry *scope = EG(scope);
+	zval *prop;
+
+	EG(scope) = ce;
+	prop = zend_std_get_static_property(ce, property, 1);
+	EG(scope) = scope;
+
+	if (!prop) {
+		return;
+	}
+
+	zval_ptr_dtor(prop);
+	ZVAL_COPY(prop, value);
+} /* }}} */
+
+void uopz_get_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
+	zend_class_entry *scope = EG(scope);
+	zval *prop;
+	
+	EG(scope) = ce;
+	prop = zend_std_get_static_property(ce, property, 1);
+	EG(scope) = scope;
+
+	if (!prop) {
+		return;
+	}
+	
+	ZVAL_COPY(value, prop);
+} /* }}} */
+
 #endif	/* UOPZ_CLASS */
 
 /*
