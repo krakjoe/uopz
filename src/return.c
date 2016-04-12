@@ -138,13 +138,12 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 	zval closure, 
 		 rv,
 		 *result = return_value ? return_value : &rv;
-	const zend_function *overload = zend_get_closure_method_def(&ureturn->value);
 
 	ZVAL_UNDEF(&rv);
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
 
-	zend_create_closure(&closure, (zend_function*) overload, 
+	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(&ureturn->value), 
 		ureturn->clazz, ureturn->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
 	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {

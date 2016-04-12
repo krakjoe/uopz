@@ -134,13 +134,12 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 	zend_fcall_info_cache fcc;
 	char *error = NULL;
 	zval closure, rv;
-	const zend_function *overload = zend_get_closure_method_def(&uhook->closure);
 
 	ZVAL_UNDEF(&rv);
 
 	uhook->busy = 1;
 
-	zend_create_closure(&closure, (zend_function*) overload, 
+	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(&uhook->closure), 
 		uhook->clazz, uhook->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
 	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {

@@ -22,6 +22,9 @@
 #include "php.h"
 #include "uopz.h"
 
+#include "return.h"
+#include "hook.h"
+
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
 #else
@@ -33,6 +36,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS);
 
 void uopz_handlers_init(void) {
 	zend_set_user_opcode_handler(ZEND_INIT_FCALL_BY_NAME,		uopz_call_handler);
@@ -42,6 +46,7 @@ void uopz_handlers_init(void) {
 	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL,	uopz_call_handler);
 	zend_set_user_opcode_handler(ZEND_NEW,						uopz_mock_handler);
 	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT,			uopz_constant_handler);
+	zend_set_user_opcode_handler(ZEND_DO_FCALL,					uopz_return_handler);
 }
 
 void uopz_handlers_shutdown(void) {
@@ -52,6 +57,7 @@ void uopz_handlers_shutdown(void) {
 	zend_set_user_opcode_handler(ZEND_INIT_STATIC_METHOD_CALL,	NULL);
 	zend_set_user_opcode_handler(ZEND_NEW,						NULL);
 	zend_set_user_opcode_handler(ZEND_FETCH_CONSTANT,			NULL);
+	zend_set_user_opcode_handler(ZEND_DO_FCALL,					NULL);
 }
 
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -159,6 +165,53 @@ int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	return UOPZ_VM_ACTION;
 } /* }}} */
 
+static inline void uopz_run_hook(zend_function *function, zend_execute_data *execute_data) { /* {{{ */
+	uopz_hook_t *uhook = uopz_find_hook(function);
+
+	if (uhook && !uhook->busy) {
+		uopz_execute_hook(uhook, execute_data);
+	}
+} /* }}} */
+
+int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) {
+	zend_execute_data *call = EX(call);
+
+	if (call) {
+		uopz_return_t *ureturn;
+
+		uopz_run_hook(call->func, call);
+
+		ureturn = uopz_find_return(call->func);
+
+		if (ureturn) {
+			zval *return_value = EX_VAR(EX(opline)->result.var);
+
+			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
+				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
+					return ZEND_USER_OPCODE_DISPATCH;
+				}
+
+				uopz_execute_return(ureturn, call, return_value);
+
+				EX(call) = call->prev_execute_data;
+				EX(opline)++;
+				
+				return ZEND_USER_OPCODE_CONTINUE;
+			}
+
+			if (return_value) {
+				ZVAL_COPY(return_value, &ureturn->value);
+			}
+			
+			EX(call) = call->prev_execute_data;
+			EX(opline)++;
+
+			return ZEND_USER_OPCODE_CONTINUE;
+		}
+	}
+
+	return ZEND_USER_OPCODE_DISPATCH;
+}
 #endif	/* UOPZ_HANDLERS_H */
 
 /*

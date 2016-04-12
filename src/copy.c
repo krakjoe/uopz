@@ -26,13 +26,7 @@
 
 /* {{{ */
 static inline HashTable* uopz_copy_statics(HashTable *old) {
-	HashTable *statics = NULL;
-
-	if (old) {
-		GC_REFCOUNT(old)++;
-	}
-	
-	return statics;
+	return zend_array_dup(old);
 } /* }}} */
 
 /* {{{ */
