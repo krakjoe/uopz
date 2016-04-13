@@ -24,6 +24,8 @@
 
 #include "util.h"
 #include "class.h"
+#include <Zend/zend_exceptions.h>
+#include <Zend/zend_inheritance.h>
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 

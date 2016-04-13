@@ -26,6 +26,7 @@
 #include "return.h"
 
 #include <Zend/zend_closures.h>
+#include <Zend/zend_exceptions.h>
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
