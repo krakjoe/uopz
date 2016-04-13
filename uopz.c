@@ -37,6 +37,7 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #include "src/hook.h"
 #include "src/constant.h"
 #include "src/class.h"
+#include "src/function.h"
 #include "src/handlers.h"
 #include "src/executors.h"
 
