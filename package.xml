@@ -10,11 +10,17 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2015-03-04</date>
+ <lead>
+  <name>Remi Collet</name>
+  <user>remi</user>
+  <email>remi@php.net</email>
+  <active>yes</active>
+ </lead>
+ <date>2016-04-13</date>
  <time>13:00:00</time>
  <version>
-  <release>2.0.7</release>
-  <api>2.0.7</api>
+  <release>5.0.1</release>
+  <api>5.0.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,84 +28,91 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix bug in overriding methods in classes loaded prior to override
-  add ability to send object from ZEND_NEW handler
-  send exit parameter to overload function
-  fix bug in handling exit status code when overloading disabled
-  set exit status code when overloading enabled from return value
+- PHP 7 compatibility
+- new API, see documentation
  </notes>
  <contents>
   <dir name="/">
-   <file name="tests/001.phpt" role="test" />
-   <file name="tests/002.phpt" role="test" />
-   <file name="tests/003.phpt" role="test" />
-   <file name="tests/004.phpt" role="test" />
-   <file name="tests/005.phpt" role="test" />
-   <file name="tests/006.phpt" role="test" />
-   <file name="tests/007.phpt" role="test" />
-   <file name="tests/008.phpt" role="test" />
-   <file name="tests/010.phpt" role="test" />
-   <file name="tests/011.phpt" role="test" />
-   <file name="tests/012.phpt" role="test" />
-   <file name="tests/013.phpt" role="test" />
-   <file name="tests/014.phpt" role="test" />
-   <file name="tests/015.phpt" role="test" />
-   <file name="tests/016.phpt" role="test" />
-   <file name="tests/017.phpt" role="test" />
-   <file name="tests/018.phpt" role="test" />
-   <file name="tests/019.phpt" role="test" />
-   <file name="tests/020.phpt" role="test" />
-   <file name="tests/021.phpt" role="test" />
-   <file name="tests/022.phpt" role="test" />
-   <file name="tests/023.phpt" role="test" />
-   <file name="tests/024.phpt" role="test" />
-   <file name="tests/025.phpt" role="test" />
-   <file name="tests/026.phpt" role="test" />
-   <file name="tests/027.phpt" role="test" />
-   <file name="tests/028.phpt" role="test" />
-   <file name="tests/029.phpt" role="test" />
-   <file name="tests/030.phpt" role="test" />
-   <file name="tests/031.phpt" role="test" />
-   <file name="tests/032.phpt" role="test" />
-   <file name="tests/033.phpt" role="test" />
-   <file name="tests/034.phpt" role="test" />
-   <file name="tests/035.phpt" role="test" />
-   <file name="tests/036.phpt" role="test" />
-   <file name="tests/037.phpt" role="test" />
-   <file name="tests/038.phpt" role="test" />
-   <file name="tests/039.phpt" role="test" />
-   <file name="tests/040.phpt" role="test" />
-   <file name="tests/041.phpt" role="test" />
-   <file name="tests/042.phpt" role="test" />
-   <file name="tests/043.phpt" role="test" />
-   <file name="tests/044.phpt" role="test" />
-   <file name="tests/045.phpt" role="test" />
-   <file name="tests/046.phpt" role="test" />
-   <file name="tests/047.phpt" role="test" />
-   <file name="tests/048.phpt" role="test" />
-   <file name="tests/049.phpt" role="test" />
-   <file name="tests/050.phpt" role="test" />
-   <file name="tests/skipif.inc" role="test" />
-   <file name="uopz.h" role="src" />
-   <file name="uopz.c" role="src" />
-   <file name="compile.h" role="src" />
-   <file name="copy.h" role="src" />
-   <file name="config.m4" role="src" />
-   <file name="config.w32" role="src" />
-   <file name="LICENSE" role="doc" />
-   <file name="README.md" role="doc" />
+    <dir name="/src">
+     <file name="class.c" role="src" />
+     <file name="class.h" role="src" />
+     <file name="constant.c" role="src" />
+     <file name="constant.h" role="src" />
+     <file name="copy.c" role="src" />
+     <file name="copy.h" role="src" />
+     <file name="executors.c" role="src" />
+     <file name="executors.h" role="src" />
+     <file name="function.c" role="src" />
+     <file name="function.h" role="src" />
+     <file name="handlers.c" role="src" />
+     <file name="handlers.h" role="src" />
+     <file name="hook.c" role="src" />
+     <file name="hook.h" role="src" />
+     <file name="return.c" role="src" />
+     <file name="return.h" role="src" />
+     <file name="util.c" role="src" />
+     <file name="util.h" role="src" />
+    </dir>
+    <dir name="/tests">
+     <file name="001.phpt" role="test" />
+     <file name="002.phpt" role="test" />
+     <file name="003.phpt" role="test" />
+     <file name="004.phpt" role="test" />
+     <file name="005.phpt" role="test" />
+     <file name="006.phpt" role="test" />
+     <file name="007.phpt" role="test" />
+     <file name="008.phpt" role="test" />
+     <file name="010.phpt" role="test" />
+     <file name="011.phpt" role="test" />
+     <file name="012.phpt" role="test" />
+     <file name="013.phpt" role="test" />
+     <file name="014.phpt" role="test" />
+     <file name="015.phpt" role="test" />
+     <file name="016.phpt" role="test" />
+     <file name="017.phpt" role="test" />
+     <file name="018.phpt" role="test" />
+     <file name="019.phpt" role="test" />
+     <file name="skipif.inc" role="test" />
+    </dir>
+    <file name="uopz.h" role="src" />
+    <file name="uopz.c" role="src" />
+    <file name="config.m4" role="src" />
+    <file name="config.w32" role="src" />
+    <file name="LICENSE" role="doc" />
+    <file name="README.md" role="doc" />
   </dir>
  </contents>
  <dependencies>
   <required>
    <php>
-    <min>5.4.0</min>
+    <min>7.0.0</min>
    </php>
    <pearinstaller>
-    <min>1.4.0b1</min>
+    <min>1.10</min>
    </pearinstaller>
   </required>
  </dependencies>
  <providesextension>uopz</providesextension>
  <extsrcrelease />
+ <changelog>
+  <release>
+   <date>2015-03-04</date>
+   <version>
+    <release>2.0.7</release>
+    <api>2.0.7</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+  fix bug in overriding methods in classes loaded prior to override
+  add ability to send object from ZEND_NEW handler
+  send exit parameter to overload function
+  fix bug in handling exit status code when overloading disabled
+  set exit status code when overloading enabled from return value
+   </notes>
+  </release>
+ </changelog>
 </package>
