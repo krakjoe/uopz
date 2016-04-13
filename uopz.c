@@ -555,7 +555,7 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_undefine)
 	UOPZ_FE(uopz_set_property)
 	UOPZ_FE(uopz_get_property)
-	{NULL, NULL, NULL}
+	ZEND_FE_END
 };
 #undef UOPZ_FE
 /* }}} */
