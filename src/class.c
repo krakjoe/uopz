@@ -163,7 +163,7 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 	zend_class_entry *scope = EG(scope);
 	zend_class_entry *ce = Z_OBJCE_P(object);
 	zend_property_info *info;
-	zval *prop;
+	zval *prop, rv;
 
 	do {
 		EG(scope) = ce;
@@ -184,7 +184,7 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 	}
 	
 	prop = Z_OBJ_HT_P(object)
-		->read_property(object, member, BP_VAR_R, NULL, prop);
+		->read_property(object, member, BP_VAR_R, NULL, &rv);
 	EG(scope) = scope;
 
 	if (!prop) {
