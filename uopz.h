@@ -40,7 +40,15 @@ ZEND_END_MODULE_GLOBALS(uopz)
 #define UOPZ(v) (uopz_globals.v)
 #endif
 
-extern zend_class_entry* spl_ce_RuntimeException;
+#ifdef HAVE_SPL
+#	include "ext/spl/spl_exceptions.h"
+#else
+	extern zend_class_entry* spl_ce_RuntimeException;
+#endif
+
+#include "Zend/zend_inheritance.h"
+#include "Zend/zend_exceptions.h"
+#include "Zend/zend_closures.h"
 
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)

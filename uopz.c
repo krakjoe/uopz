@@ -23,13 +23,8 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
-#include "Zend/zend_closures.h"
-#include "Zend/zend_exceptions.h"
-#include "Zend/zend_inheritance.h"
 
-#ifdef HAVE_SPL
-#include "ext/spl/spl_exceptions.h"
-#else
+#ifndef HAVE_SPL
 /* {{{ */
 zend_class_entry *spl_ce_RuntimeException;
 zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */

@@ -4,10 +4,12 @@
 ARG_ENABLE("uopz", "for uopz support", "no");
 
 if (PHP_UOPZ != "no") {
-	EXTENSION("uopz", "uopz.c handlers.c executors.c");
+	EXTENSION("uopz", "uopz.c");
 	ADD_SOURCES(
-    	"ext/uopz/src",
+    	configure_module_dirname + "/src",
 		"util.c copy.c return.c hook.c constant.c function.c class.c handlers.c executors.c", 
 		"uopz"
     );
+	ADD_FLAG("CFLAGS_UOPZ", "/I" + configure_module_dirname + "");
 }
+
