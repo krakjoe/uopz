@@ -42,4 +42,5 @@ try {
 bool(true)
 bool(true)
 string(50) "Call to private method Foo::priv() from context ''"
-string(69) "uopz will not replace existing functions, use uopz_set_return instead"
+string(73) "will not replace existing method Foo::exists, use uopz_set_return instead"
+

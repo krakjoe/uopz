@@ -143,8 +143,15 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 		uhook->clazz, uhook->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
 	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
-		uopz_exception("cannot use hook set for %s as function: %s",
-			ZSTR_VAL(EX(func)->common.function_name), error);
+		if (EX(func)->common.scope) {
+			uopz_exception("cannot use hook set for %s::%s as function: %s",
+				ZSTR_VAL(EX(func)->common.scope->name),
+				ZSTR_VAL(EX(func)->common.function_name), error);
+		} else {
+			uopz_exception("cannot use hook set for %s as function: %s",
+				ZSTR_VAL(EX(func)->common.function_name), error);
+		}		
+		
 		if (error) {
 			efree(error);
 		}
@@ -152,8 +159,15 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 	}
 
 	if (zend_fcall_info_argp(&fci, EX_NUM_ARGS(), EX_VAR_NUM(0)) != SUCCESS) {
-		uopz_exception("cannot set arguments for %s hook",
+		if (EX(func)->common.scope) {
+			uopz_exception("cannot set arguments for %s::%s hook",
+				ZSTR_VAL(EX(func)->common.scope->name),
+				ZSTR_VAL(EX(func)->common.function_name));
+		} else {
+			uopz_exception("cannot set arguments for %s hook",
 			ZSTR_VAL(EX(func)->common.function_name));
+		}
+		
 		goto _exit_uopz_execute_hook;
 	}
 

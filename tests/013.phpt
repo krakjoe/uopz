@@ -35,4 +35,5 @@ bool(true)
 bool(true)
 bool(true)
 string(38) "Call to undefined method Foo::method()"
-string(48) "cannot delete function, it was not added by uopz"
+string(58) "cannot delete method Foo::exists, it was not added by uopz"
+

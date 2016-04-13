@@ -37,8 +37,16 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	HashTable *functions = NULL;
 
 	if (zend_hash_exists(table, key)) {
-		uopz_exception(
-			"uopz will not replace existing functions, use uopz_set_return instead");
+		if (clazz) {
+			uopz_exception(
+				"will not replace existing method %s::%s, use uopz_set_return instead",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+		} else {
+			uopz_exception(
+				"will not replace existing function %s, use uopz_set_return instead",
+				ZSTR_VAL(name));
+		}
 		zend_string_release(key);
 		return 0;
 	}
@@ -51,8 +59,16 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	}
 
 	if (!zend_hash_update(functions, key, closure)) {
-		uopz_exception(
-			"failed to update uopz function table");
+		if (clazz) {
+			uopz_exception(
+				"failed to update uopz function table while adding method %s::%s",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+		} else {
+			uopz_exception(
+				"failed to update uopz function table while adding function %s",
+				ZSTR_VAL(name));
+		}
 		zend_string_release(key);
 		return 0;
 	}
@@ -62,8 +78,16 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	function = uopz_copy_closure(clazz, (zend_function*) zend_get_closure_method_def(closure), flags);
 
 	if (!zend_hash_update_ptr(table, key, (void*) function)) {
-		uopz_exception(
-			"failed to register function");
+		if (clazz) {
+			uopz_exception(
+				"failed to update zend function table while adding method %s::%s",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+		} else {
+			uopz_exception(
+				"failed to update zend function table while adding function %s",
+				ZSTR_VAL(name));
+		}
 		zend_hash_del(functions, key);
 		zend_string_release(key);
 		return 0;
@@ -83,8 +107,16 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name) { /* {{{
 	zend_string *key = zend_string_tolower(name);
 
 	if (!functions || !zend_hash_exists(functions, key)) {
-		uopz_exception(
-			"cannot delete function, it was not added by uopz");
+		if (clazz) {
+			uopz_exception(
+				"cannot delete method %s::%s, it was not added by uopz",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+		} else {
+			uopz_exception(
+				"cannot delete function %s, it was not added by uopz",
+				ZSTR_VAL(name));
+		}
 		zend_string_release(key);
 		return 0;
 	}
@@ -109,13 +141,15 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 
 		if (flags & ZEND_ACC_PPP_MASK) {
 			uopz_exception(
-				"attempt to set public, private or protected on class entry, not allowed");
+				"attempt to set public, private or protected on class entry %s, not allowed",
+				ZSTR_VAL(clazz->name));
 			return;
 		}
 
 		if (flags & ZEND_ACC_STATIC) {
 			uopz_exception(
-				"attempt to set static on class entry, not allowed");
+				"attempt to set static on class entry %s, not allowed",
+				ZSTR_VAL(clazz->name));
 			return;
 		}
 
@@ -127,11 +161,11 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	if (uopz_find_function(table, name, &function) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
-			"failed to set or get flags of %s::%s, function does not exist",
+			"failed to set or get flags of method %s::%s, it does not exist",
 			ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
 			uopz_exception(
-				"failed to set or get flags of %s, function does not exist",
+				"failed to set or get flags of function %s, it does not exist",
 				ZSTR_VAL(name));
 		}
 		return;
