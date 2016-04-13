@@ -96,8 +96,6 @@ static inline zval* uopz_copy_literals(zval *old, int end) {
 
 /* {{{ */
 static inline zend_op* uopz_copy_opcodes(zend_op_array *op_array, zval *literals) {
-	zval *literal;
-	uint32_t it = 0;
 	zend_op *copy = safe_emalloc(
 		op_array->last, sizeof(zend_op), 0);
 

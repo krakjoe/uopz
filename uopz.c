@@ -131,17 +131,17 @@ static PHP_MINFO_FUNCTION(uopz)
 }
 /* }}} */
 
-/* {{{ proto bool uopz_set_return(string class, string function, mixed value)
-	   proto bool uopz_set_return(function, mixed value) */
+/* {{{ proto bool uopz_set_return(string class, string function, mixed variable [, bool execute ])
+	   proto bool uopz_set_return(function, mixed variable [, bool execute ]) */
 static PHP_FUNCTION(uopz_set_return) 
 {
 	zend_string *function = NULL;
 	zval *variable = NULL;
 	zend_class_entry *clazz = NULL;
-	zend_long execute = 0;
+	zend_bool execute = 0;
 
-	if (uopz_parse_parameters("CSz|l", &clazz, &function, &variable, &execute) != SUCCESS &&
-		uopz_parse_parameters("Sz|l", &function, &variable, &execute) != SUCCESS) {
+	if (uopz_parse_parameters("CSz|b", &clazz, &function, &variable, &execute) != SUCCESS &&
+		uopz_parse_parameters("Sz|b", &function, &variable, &execute) != SUCCESS) {
 		uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function, variable [, execute]) or (function, variable [, execute])");
 		return;
@@ -555,7 +555,7 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_undefine)
 	UOPZ_FE(uopz_set_property)
 	UOPZ_FE(uopz_get_property)
-	{NULL, NULL, NULL}
+	ZEND_FE_END
 };
 #undef UOPZ_FE
 /* }}} */
