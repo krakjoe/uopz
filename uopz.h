@@ -32,6 +32,8 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	HashTable	returns;
 	HashTable	mocks;
 	HashTable   hooks;
+
+	zval estatus;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS

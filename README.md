@@ -296,6 +296,13 @@ function uopz_get_property(object instance, string property) : mixed;
 * @param string property
 */
 function uopz_get_property(string class, string property) : mixed;
+
+/**
+* Retrieve the last set exit() status
+* Note: opcache optimizes away dead code after unconditional exit
+* Note: exit() breaks xdebug hooks
+*/
+function uopz_get_exit_status() : mixed;
 ```
 
 Installation

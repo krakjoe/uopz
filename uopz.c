@@ -50,7 +50,7 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
-
+	ZVAL_UNDEF(&ng->estatus);
 } /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
@@ -533,6 +533,13 @@ static PHP_FUNCTION(uopz_get_property) {
 	}
 } /* }}} */
 
+/* {{{ proto mixed uopz_get_exit_status(void) */
+static PHP_FUNCTION(uopz_get_exit_status) {
+	if (Z_TYPE(UOPZ(estatus)) != IS_UNDEF) {
+		ZVAL_COPY(return_value, &UOPZ(estatus));
+	}
+} /* }}} */
+
 /* {{{ uopz_functions[]
  */
 #define UOPZ_FE(f) PHP_FE(f, NULL)
@@ -557,6 +564,7 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_undefine)
 	UOPZ_FE(uopz_set_property)
 	UOPZ_FE(uopz_get_property)
+	UOPZ_FE(uopz_get_exit_status)
 	ZEND_FE_END
 };
 #undef UOPZ_FE

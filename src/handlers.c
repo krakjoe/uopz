@@ -42,6 +42,7 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
+int uopz_no_exit_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
@@ -52,6 +53,7 @@ int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 
 typedef int (*uopz_opcode_handler_t) (UOPZ_OPCODE_HANDLER_ARGS);
 
+uopz_opcode_handler_t uopz_exit_handler;
 uopz_opcode_handler_t uopz_init_fcall_by_name_handler;
 uopz_opcode_handler_t uopz_init_fcall_handler;
 uopz_opcode_handler_t uopz_init_ns_fcall_by_name_handler;
@@ -74,6 +76,7 @@ uopz_opcode_handler_t uopz_fetch_class_constant_handler;
 } while (0)
 
 void uopz_handlers_init(void) {
+	UOPZ_SET_HANDLER(uopz_exit_handler,                     ZEND_EXIT,                      uopz_no_exit_handler);
 	UOPZ_SET_HANDLER(uopz_init_fcall_by_name_handler,		ZEND_INIT_FCALL_BY_NAME, 		uopz_call_handler);
 	UOPZ_SET_HANDLER(uopz_init_fcall_handler,				ZEND_INIT_FCALL, 				uopz_call_handler);
 	UOPZ_SET_HANDLER(uopz_init_ns_fcall_by_name_handler,	ZEND_INIT_NS_FCALL_BY_NAME, 	uopz_call_handler);
@@ -88,6 +91,7 @@ void uopz_handlers_init(void) {
 }
 
 void uopz_handlers_shutdown(void) {
+	UOPZ_UNSET_HANDLER(uopz_exit_handler,					ZEND_EXIT);
 	UOPZ_UNSET_HANDLER(uopz_init_fcall_by_name_handler,		ZEND_INIT_FCALL_BY_NAME);
 	UOPZ_UNSET_HANDLER(uopz_init_fcall_handler,				ZEND_INIT_FCALL);
 	UOPZ_UNSET_HANDLER(uopz_init_ns_fcall_by_name_handler,	ZEND_INIT_NS_FCALL_BY_NAME);
@@ -100,6 +104,38 @@ void uopz_handlers_shutdown(void) {
 	UOPZ_UNSET_HANDLER(uopz_fetch_class_constant_handler,	ZEND_FETCH_CLASS_CONSTANT);
 #endif
 }
+
+int uopz_no_exit_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	if (EX(opline)->op1_type != IS_UNUSED) {
+		zval *estatus;
+
+		if (EX(opline)->op1_type == IS_CONST) {
+			estatus = EX_CONSTANT(EX(opline)->op1);
+		} else estatus = EX_VAR(EX(opline->op1.var));
+
+		if (Z_ISREF_P(estatus)) {
+			estatus = Z_REFVAL_P(estatus);
+		}
+
+		if (Z_TYPE_P(estatus) == IS_LONG) {
+			EG(exit_status) = Z_LVAL_P(estatus);
+		} else EG(exit_status) = 0;
+
+		ZVAL_COPY(&UOPZ(estatus), estatus);
+	}
+
+	if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
+		EX(opline)++;
+
+		while (EX(opline)->opcode == ZEND_EXT_STMT) {
+			EX(opline)++;
+		}
+
+		return ZEND_USER_OPCODE_CONTINUE;
+	} else {
+		return ZEND_USER_OPCODE_RETURN;
+	}
+} /* }}} */
 
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	switch (EX(opline)->opcode) {
