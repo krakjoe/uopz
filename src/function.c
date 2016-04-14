@@ -30,7 +30,7 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags) { /* {{{ */
+zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool all) { /* {{{ */
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_string *key = zend_string_tolower(name);
 	zend_function *function = NULL;
@@ -95,6 +95,19 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	}
 
 	if (clazz) {
+		if (all) {
+			zend_class_entry *next;
+
+			ZEND_HASH_FOREACH_PTR(CG(class_table), next) {
+				if (next->parent == clazz) {
+					if (zend_hash_exists(&next->function_table, key)) {
+						continue;
+					}
+					uopz_add_function(next, name, closure, flags, all);
+				}
+			} ZEND_HASH_FOREACH_END();
+		}
+
 		uopz_handle_magic(clazz, name, function);
 	}
 
@@ -103,7 +116,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	return 1;
 } /* }}} */
 
-zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name) { /* {{{ */
+zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_bool all) { /* {{{ */
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	HashTable *functions = (HashTable*) 
 		zend_hash_index_find_ptr(&UOPZ(functions), (zend_long) table);	
@@ -122,6 +135,21 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name) { /* {{{
 		}
 		zend_string_release(key);
 		return 0;
+	}
+
+	if (clazz) {
+		if (all) {
+			zend_class_entry *next;
+
+			ZEND_HASH_FOREACH_PTR(CG(class_table), next) {
+				if (next->parent == clazz) {
+					if (!zend_hash_exists(&next->function_table, key)) {
+						continue;
+					}
+					uopz_del_function(next, name, all);
+				}
+			} ZEND_HASH_FOREACH_END();
+		}
 	}
 
 	zend_hash_del(table, key);

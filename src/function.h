@@ -19,8 +19,8 @@
 #ifndef UOPZ_FUNCTION_H
 #define UOPZ_FUNCTION_H
 
-zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags);
-zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name);
+zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool all);
+zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_bool all);
 
 void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zval *return_value);
 void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics);

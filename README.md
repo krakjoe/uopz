@@ -173,23 +173,29 @@ function uopz_unset_hook(string function) : bool;
 * @param string function
 * @param Closure handler
 * @param int flags
+* @param bool all
+* If all is true, all classes that descend from class will also be affected
 **/
-function uopz_add_function(string class, string function, Closure handler [, int flags = ZEND_ACC_PUBLIC]) : bool;
+function uopz_add_function(string class, string function, Closure handler [, int flags = ZEND_ACC_PUBLIC [, bool all = true]]) : bool;
 
 /**
 * Add a non-existent function
 * @param string function
 * @param Closure handler
 * @param int flags
+* @param bool all
+* If all is true, all classes that descend from class will also be affected
 **/
-function uopz_add_function(string function, Closure handler [, int flags = ZEND_ACC_PUBLIC]) : bool;
+function uopz_add_function(string function, Closure handler [, int flags = ZEND_ACC_PUBLIC [, bool all = true]]) : bool;
 
 /**
 * Delete a previously added method
 * @param string class
 * @param string function
+* @param bool all
+* If all is true, all classes that descend from class will also be affected
 **/
-function uopz_del_function(string class, string function);
+function uopz_del_function(string class, string function, [, bool all = true]);
 
 /**
 * Delete a previously added function

@@ -332,7 +332,7 @@ static PHP_FUNCTION(uopz_get_hook)
 	uopz_get_hook(clazz, function, return_value);
 } /* }}} */
 
-/* {{{ proto bool uopz_add_function(string class, string method, Closure function [, int flags = ZEND_ACC_PUBLIC])
+/* {{{ proto bool uopz_add_function(string class, string method, Closure function [, int flags = ZEND_ACC_PUBLIC [, bool all = false]])
 			 bool uopz_add_function(string function, Closure function [, int flags = ZEND_ACC_PUBLIC]) */
 static PHP_FUNCTION(uopz_add_function)
 {
@@ -340,32 +340,34 @@ static PHP_FUNCTION(uopz_add_function)
 	zend_string *name = NULL;
 	zval *closure = NULL;
 	zend_long flags = ZEND_ACC_PUBLIC;
+	zend_bool all = 1;
 
-	if (uopz_parse_parameters("CSO|l", &clazz, &name, &closure, zend_ce_closure, &flags) != SUCCESS &&
+	if (uopz_parse_parameters("CSO|lb", &clazz, &name, &closure, zend_ce_closure, &flags, &all) != SUCCESS &&
 		uopz_parse_parameters("SO|l", &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (class, function, closure [, flags]) or (function, closure [, flags])");
 		return;
 	}
 
-	RETURN_BOOL(uopz_add_function(clazz, name, closure, flags));
+	RETURN_BOOL(uopz_add_function(clazz, name, closure, flags, all));
 } /* }}} */
 
-/* {{{ proto bool uopz_del_function(string class, string method)
+/* {{{ proto bool uopz_del_function(string class, string method [, bool all = false])
 			 bool uopz_del_function(string function) */
 static PHP_FUNCTION(uopz_del_function)
 {
 	zend_class_entry *clazz = NULL;
 	zend_string *name = NULL;
+	zend_bool all = 1;
 
-	if (uopz_parse_parameters("CS", &clazz, &name) != SUCCESS &&
+	if (uopz_parse_parameters("CS|b", &clazz, &name, &all) != SUCCESS &&
 		uopz_parse_parameters("S", &name) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (class, function) or (function)");
 		return;
 	}
 
-	RETURN_BOOL(uopz_del_function(clazz, name));
+	RETURN_BOOL(uopz_del_function(clazz, name, all));
 } /* }}} */
 
 /* {{{ proto bool uopz_redefine(string constant, mixed variable)
