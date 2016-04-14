@@ -46,6 +46,9 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS);
+#ifdef ZEND_FETCH_CLASS_CONSTANT
+int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
+#endif
 
 typedef int (*uopz_opcode_handler_t) (UOPZ_OPCODE_HANDLER_ARGS);
 
@@ -57,6 +60,9 @@ uopz_opcode_handler_t uopz_init_static_method_call_handler;
 uopz_opcode_handler_t uopz_new_handler;
 uopz_opcode_handler_t uopz_fetch_constant_handler;
 uopz_opcode_handler_t uopz_do_fcall_handler;
+#ifdef ZEND_FETCH_CLASS_CONSTANT
+uopz_opcode_handler_t uopz_fetch_class_constant_handler;
+#endif
 
 #define UOPZ_SET_HANDLER(h, o, n) do { \
 	(h) = zend_get_user_opcode_handler((o)); \
@@ -76,6 +82,9 @@ void uopz_handlers_init(void) {
 	UOPZ_SET_HANDLER(uopz_new_handler,						ZEND_NEW,						uopz_mock_handler);
 	UOPZ_SET_HANDLER(uopz_fetch_constant_handler,			ZEND_FETCH_CONSTANT,			uopz_constant_handler);
 	UOPZ_SET_HANDLER(uopz_do_fcall_handler,					ZEND_DO_FCALL,					uopz_return_handler);
+#ifdef ZEND_FETCH_CLASS_CONSTANT
+	UOPZ_SET_HANDLER(uopz_fetch_class_constant_handler,		ZEND_FETCH_CLASS_CONSTANT,		uopz_class_constant_handler);
+#endif
 }
 
 void uopz_handlers_shutdown(void) {
@@ -87,6 +96,9 @@ void uopz_handlers_shutdown(void) {
 	UOPZ_UNSET_HANDLER(uopz_new_handler,					ZEND_NEW);
 	UOPZ_UNSET_HANDLER(uopz_fetch_constant_handler,			ZEND_FETCH_CONSTANT);
 	UOPZ_UNSET_HANDLER(uopz_do_fcall_handler,				ZEND_DO_FCALL);
+#ifdef ZEND_FETCH_CLASS_CONSTANT
+	UOPZ_UNSET_HANDLER(uopz_fetch_class_constant_handler,	ZEND_FETCH_CLASS_CONSTANT);
+#endif
 }
 
 int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -181,13 +193,40 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 		}
 	} else {
+		zend_string *key = NULL;
+		zval *mock = NULL;
+		zend_class_entry *poser = NULL;
+
 		if (EX(opline)->op1_type == IS_CONST) {
+			key = zend_string_tolower(Z_STR_P(EX_CONSTANT(EX(opline)->op1)));			
+
+			if ((mock = zend_hash_find(&UOPZ(mocks), key))) {
+				if (Z_TYPE_P(mock) == IS_OBJECT) {
+					poser = Z_OBJCE_P(mock);
+				} else poser = zend_lookup_class(Z_STR_P(mock));
+				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), poser);
+			}
+
 			if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
 				CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 			}
+
+			zend_string_release(key);		
 		} else {
+			key = zend_string_tolower(Z_CE_P(EX_VAR(EX(opline)->op1.var))->name);
+			
+			if ((mock = zend_hash_find(&UOPZ(mocks), key))) {
+				if (Z_TYPE_P(mock) == IS_OBJECT) {
+					poser = Z_OBJCE_P(mock);
+				} else poser = zend_lookup_class(Z_STR_P(mock));
+
+				Z_CE_P(EX_VAR(EX(opline)->op1.var)) = poser;
+			}
+
 			CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), 
 								  Z_CE_P(EX_VAR(EX(opline)->op1.var)), NULL);
+
+			zend_string_release(key);
 		}
 	}
 #endif
@@ -314,6 +353,25 @@ _uopz_return_handler_dispatch:
 
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
+
+#ifdef ZEND_FETCH_CLASS_CONSTANT
+int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	if (EX(opline)->op1_type == IS_CONST) {
+		zend_string *key = zend_string_tolower(Z_STR_P(EX_CONSTANT(opline->op1)));
+		zval *mock;
+
+		if ((mock = zend_hash_find(&UOPZ(mocks), key))) {
+			if (Z_TYPE_P(mock) == IS_OBJECT) {
+				poser = Z_OBJCE_P(mock);
+			} else poser = zend_lookup_class(Z_STR_P(mock));
+
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op1)), poser);
+		} else {
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), NULL);
+		}
+	}
+} /* }}} */
+#endif
 
 #endif	/* UOPZ_HANDLERS_H */
 
