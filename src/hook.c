@@ -82,6 +82,7 @@ zend_bool uopz_unset_hook(zend_class_entry *clazz, zend_string *function) { /* {
 	} else hooks = zend_hash_index_find_ptr(&UOPZ(hooks), 0);
 
 	if (!hooks || !zend_hash_exists(hooks, key)) {
+		zend_string_release(key);
 		return 0;
 	}
 
