@@ -16,11 +16,17 @@ var_dump(new Foo);
 
 var_dump(Foo::thing());
 
-class Qux {}
+class Qux {
+	public static function thing() {
+		return true;
+	}
+}
 
 uopz_set_mock(Foo::class, new Qux);
 
 var_dump(new Foo);
+
+var_dump(Foo::thing());
 ?>
 --EXPECT--
 object(Bar)#1 (0) {
@@ -28,3 +34,4 @@ object(Bar)#1 (0) {
 bool(true)
 object(Qux)#1 (0) {
 }
+bool(true)
