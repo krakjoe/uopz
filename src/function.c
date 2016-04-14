@@ -90,6 +90,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		}
 		zend_hash_del(functions, key);
 		zend_string_release(key);
+		destroy_zend_function(function);
 		return 0;
 	}
 
