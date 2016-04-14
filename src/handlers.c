@@ -357,17 +357,18 @@ _uopz_return_handler_dispatch:
 #ifdef ZEND_FETCH_CLASS_CONSTANT
 int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (EX(opline)->op1_type == IS_CONST) {
-		zend_string *key = zend_string_tolower(Z_STR_P(EX_CONSTANT(opline->op1)));
-		zval *mock;
+		zend_string *key = zend_string_tolower(Z_STR_P(EX_CONSTANT(EX(opline)->op1)));
+		zval *mock = NULL;
+		zend_class_entry *poser = NULL;
 
 		if ((mock = zend_hash_find(&UOPZ(mocks), key))) {
 			if (Z_TYPE_P(mock) == IS_OBJECT) {
 				poser = Z_OBJCE_P(mock);
 			} else poser = zend_lookup_class(Z_STR_P(mock));
 
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op1)), poser);
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), poser);
 		} else {
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), NULL);
+			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 		}
 	}
 } /* }}} */
