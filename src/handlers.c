@@ -371,6 +371,12 @@ int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 		}
 	}
+	
+	if (uopz_fetch_class_constant_handler) {
+		return uopz_fetch_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+	}
+	
+	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
 #endif
 
