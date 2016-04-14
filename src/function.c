@@ -93,7 +93,9 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		return 0;
 	}
 
-	uopz_handle_magic(clazz, name, function);
+	if (clazz) {
+		uopz_handle_magic(clazz, name, function);
+	}
 
 	zend_string_release(key);
 
