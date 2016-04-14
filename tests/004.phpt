@@ -6,7 +6,7 @@ uopz_set_mock
 <?php
 class Bar {
 	public static function thing() {
-		return true;
+		return 10;
 	}
 }
 
@@ -18,7 +18,7 @@ var_dump(Foo::thing());
 
 class Qux {
 	public static function thing() {
-		return true;
+		return 20;
 	}
 }
 
@@ -31,7 +31,7 @@ var_dump(Foo::thing());
 --EXPECT--
 object(Bar)#1 (0) {
 }
-bool(true)
+int(10)
 object(Qux)#1 (0) {
 }
-bool(true)
+int(20)
