@@ -4,11 +4,17 @@ uopz_set_mock
 <?php include("skipif.inc") ?>
 --FILE--
 <?php
-class Bar {}
+class Bar {
+	public static function thing() {
+		return true;
+	}
+}
 
 uopz_set_mock(Foo::class, Bar::class);
 
 var_dump(new Foo);
+
+var_dump(Foo::thing());
 
 class Qux {}
 
@@ -19,5 +25,6 @@ var_dump(new Foo);
 --EXPECT--
 object(Bar)#1 (0) {
 }
+bool(true)
 object(Qux)#1 (0) {
 }
