@@ -367,11 +367,10 @@ int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			} else poser = zend_lookup_class(Z_STR_P(mock));
 
 			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op1)), poser);
-		} else {
-			CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 		}
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 	}
-	
+
 	if (uopz_fetch_class_constant_handler) {
 		return uopz_fetch_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
 	}
