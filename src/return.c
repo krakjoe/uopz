@@ -33,14 +33,27 @@ zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *valu
 	HashTable *returns;
 	uopz_return_t ret;
 	zend_string *key = zend_string_tolower(name);
+	zend_function *function;
 
-	if (clazz && uopz_find_function(&clazz->function_table, key, NULL) != SUCCESS) {
-		uopz_exception(
-			"failed to set return for %s::%s, the method does not exist",
-			ZSTR_VAL(clazz->name),
-			ZSTR_VAL(name));
-		zend_string_release(key);
-		return 0;
+	if (clazz) {
+		if (uopz_find_method(clazz, key, &function) != SUCCESS) {
+			uopz_exception(
+				"failed to set return for %s::%s, the method does not exist",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+			zend_string_release(key);
+			return 0;
+		}
+
+		if (function->common.scope != clazz) {
+			uopz_exception(
+				"failed to set return for %s::%s, the method is defined in %s",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name),
+				ZSTR_VAL(function->common.scope->name));
+			zend_string_release(key);
+			return 0;
+		}
 	}
 
 	if (clazz) {
@@ -61,16 +74,15 @@ zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *valu
 	ret.function = zend_string_copy(name);
 	ZVAL_COPY(&ret.value, value);
 	ret.flags = execute ? UOPZ_RETURN_EXECUTE : 0;
-	
-	zend_hash_update_mem(returns, key, &ret, sizeof(uopz_return_t));
-	zend_string_release(key);
 
-	if (clazz && clazz->parent) {
-		if (uopz_find_method(clazz->parent, name, NULL) == SUCCESS) {
-			return uopz_set_return(clazz->parent, name, value, execute);
-		}
+	if (!zend_hash_update_mem(returns, key, &ret, sizeof(uopz_return_t))) {
+		zend_string_release(ret.function);
+		zval_ptr_dtor(&ret.value);
+		zend_string_release(key);
+		return 0;
 	}
 
+	zend_string_release(key);
 	return 1;
 } /* }}} */
 
@@ -115,20 +127,29 @@ void uopz_get_return(zend_class_entry *clazz, zend_string *function, zval *retur
 } /* }}} */
 
 uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
-	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name) :
-												  zend_hash_index_find_ptr(&UOPZ(returns), 0);
+	zend_string *key;
+	uopz_return_t *ureturn;
+	HashTable *returns;
 
-	if (returns && function->common.function_name) {
-		Bucket *bucket;
-
-		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
-			if (zend_string_equals_ci(function->common.function_name, bucket->key)) {
-				return Z_PTR(bucket->val);
-			}
-		} ZEND_HASH_FOREACH_END();
+	if (!function->common.function_name) {
+		return NULL;
 	}
 
-	return NULL;
+	if (function->common.scope) {
+		returns = zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name);
+	} else {
+		returns = zend_hash_index_find_ptr(&UOPZ(returns), 0);
+	}
+
+	if (!returns) {
+		return NULL;
+	}
+
+	key = zend_string_tolower(function->common.function_name);
+	ureturn = zend_hash_find_ptr(returns, key);
+	zend_string_release(key);
+
+	return ureturn;
 } /* }}} */
 
 void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value) { /* {{{ */

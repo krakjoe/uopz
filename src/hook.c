@@ -33,14 +33,27 @@ zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closur
 	HashTable *hooks;
 	uopz_hook_t hook;
 	zend_string *key = zend_string_tolower(name);
+	zend_function *function;
 
-	if (clazz && uopz_find_function(&clazz->function_table, key, NULL) != SUCCESS) {
-		uopz_exception(
-			"failed to set hook for %s::%s, the method does not exist",
-			ZSTR_VAL(clazz->name),
-			ZSTR_VAL(name));
-		zend_string_release(key);
-		return 0;
+	if (clazz) {
+		if (uopz_find_method(clazz, key, &function) != SUCCESS) {
+			uopz_exception(
+				"failed to set hook for %s::%s, the method does not exist",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+			zend_string_release(key);
+			return 0;
+		}
+
+		if (function->common.scope != clazz) {
+			uopz_exception(
+				"failed to set hook for %s::%s, the method is defined in %s",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name),
+				ZSTR_VAL(function->common.scope->name));
+			zend_string_release(key);
+			return 0;
+		}
 	}
 
 	if (clazz) {
@@ -56,20 +69,19 @@ zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closur
 	}
 
 	memset(&hook, 0, sizeof(uopz_hook_t));
-	
+
 	hook.clazz = clazz;
 	hook.function = zend_string_copy(name);
 	ZVAL_COPY(&hook.closure, closure);
 
-	zend_hash_update_mem(hooks, key, &hook, sizeof(uopz_hook_t));
-	zend_string_release(key);
-
-	if (clazz && clazz->parent) {
-		if (uopz_find_method(clazz->parent, name, NULL) == SUCCESS) {
-			return uopz_set_hook(clazz->parent, name, closure);	
-		}
+	if (!zend_hash_update_mem(hooks, key, &hook, sizeof(uopz_hook_t))) {
+		zend_string_release(hook.function);
+		zval_ptr_dtor(&hook.closure);
+		zend_string_release(key);
+		return 0;
 	}
-	
+
+	zend_string_release(key);
 	return 1;
 } /* }}} */
 
@@ -114,20 +126,29 @@ void uopz_get_hook(zend_class_entry *clazz, zend_string *function, zval *return_
 } /* }}} */
 
 uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
-	HashTable *returns = function->common.scope ? zend_hash_find_ptr(&UOPZ(hooks), function->common.scope->name) :
-												  zend_hash_index_find_ptr(&UOPZ(hooks), 0);
+	zend_string *key;
+	uopz_hook_t *uhook;
+	HashTable *hooks;
 
-	if (returns && function->common.function_name) {
-		Bucket *bucket;
-
-		ZEND_HASH_FOREACH_BUCKET(returns, bucket) {
-			if (zend_string_equals_ci(function->common.function_name, bucket->key)) {
-				return Z_PTR(bucket->val);
-			}
-		} ZEND_HASH_FOREACH_END();
+	if (!function->common.function_name) {
+		return NULL;
 	}
 
-	return NULL;
+	if (function->common.scope) {
+		hooks = zend_hash_find_ptr(&UOPZ(hooks), function->common.scope->name);
+	} else {
+		hooks = zend_hash_index_find_ptr(&UOPZ(hooks), 0);
+	}
+
+	if (!hooks) {
+		return NULL;
+	}
+
+	key = zend_string_tolower(function->common.function_name);
+	uhook = zend_hash_find_ptr(hooks, key);
+	zend_string_release(key);
+
+	return uhook;
 } /* }}} */
 
 void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /* {{{ */

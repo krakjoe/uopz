@@ -92,18 +92,20 @@ int uopz_find_method(zend_class_entry *ce, zend_string *name, zend_function **fu
 } /* }}} */
 
 int uopz_find_function(HashTable *table, zend_string *name, zend_function **function) { /* {{{ */
-	Bucket *bucket;
+	zend_string *key = zend_string_tolower(name);
+	zend_function *ptr = zend_hash_find_ptr(table, key);
 
-	ZEND_HASH_FOREACH_BUCKET(table, bucket) {
-		if (zend_string_equals_ci(bucket->key, name)) {
-			if (function) {
-				*function = (zend_function*) Z_PTR(bucket->val);
-			}
-			return SUCCESS;
-		}
-	} ZEND_HASH_FOREACH_END();
+	zend_string_release(key);
 
-	return FAILURE;
+	if (!ptr) {
+		return FAILURE;
+	}
+
+	if (function) {
+		*function = ptr;
+	}
+
+	return SUCCESS;
 } /* }}} */
 
 zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /* {{{ */

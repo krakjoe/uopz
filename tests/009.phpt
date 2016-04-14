@@ -18,9 +18,19 @@ var_dump(uopz_set_hook(Foo::class, "method", function($arg){
 $foo = new Foo();
 
 $foo->method(true);
+
+class Bar extends Foo {}
+
+try {
+	uopz_set_hook(Bar::class, "method", function(){});
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
 ?>
 --EXPECT--
 bool(true)
 bool(true)
 object(Foo)#2 (0) {
 }
+string(64) "failed to set hook for Bar::method, the method is defined in Foo"
+
