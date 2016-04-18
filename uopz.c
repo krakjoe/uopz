@@ -50,7 +50,7 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
-	ZVAL_UNDEF(&ng->estatus);
+	memset(ng, 0, sizeof(zend_uopz_globals));
 } /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
@@ -541,6 +541,19 @@ static PHP_FUNCTION(uopz_get_exit_status) {
 	}
 } /* }}} */
 
+/* {{{ proto mixed uopz_allow_exit(bool allow) */
+static PHP_FUNCTION(uopz_allow_exit) {
+	zend_bool allow = 0;
+	
+	if (uopz_parse_parameters("b", &allow) != SUCCESS) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, expected (allow)");
+		return;
+	}
+
+	UOPZ(exit) = allow;
+} /* }}} */
+
 /* {{{ uopz_functions[]
  */
 #define UOPZ_FE(f) PHP_FE(f, NULL)
@@ -566,6 +579,7 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_set_property)
 	UOPZ_FE(uopz_get_property)
 	UOPZ_FE(uopz_get_exit_status)
+	UOPZ_FE(uopz_allow_exit)
 	ZEND_FE_END
 };
 #undef UOPZ_FE

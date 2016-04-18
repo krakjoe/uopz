@@ -33,7 +33,8 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	HashTable	mocks;
 	HashTable   hooks;
 
-	zval estatus;
+	zend_bool	exit;
+	zval 		estatus;
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS

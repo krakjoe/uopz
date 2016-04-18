@@ -106,6 +106,10 @@ void uopz_handlers_shutdown(void) {
 }
 
 int uopz_no_exit_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	if (UOPZ(exit)) {
+		return ZEND_USER_OPCODE_DISPATCH;
+	}
+
 	if (EX(opline)->op1_type != IS_UNUSED) {
 		zval *estatus;
 

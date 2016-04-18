@@ -303,6 +303,13 @@ function uopz_get_property(string class, string property) : mixed;
 * Note: exit() breaks xdebug hooks
 */
 function uopz_get_exit_status() : mixed;
+
+/**
+* Allows control over disabled exit opcode
+* @param bool allow
+* Note: by default exit will be ignored
+*/
+function uopz_allow_exit(bool allow) : void;
 ```
 
 Installation
