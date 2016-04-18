@@ -107,6 +107,9 @@ void uopz_handlers_shutdown(void) {
 
 int uopz_no_exit_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (UOPZ(exit)) {
+		if (uopz_exit_handler)
+			return uopz_exit_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+
 		return ZEND_USER_OPCODE_DISPATCH;
 	}
 
