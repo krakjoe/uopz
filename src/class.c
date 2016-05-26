@@ -27,6 +27,14 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
+#if PHP_VERSION_ID >= 70100
+#	define uopz_get_scope(e) ((e) ? zend_get_executed_scope() : EG(fake_scope))
+#	define uopz_set_scope(s) EG(fake_scope) = (s)
+#else
+#	define uopz_get_scope(e) EG(scope)
+#	define uopz_set_scope(s) EG(scope) = (s)
+#endif
+
 void uopz_set_mock(zend_string *clazz, zval *mock) { /* {{{ */
 	zend_string *key = zend_string_tolower(clazz);
 
@@ -131,12 +139,12 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 } /* }}} */
 
 void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
-	zend_class_entry *scope = EG(scope);
+	zend_class_entry *scope = uopz_get_scope(1);
 	zend_class_entry *ce = Z_OBJCE_P(object);
 	zend_property_info *info;
 
 	do {
-		EG(scope) = ce;
+		uopz_set_scope(ce);
 
 		info = zend_get_property_info(ce, Z_STR_P(member), 1);
 	
@@ -148,25 +156,25 @@ void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
 	} while (ce);
 
 	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
-		EG(scope) = info->ce;
+		uopz_set_scope(info->ce);
 	} else {
-		EG(scope) = Z_OBJCE_P(object);
+		uopz_set_scope(Z_OBJCE_P(object));
 	}
 
 	Z_OBJ_HT_P(object)
 		->write_property(object, member, value, NULL);
 
-	EG(scope) = scope;
+	uopz_set_scope(scope);
 } /* }}} */
 
 void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
-	zend_class_entry *scope = EG(scope);
+	zend_class_entry *scope = uopz_get_scope(1);
 	zend_class_entry *ce = Z_OBJCE_P(object);
 	zend_property_info *info;
 	zval *prop, rv;
 
 	do {
-		EG(scope) = ce;
+		uopz_set_scope(ce);
 
 		info = zend_get_property_info(ce, Z_STR_P(member), 1);
 	
@@ -178,14 +186,15 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 	} while (ce);
 
 	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
-		EG(scope) = info->ce;
+		uopz_set_scope(info->ce);
 	} else {
-		EG(scope) = Z_OBJCE_P(object);
+		uopz_set_scope(Z_OBJCE_P(object));
 	}
 	
 	prop = Z_OBJ_HT_P(object)
 		->read_property(object, member, BP_VAR_R, NULL, &rv);
-	EG(scope) = scope;
+
+	uopz_set_scope(scope);
 
 	if (!prop) {
 		return;
@@ -195,13 +204,13 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 } /* }}} */
 
 void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
-	zend_class_entry *scope = EG(scope);
+	zend_class_entry *scope = uopz_get_scope(1);
 	zend_class_entry *seek = ce;
 	zend_property_info *info;
 	zval *prop;
 
 	do {
-		EG(scope) = seek;
+		uopz_set_scope(seek);
 
 		info = zend_get_property_info(seek, property, 1);
 	
@@ -213,13 +222,14 @@ void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval 
 	} while (seek);
 
 	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
-		EG(scope) = info->ce;
+		uopz_set_scope(info->ce);
 	} else {
-		EG(scope) = ce;
+		uopz_set_scope(ce);
 	}
 
-	prop = zend_std_get_static_property(EG(scope), property, 1);
-	EG(scope) = scope;
+	prop = zend_std_get_static_property(uopz_get_scope(0), property, 1);
+	
+	uopz_set_scope(scope);
 
 	if (!prop) {
 		return;
@@ -230,13 +240,13 @@ void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval 
 } /* }}} */
 
 void uopz_get_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
-	zend_class_entry *scope = EG(scope);
+	zend_class_entry *scope = uopz_get_scope(1);
 	zend_class_entry *seek = ce;
 	zend_property_info *info;
 	zval *prop;
 
 	do {
-		EG(scope) = seek;
+		uopz_set_scope(seek);
 
 		info = zend_get_property_info(seek, property, 1);
 	
@@ -248,13 +258,14 @@ void uopz_get_static_property(zend_class_entry *ce, zend_string *property, zval 
 	} while (seek);
 
 	if (info && info != ZEND_WRONG_PROPERTY_INFO) {
-		EG(scope) = info->ce;
+		uopz_set_scope(info->ce);
 	} else {
-		EG(scope) = ce;
+		uopz_set_scope(ce);
 	}
 
-	prop = zend_std_get_static_property(EG(scope), property, 1);
-	EG(scope) = scope;
+	prop = zend_std_get_static_property(uopz_get_scope(0), property, 1);
+	
+	uopz_set_scope(scope);
 
 	if (!prop) {
 		return;

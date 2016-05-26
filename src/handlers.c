@@ -344,6 +344,27 @@ static inline void uopz_run_hook(zend_function *function, zend_execute_data *exe
 	}
 } /* }}} */
 
+/* {{{ */
+static inline int php_uopz_leave_helper(zend_execute_data *execute_data) {
+	zend_execute_data *call = EX(call);
+	uint32_t info = ZEND_CALL_INFO(call);
+
+	if (info & ZEND_CALL_RELEASE_THIS) {
+		OBJ_RELEASE(Z_OBJ(call->This));
+	} else if (info & ZEND_CALL_CLOSURE) {
+		 OBJ_RELEASE((zend_object*)call->func->op_array.prototype);
+	}
+
+	EX(call) = call->prev_execute_data;
+
+	zend_vm_stack_free_args(call);
+	zend_vm_stack_free_call_frame(call);
+
+	EX(opline) = EX(opline) + 1;
+
+	return ZEND_USER_OPCODE_LEAVE;
+} /* }}} */
+
 int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_execute_data *call = EX(call);
 
@@ -366,26 +387,18 @@ int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 				uopz_execute_return(ureturn, call, return_value);
 
-				EX(call) = call->prev_execute_data;
-				zend_vm_stack_free_call_frame(call);
-				EX(opline) = opline + 1;
-
 				if (!RETURN_VALUE_USED(opline)) {
 					zval_ptr_dtor(&rv);
 				}
 
-				return ZEND_USER_OPCODE_CONTINUE;
+				return php_uopz_leave_helper(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
 			}
 
 			if (RETURN_VALUE_USED(opline)) {
 				ZVAL_COPY(return_value, &ureturn->value);
 			}
 
-			EX(call) = call->prev_execute_data;
-			zend_vm_stack_free_call_frame(call);
-			EX(opline) = opline + 1;
-
-			return ZEND_USER_OPCODE_CONTINUE;
+			return php_uopz_leave_helper(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
 		}
 	}
 
