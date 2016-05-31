@@ -43,6 +43,28 @@ var_dump(FOO::THING);
 var_dump($foo::THING);
 
 var_dump(Foo::thing());
+
+interface IFaceMock {
+	
+}
+
+uopz_set_mock(IFace::class, IFaceMock::class);
+
+class Interfacing implements IFace {}
+
+var_dump(new Interfacing);
+
+trait ITraitMock {
+
+}
+
+uopz_set_mock(ITrait::class, ITraitMock::class);
+
+class Traiting {
+	use ITrait;
+}
+
+var_dump(new Traiting());
 ?>
 --EXPECT--
 object(Bar)#1 (0) {
@@ -57,3 +79,7 @@ object(Qux)#1 (0) {
 int(50)
 int(50)
 int(20)
+object(Interfacing)#2 (0) {
+}
+object(Traiting)#2 (0) {
+}

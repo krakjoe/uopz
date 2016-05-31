@@ -48,6 +48,7 @@ int uopz_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_fetch_handler(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_return_handler(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_add_class_handler(UOPZ_OPCODE_HANDLER_ARGS);
 #ifdef ZEND_FETCH_CLASS_CONSTANT
 int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS);
 #endif
@@ -64,6 +65,8 @@ uopz_opcode_handler_t uopz_new_handler;
 uopz_opcode_handler_t uopz_fetch_constant_handler;
 uopz_opcode_handler_t uopz_do_fcall_handler;
 uopz_opcode_handler_t uopz_fetch_class_handler;
+uopz_opcode_handler_t uopz_add_trait_handler;
+uopz_opcode_handler_t uopz_add_interface_handler;
 #ifdef ZEND_FETCH_CLASS_CONSTANT
 uopz_opcode_handler_t uopz_fetch_class_constant_handler;
 #endif
@@ -91,6 +94,8 @@ void uopz_handlers_init(void) {
 	UOPZ_SET_HANDLER(uopz_fetch_class_constant_handler,		ZEND_FETCH_CLASS_CONSTANT,		uopz_class_constant_handler);
 #endif
 	UOPZ_SET_HANDLER(uopz_fetch_class_handler,				ZEND_FETCH_CLASS,				uopz_fetch_handler);
+	UOPZ_SET_HANDLER(uopz_add_trait_handler,				ZEND_ADD_TRAIT,					uopz_add_class_handler);
+	UOPZ_SET_HANDLER(uopz_add_interface_handler,			ZEND_ADD_INTERFACE,				uopz_add_class_handler);
 }
 
 void uopz_handlers_shutdown(void) {
@@ -107,6 +112,8 @@ void uopz_handlers_shutdown(void) {
 	UOPZ_UNSET_HANDLER(uopz_fetch_class_constant_handler,	ZEND_FETCH_CLASS_CONSTANT);
 #endif
 	UOPZ_UNSET_HANDLER(uopz_fetch_class_handler,			ZEND_FETCH_CLASS);
+	UOPZ_UNSET_HANDLER(uopz_add_trait_handler,				ZEND_ADD_TRAIT);
+	UOPZ_UNSET_HANDLER(uopz_add_interface_handler,			ZEND_ADD_INTERFACE);
 }
 
 int uopz_no_exit_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -122,7 +129,7 @@ int uopz_no_exit_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 		if (EX(opline)->op1_type == IS_CONST) {
 			estatus = EX_CONSTANT(EX(opline)->op1);
-		} else estatus = EX_VAR(EX(opline->op1.var));
+		} else estatus = EX_VAR(EX(opline)->op1.var);
 
 		if (Z_ISREF_P(estatus)) {
 			estatus = Z_REFVAL_P(estatus);
@@ -526,6 +533,38 @@ int uopz_fetch_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 	return UOPZ_VM_ACTION;
+} /* }}} */
+
+int uopz_add_class_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	zval *name = EX_CONSTANT(EX(opline)->op2);
+	zend_string *key = zend_string_tolower(Z_STR_P(name));
+	zval *mock = NULL;
+	
+	if ((mock = zend_hash_find(&UOPZ(mocks), key))) {
+		if (Z_TYPE_P(mock) == IS_STRING) {
+			zend_class_entry *ce = zend_lookup_class(Z_STR_P(mock));
+			
+			if (ce) {
+				CACHE_PTR(Z_CACHE_SLOT_P(name), ce);
+			}
+		} else {
+			CACHE_PTR(Z_CACHE_SLOT_P(name), Z_OBJCE_P(mock));
+		}
+	}
+	
+	zend_string_release(key);	
+
+	if (uopz_add_trait_handler || uopz_add_interface_handler) {
+		switch (EX(opline)->opcode) {
+			case ZEND_ADD_INTERFACE:
+				return uopz_add_interface_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+
+			case ZEND_ADD_TRAIT:
+				return uopz_add_trait_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+		}
+	}
+	
+	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
 
 #endif	/* UOPZ_HANDLERS_H */
