@@ -42,7 +42,7 @@ void uopz_executors_init(void) { /* {{{ */
 	zend_execute_internal_function = zend_execute_internal;
 	zend_execute_internal = php_uopz_execute_internal;
 	zend_execute_function = zend_execute_ex;
-	zend_execute_ex = php_uopz_execute;
+	zend_execute_ex = php_uopz_execute;	
 } /* }}} */
 
 void uopz_executors_shutdown(void) { /* {{{ */

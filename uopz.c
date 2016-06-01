@@ -554,6 +554,75 @@ static PHP_FUNCTION(uopz_allow_exit) {
 	UOPZ(exit) = allow;
 } /* }}} */
 
+#define UOPZ_CALL_HOOKS() \
+	{ \
+		uopz_hook_t *uhook = uopz_find_hook(fcc.function_handler); \
+		\
+		if (uhook && !uhook->busy) { \
+			uopz_execute_hook(uhook, execute_data); \
+		} \
+	} \
+	\
+	do { \
+		uopz_return_t *ureturn = uopz_find_return(fcc.function_handler); \
+		\
+		if (ureturn) { \
+			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) { \
+				if (UOPZ_RETURN_IS_BUSY(ureturn)) { \
+					break; \
+				} \
+				\
+				uopz_execute_return(ureturn, execute_data, return_value); \
+				return; \
+			} \
+			\
+			ZVAL_COPY(return_value, &ureturn->value); \
+			return; \
+		} \
+	} while (0)
+
+/* {{{ proto mixed uopz_call_user_func(callable function, ... args) */
+static PHP_FUNCTION(uopz_call_user_func) {
+	zval retval;
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f*", &fci, &fcc, &fci.params, &fci.param_count) != SUCCESS) {
+		return;
+	}
+
+	fci.retval = &retval;
+
+	UOPZ_CALL_HOOKS();
+
+	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
+		ZVAL_COPY_VALUE(return_value, &retval);
+	}
+} /* }}} */
+
+/* {{{ proto mixed uopz_call_user_func_array(callable function, array args) */
+static PHP_FUNCTION(uopz_call_user_func_array) {
+	zval *params, retval;
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "fa/", &fci, &fcc, &params) == FAILURE) {
+		return;
+	}
+
+	zend_fcall_info_args(&fci, params);
+	
+	fci.retval = &retval;
+
+	UOPZ_CALL_HOOKS();
+
+	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
+		ZVAL_COPY_VALUE(return_value, &retval);
+	}
+
+	zend_fcall_info_args_clear(&fci, 1);	
+} /* }}} */
+
 /* {{{ uopz_functions[]
  */
 #define UOPZ_FE(f) PHP_FE(f, NULL)
@@ -580,6 +649,9 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_get_property)
 	UOPZ_FE(uopz_get_exit_status)
 	UOPZ_FE(uopz_allow_exit)
+
+	UOPZ_FE(uopz_call_user_func)
+	UOPZ_FE(uopz_call_user_func_array)
 	ZEND_FE_END
 };
 #undef UOPZ_FE
