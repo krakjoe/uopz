@@ -345,7 +345,7 @@ int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 					} else if (EX(opline)->op1_type != IS_UNUSED) {
 						Z_CE_P(EX_VAR(EX(opline)->op1.var)) = ce;
 					} else {
-						php_printf("oh\n");					
+						/* oh dear, can't do what is requested */			
 					}
 					
 				}
