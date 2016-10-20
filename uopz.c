@@ -148,7 +148,7 @@ static PHP_FUNCTION(uopz_set_return)
 		return;
 	}
 
-	if (execute && !instanceof_function(Z_OBJCE_P(variable), zend_ce_closure)) {
+	if (execute && (Z_TYPE_P(variable) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(variable), zend_ce_closure))) {
 		uopz_refuse_parameters(
 			"only closures are accepted as executable return values");
 		return;
