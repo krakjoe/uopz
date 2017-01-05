@@ -43,10 +43,20 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
-#define uopz_parse_parameters(spec, ...) zend_parse_parameters_ex\
-	(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), spec, ##__VA_ARGS__)
+#define uopz_parse_parameters(spec, ...) zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), spec, ##__VA_ARGS__)
 #define uopz_refuse_parameters(message, ...) zend_throw_exception_ex\
 	(spl_ce_InvalidArgumentException, 0, message, ##__VA_ARGS__)
+
+#define uopz_disabled_guard() do { \
+	if (UOPZ(disable)) { \
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, "uopz is disabled by configuration (uopz.disable)"); \
+		return; \
+	} \
+} while(0)
+
+PHP_INI_BEGIN()
+	STD_PHP_INI_ENTRY("uopz.disable", "0", PHP_INI_SYSTEM, OnUpdateBool, disable, zend_uopz_globals, uopz_globals)
+PHP_INI_END()
 
 /* {{{ */
 static void php_uopz_init_globals(zend_uopz_globals *ng) {
@@ -58,6 +68,12 @@ static void php_uopz_init_globals(zend_uopz_globals *ng) {
 static PHP_MINIT_FUNCTION(uopz)
 {
 	ZEND_INIT_MODULE_GLOBALS(uopz, php_uopz_init_globals, NULL);
+
+	REGISTER_INI_ENTRIES();
+
+	if (UOPZ(disable)) {
+		return SUCCESS;
+	}
 
 	REGISTER_LONG_CONSTANT("ZEND_ACC_PUBLIC", 				ZEND_ACC_PUBLIC, 				CONST_CS|CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("ZEND_ACC_PRIVATE", 				ZEND_ACC_PRIVATE,				CONST_CS|CONST_PERSISTENT);
@@ -77,6 +93,10 @@ static PHP_MINIT_FUNCTION(uopz)
 /* {{{ */
 static PHP_MSHUTDOWN_FUNCTION(uopz)
 {
+	if (UOPZ(disable)) {
+		return SUCCESS;
+	}
+
 	uopz_executors_shutdown();
 	uopz_handlers_shutdown();
 
@@ -93,6 +113,10 @@ static PHP_RINIT_FUNCTION(uopz)
 #ifdef ZTS
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
+
+	if (UOPZ(disable)) {
+		return SUCCESS;
+	}
 
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
 	spl_ce_RuntimeException =
@@ -115,6 +139,10 @@ static PHP_RINIT_FUNCTION(uopz)
  */
 static PHP_RSHUTDOWN_FUNCTION(uopz)
 {
+	if (UOPZ(disable)) {
+		return SUCCESS;
+	}
+
 	uopz_request_shutdown();
 
 	return SUCCESS;
@@ -126,7 +154,7 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 static PHP_MINFO_FUNCTION(uopz)
 {
 	php_info_print_table_start();
-	php_info_print_table_header(2, "uopz support", "enabled");
+	php_info_print_table_header(2, "uopz support", UOPZ(disable) ? "disabled" : "enabled");
 	php_info_print_table_row(2, "Version", PHP_UOPZ_VERSION);
 	php_info_print_table_end();
 }
@@ -140,6 +168,8 @@ static PHP_FUNCTION(uopz_set_return)
 	zval *variable = NULL;
 	zend_class_entry *clazz = NULL;
 	zend_bool execute = 0;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CSz|b", &clazz, &function, &variable, &execute) != SUCCESS &&
 		uopz_parse_parameters("Sz|b", &function, &variable, &execute) != SUCCESS) {
@@ -170,6 +200,8 @@ static PHP_FUNCTION(uopz_unset_return)
 	zend_string *function = NULL;
 	zend_class_entry *clazz = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS &&
 		uopz_parse_parameters("S", &function) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -187,6 +219,8 @@ static PHP_FUNCTION(uopz_get_return)
 	zend_string *function = NULL;
 	zend_class_entry *clazz = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS &&
 		uopz_parse_parameters("S", &function) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -202,6 +236,8 @@ static PHP_FUNCTION(uopz_set_mock)
 {
 	zend_string *clazz = NULL;
 	zval *mock = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("Sz", &clazz, &mock) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -223,6 +259,8 @@ static PHP_FUNCTION(uopz_unset_mock)
 {
 	zend_string *clazz = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("S", &clazz) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (clazz), class not found ?");
@@ -236,6 +274,8 @@ static PHP_FUNCTION(uopz_unset_mock)
 static PHP_FUNCTION(uopz_get_mock) 
 {
 	zend_string *clazz = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("S", &clazz) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -252,6 +292,8 @@ static PHP_FUNCTION(uopz_get_static)
 {
 	zend_string *function = NULL;
 	zend_class_entry *clazz = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS &&
 		uopz_parse_parameters("S", &function) != SUCCESS) {
@@ -271,6 +313,8 @@ static PHP_FUNCTION(uopz_set_static)
 	zend_class_entry *clazz = NULL;
 	zval *statics = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CSz", &clazz, &function, &statics) != SUCCESS &&
 		uopz_parse_parameters("Sz", &function, &statics) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -288,6 +332,8 @@ static PHP_FUNCTION(uopz_set_hook)
 	zend_string *function = NULL;
 	zend_class_entry *clazz = NULL;
 	zval *hook = NULL;
+
+	uopz_disabled_guard();
 	
 	if (uopz_parse_parameters("CSO", &clazz, &function, &hook, zend_ce_closure) != SUCCESS &&
 		uopz_parse_parameters("SO", &function, &hook, zend_ce_closure) != SUCCESS) {
@@ -306,6 +352,8 @@ static PHP_FUNCTION(uopz_unset_hook)
 	zend_string *function = NULL;
 	zend_class_entry *clazz = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS &&
 		uopz_parse_parameters("S", &function) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -322,6 +370,8 @@ static PHP_FUNCTION(uopz_get_hook)
 {
 	zend_string *function = NULL;
 	zend_class_entry *clazz = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CS", &clazz, &function) != SUCCESS &&
 		uopz_parse_parameters("S", &function) != SUCCESS) {
@@ -343,6 +393,8 @@ static PHP_FUNCTION(uopz_add_function)
 	zend_long flags = ZEND_ACC_PUBLIC;
 	zend_bool all = 1;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CSO|lb", &clazz, &name, &closure, zend_ce_closure, &flags, &all) != SUCCESS &&
 		uopz_parse_parameters("SO|l", &name, &closure, zend_ce_closure, &flags) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -361,6 +413,8 @@ static PHP_FUNCTION(uopz_del_function)
 	zend_string *name = NULL;
 	zend_bool all = 1;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CS|b", &clazz, &name, &all) != SUCCESS &&
 		uopz_parse_parameters("S", &name) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -378,6 +432,8 @@ static PHP_FUNCTION(uopz_redefine)
 	zend_string *name = NULL;
 	zval *variable = NULL;
 	zend_class_entry *clazz = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CSz", &clazz, &name, &variable) != SUCCESS &&
 		uopz_parse_parameters("Sz", &name, &variable) != SUCCESS) {
@@ -406,6 +462,8 @@ static PHP_FUNCTION(uopz_undefine)
 	zend_string *name = NULL;
 	zend_class_entry *clazz = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CS", &clazz, &name) != SUCCESS &&
 		uopz_parse_parameters("S", &name) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -431,6 +489,8 @@ static PHP_FUNCTION(uopz_implement)
 	zend_class_entry *clazz = NULL;
 	zend_class_entry *interface = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("CC", &clazz, &interface) != SUCCESS) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, expected (class, interface)");
@@ -445,6 +505,8 @@ static PHP_FUNCTION(uopz_extend)
 {
 	zend_class_entry *clazz = NULL;
 	zend_class_entry *parent = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CC", &clazz, &parent) != SUCCESS) {
 		uopz_refuse_parameters(
@@ -462,6 +524,8 @@ static PHP_FUNCTION(uopz_flags)
 	zend_string *name = NULL;
 	zend_class_entry *clazz = NULL;
 	zend_long flags = LONG_MAX;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CS|l", &clazz, &name, &flags) != SUCCESS &&
 		uopz_parse_parameters("S|l", &name, &flags) != SUCCESS) {
@@ -481,6 +545,8 @@ static PHP_FUNCTION(uopz_set_property)
 	zval *scope = NULL;
 	zval *prop  = NULL;
 	zval *value = NULL;
+
+	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("zzz", &scope, &prop, &value) != SUCCESS ||
 		!scope || !prop || !value ||
@@ -511,6 +577,8 @@ static PHP_FUNCTION(uopz_get_property) {
 	zval *scope = NULL;
 	zval *prop  = NULL;
 
+	uopz_disabled_guard();
+
 	if (uopz_parse_parameters("zz", &scope, &prop) != SUCCESS ||
 		!scope || !prop ||
 		(Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) ||
@@ -536,6 +604,9 @@ static PHP_FUNCTION(uopz_get_property) {
 
 /* {{{ proto mixed uopz_get_exit_status(void) */
 static PHP_FUNCTION(uopz_get_exit_status) {
+
+	uopz_disabled_guard();
+
 	if (Z_TYPE(UOPZ(estatus)) != IS_UNDEF) {
 		ZVAL_COPY(return_value, &UOPZ(estatus));
 	}
@@ -544,6 +615,8 @@ static PHP_FUNCTION(uopz_get_exit_status) {
 /* {{{ proto mixed uopz_allow_exit(bool allow) */
 static PHP_FUNCTION(uopz_allow_exit) {
 	zend_bool allow = 0;
+
+	uopz_disabled_guard();
 	
 	if (uopz_parse_parameters("b", &allow) != SUCCESS) {
 		uopz_refuse_parameters(
