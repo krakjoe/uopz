@@ -211,9 +211,16 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	RETURN_LONG(current);
 } /* }}} */
 
+static inline uopz_try_addref(zval *z) { /* {{{ */
+	if (Z_REFCOUNTED_P(z)) {
+		Z_ADDREF_P(z);
+	}
+} /* }}} */
+
 void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */
 	zend_function *entry;
-	
+	zval *var = NULL;
+
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
 			return;
@@ -232,12 +239,20 @@ void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *stati
 		return;
 	}
 
-	zend_hash_clean(entry->op_array.static_variables);
+	ZEND_HASH_FOREACH_VAL(entry->op_array.static_variables, var) {
+		if (Z_REFCOUNTED_P(var)) {
+			zval_ptr_dtor(var);
+		}
 
-	zend_hash_copy(
-		entry->op_array.static_variables, 
-		Z_ARRVAL_P(statics),
-		(copy_ctor_func_t) zval_addref_p);
+		ZVAL_NULL(var);
+	} ZEND_HASH_FOREACH_END();
+
+	if (zend_hash_num_elements(Z_ARRVAL_P(statics))) {
+		zend_hash_copy(
+			entry->op_array.static_variables, 
+			Z_ARRVAL_P(statics),
+			(copy_ctor_func_t) uopz_try_addref);	
+	}
 } /* }}} */
 
 void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
