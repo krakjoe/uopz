@@ -168,13 +168,13 @@ static inline zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg
 #if PHP_VERSION_ID >= 70200
 		if (ZEND_TYPE_IS_SET(old[it].type) && ZEND_TYPE_IS_CLASS(old[it].type)) {
 			info[it].type = ZEND_TYPE_ENCODE_CLASS(
-				zend_string_new(
+				zend_string_copy(
 					ZEND_TYPE_NAME(info[it].type)), 
 				ZEND_TYPE_ALLOW_NULL(info[it].type));
 		}
 #else
 		if (info[it].class_name)
-			info[it].class_name = zend_string_new(old[it].class_name);
+			info[it].class_name = zend_string_copy(old[it].class_name);
 #endif
 		it++;
 	}
