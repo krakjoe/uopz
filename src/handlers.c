@@ -378,21 +378,8 @@ static inline void uopz_run_hook(zend_function *function, zend_execute_data *exe
 /* {{{ */
 static inline int php_uopz_leave_helper(zend_execute_data *execute_data) {
 	zend_execute_data *call = EX(call);
-	uint32_t info = ZEND_CALL_INFO(call);
-
-	if (info & ZEND_CALL_RELEASE_THIS) {
-		OBJ_RELEASE(Z_OBJ(call->This));
-	} else if (info & ZEND_CALL_CLOSURE) {
-		 OBJ_RELEASE((zend_object*)call->func->op_array.prototype);
-	}
 
 	EX(call) = call->prev_execute_data;
-
-	if (!EG(exception)) {
-		zend_vm_stack_free_args(call);
-		zend_vm_stack_free_call_frame(call);
-	}
-
 	EX(opline) = EX(opline) + 1;
 
 	return ZEND_USER_OPCODE_LEAVE;

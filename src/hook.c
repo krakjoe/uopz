@@ -180,23 +180,11 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 		goto _exit_uopz_execute_hook;
 	}
 
-	if (zend_fcall_info_argp(&fci, EX_NUM_ARGS(), EX_VAR_NUM(0)) != SUCCESS) {
-		if (EX(func)->common.scope) {
-			uopz_exception("cannot set arguments for %s::%s hook",
-				ZSTR_VAL(EX(func)->common.scope->name),
-				ZSTR_VAL(EX(func)->common.function_name));
-		} else {
-			uopz_exception("cannot set arguments for %s hook",
-			ZSTR_VAL(EX(func)->common.function_name));
-		}
-		
-		goto _exit_uopz_execute_hook;
-	}
-
+	fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
+	fci.params = ZEND_CALL_ARG(execute_data, 1);
 	fci.retval= &rv;
 	
 	if (zend_call_function(&fci, &fcc) == SUCCESS) {
-		zend_fcall_info_args_clear(&fci, 1);
 		if (!Z_ISUNDEF(rv)) {
 			zval_ptr_dtor(&rv);
 		}

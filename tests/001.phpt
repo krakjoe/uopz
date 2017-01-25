@@ -5,8 +5,8 @@ uopz_set_return
 --FILE--
 <?php
 class Foo {
-	public function bar() {
-		return false;	
+	public function bar(int $arg) : int {
+		return $arg;
 	}
 }
 
@@ -14,13 +14,13 @@ var_dump(uopz_set_return(Foo::class, "bar", true));
 
 $foo = new Foo();
 
-var_dump($foo->bar());
+var_dump($foo->bar(1));
 
-uopz_set_return(Foo::class, "bar", function() {
-	return 2;
+uopz_set_return(Foo::class, "bar", function(int $arg) : int {
+	return $arg * 2;
 }, true);
 
-var_dump($foo->bar());
+var_dump($foo->bar(2));
 
 try {
 	uopz_set_return(Foo::class, "nope", 1);
@@ -39,7 +39,7 @@ try {
 --EXPECT--
 bool(true)
 bool(true)
-int(2)
+int(4)
 string(61) "failed to set return for Foo::nope, the method does not exist"
 string(63) "failed to set return for Bar::bar, the method is defined in Foo"
 
