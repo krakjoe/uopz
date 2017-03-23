@@ -24,6 +24,7 @@
 
 #include "util.h"
 #include "constant.h"
+#include <Zend/zend_exceptions.h>
 
 /* {{{ */
 zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zval *variable) {

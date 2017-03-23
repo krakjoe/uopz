@@ -40,6 +40,7 @@ zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
 #include "src/function.h"
 #include "src/handlers.h"
 #include "src/executors.h"
+#include "src/function.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
