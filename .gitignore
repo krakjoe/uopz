@@ -21,12 +21,15 @@ config.status
 config.sub
 configure
 configure.in
+configure.ac
 install-sh
 libtool
 ltmain.sh
+ltmain.sh.backup
 missing
 mkinstalldirs
 run-tests.php
 test.ini
 tmp-php.ini
 autom4te.cache
+uopz-*.tgz

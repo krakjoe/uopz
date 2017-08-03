@@ -29,10 +29,9 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2016-04-13</date>
- <time>13:00:00</time>
+ <date>2017-08-03</date>
  <version>
-  <release>5.0.2dev</release>
+  <release>5.0.2</release>
   <api>5.0.0</api>
  </version>
  <stability>
@@ -41,7 +40,16 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- 
+- add uopz.disable ini switch (default 0)
+- fix gh#43: setting hook on __invoke method doesn't work on call_user_func
+- fix gh#48: segmentation fault (uopz_set_return)
+- add 4 new functions:
+    - uopz_call_user_func(callable function, ... args)
+    - uopz_get_exit_status()
+    - uopz_allow_exit(bool allow)
+    - uopz_call_user_func_array(callable function, array args)
+- fix PHP 7.1 compatibility
+- fix PHP 7.2 compatibility
  </notes>
  <contents>
   <dir name="/">
@@ -74,6 +82,7 @@ It supports the following activities:
      <file name="006.phpt" role="test" />
      <file name="007.phpt" role="test" />
      <file name="008.phpt" role="test" />
+     <file name="009.phpt" role="test" />
      <file name="010.phpt" role="test" />
      <file name="011.phpt" role="test" />
      <file name="012.phpt" role="test" />
@@ -84,7 +93,14 @@ It supports the following activities:
      <file name="017.phpt" role="test" />
      <file name="018.phpt" role="test" />
      <file name="019.phpt" role="test" />
+     <file name="020.phpt" role="test" />
+     <file name="021.phpt" role="test" />
      <file name="skipif.inc" role="test" />
+     <dir name="/bugs">
+      <file name="0001-uopz_set_static.phpt" role="test" />
+      <file name="0002-uopz_set_static_clear.phpt" role="test" />
+      <file name="gh43.phpt" role="test" />
+     </dir>
     </dir>
     <file name="uopz.h" role="src" />
     <file name="uopz.c" role="src" />
