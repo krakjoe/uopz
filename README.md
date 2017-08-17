@@ -323,7 +323,7 @@ Testing
 
 After ``make`` has executed, run:
 
-	``make test``
+	make test
 
 You are done reading
 ====================
