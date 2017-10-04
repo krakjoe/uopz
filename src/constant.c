@@ -36,6 +36,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 		case IS_STRING:
 		case IS_TRUE:
 		case IS_FALSE:
+		case IS_ARRAY:
 		case IS_RESOURCE:
 		case IS_NULL:
 			break;
