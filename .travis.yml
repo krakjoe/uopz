@@ -1,8 +1,13 @@
 language: php
 php:
-    - 7.0
     - 7.1
+    - 7.2
+    - 7.3
     - nightly
+env: # important!
+matrix:
+  allow_failures:
+  - php: nightly
 install:
     - sudo apt-get update
     - sudo apt-get install -y valgrind
