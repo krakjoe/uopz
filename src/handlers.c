@@ -375,6 +375,15 @@ int uopz_mock_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				if (EX(opline)->extended_value == 0 && 
 					(EX(opline)+1)->opcode == ZEND_DO_FCALL) {
 					EX(opline) += 2;
+				} else if ((EX(opline)+1)->extended_value == 0 && (EX(opline)+1)->opcode == ZEND_SEND_VAL_EX) {
+					// avoid infinite loop if the mock has a no-args constructor but the constructor receives args
+					int args_ctr = 1;
+
+					while ((EX(opline)+args_ctr)->opcode == ZEND_SEND_VAL_EX) {
+						args_ctr++;
+					}
+
+					EX(opline) += args_ctr + 1;
 				}
 #endif
 				UOPZ_VM_ACTION = ZEND_USER_OPCODE_CONTINUE;
