@@ -211,7 +211,7 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	RETURN_LONG(current);
 } /* }}} */
 
-static inline uopz_try_addref(zval *z) { /* {{{ */
+static inline void uopz_try_addref(zval *z) { /* {{{ */
 	if (Z_REFCOUNTED_P(z)) {
 		Z_ADDREF_P(z);
 	}
