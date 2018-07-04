@@ -1,6 +1,6 @@
 --TEST--
 github #43
---DESC--
+--DESCRIPTION--
 Setting hook on __invoke method doesn't work on call_user_func
 --FILE--
 <?php

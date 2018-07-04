@@ -1,6 +1,6 @@
 --TEST--
 github #53
---DESC--
+--DESCRIPTION--
 uopz_redefine() refuses to redefine a constant as array
 --FILE--
 <?php
