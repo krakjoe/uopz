@@ -139,7 +139,7 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 } /* }}} */
 
 void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
-	zend_class_entry *scope = uopz_get_scope(1);
+	zend_class_entry *scope = uopz_get_scope(0);
 	zend_class_entry *ce = Z_OBJCE_P(object);
 	zend_property_info *info;
 
@@ -168,7 +168,7 @@ void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
 } /* }}} */
 
 void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
-	zend_class_entry *scope = uopz_get_scope(1);
+	zend_class_entry *scope = uopz_get_scope(0);
 	zend_class_entry *ce = Z_OBJCE_P(object);
 	zend_property_info *info;
 	zval *prop, rv;
@@ -204,7 +204,7 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 } /* }}} */
 
 void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
-	zend_class_entry *scope = uopz_get_scope(1);
+	zend_class_entry *scope = uopz_get_scope(0);
 	zend_class_entry *seek = ce;
 	zend_property_info *info;
 	zval *prop;
@@ -240,7 +240,7 @@ void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval 
 } /* }}} */
 
 void uopz_get_static_property(zend_class_entry *ce, zend_string *property, zval *value) { /* {{{ */
-	zend_class_entry *scope = uopz_get_scope(1);
+	zend_class_entry *scope = uopz_get_scope(0);
 	zend_class_entry *seek = ce;
 	zend_property_info *info;
 	zval *prop;
