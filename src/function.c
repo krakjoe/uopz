@@ -111,7 +111,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		uopz_handle_magic(clazz, name, function);
 	}
 
-	//zend_string_release(key);
+	zend_string_release(key);
 
 	return 1;
 } /* }}} */
