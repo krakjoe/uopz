@@ -101,45 +101,66 @@ static inline zend_op* uopz_copy_opcodes(zend_op_array *op_array, zval *literals
 
 	memcpy(copy, op_array->opcodes, sizeof(zend_op) * op_array->last);
 
-#if ZEND_USE_ABS_CONST_ADDR || ZEND_USE_ABS_JMP_ADDR
-	zend_op *opline = copy;
-	zend_op *end    = copy + op_array->last;
+	{
+		zend_op *opline = copy;
+		zend_op *end    = copy + op_array->last;
 
-	for (; opline < end; opline++) {
+		for (; opline < end; opline++) {
 #if ZEND_USE_ABS_CONST_ADDR
-		if (opline->op1_type == IS_CONST)
-			opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
-		if (opline->op2_type == IS_CONST) 
-			opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
-#endif
-#if ZEND_USE_ABS_JMP_ADDR
-		if ((op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) != 0) {
-			switch (opline->opcode) {
-				case ZEND_JMP:
-				case ZEND_FAST_CALL:
-				case ZEND_DECLARE_ANON_CLASS:
-				case ZEND_DECLARE_ANON_INHERITED_CLASS:
-					 opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
-				break;
-
-				case ZEND_JMPZNZ:
-				case ZEND_JMPZ:
-				case ZEND_JMPNZ:
-				case ZEND_JMPZ_EX:
-				case ZEND_JMPNZ_EX:
-				case ZEND_JMP_SET:
-				case ZEND_COALESCE:
-				case ZEND_NEW:
-				case ZEND_FE_RESET_R:
-				case ZEND_FE_RESET_RW:
-				case ZEND_ASSERT_CHECK:
-					opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - op_array->opcodes];
-				break;
+			if (opline->op1_type == IS_CONST)
+				opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
+			if (opline->op2_type == IS_CONST) 
+				opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
+#elif PHP_VERSION_ID >= 70300
+			if (opline->op1_type == IS_CONST) {
+				opline->op1.constant =
+					(char*)(op_array->literals +
+						((zval*)((char*)(op_array->opcodes + (opline - copy)) +
+						(int32_t)opline->op1.constant) - literals)) -
+					(char*)opline;
+				if (opline->opcode == ZEND_SEND_VAL
+				 || opline->opcode == ZEND_SEND_VAL_EX
+				 || opline->opcode == ZEND_QM_ASSIGN) {
+					zend_vm_set_opcode_handler_ex(opline, 0, 0, 0);
+				}
 			}
+			if (opline->op2_type == IS_CONST) {
+				opline->op2.constant =
+					(char*)(op_array->literals +
+						((zval*)((char*)(op_array->opcodes + (opline - copy)) +
+						(int32_t)opline->op2.constant) - literals)) -
+					(char*)opline;
+			}
+#endif
+
+#if ZEND_USE_ABS_JMP_ADDR
+			if ((op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) != 0) {
+				switch (opline->opcode) {
+					case ZEND_JMP:
+					case ZEND_FAST_CALL:
+					case ZEND_DECLARE_ANON_CLASS:
+					case ZEND_DECLARE_ANON_INHERITED_CLASS:
+						 opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
+					break;
+
+					case ZEND_JMPZNZ:
+					case ZEND_JMPZ:
+					case ZEND_JMPNZ:
+					case ZEND_JMPZ_EX:
+					case ZEND_JMPNZ_EX:
+					case ZEND_JMP_SET:
+					case ZEND_COALESCE:
+					case ZEND_NEW:
+					case ZEND_FE_RESET_R:
+					case ZEND_FE_RESET_RW:
+					case ZEND_ASSERT_CHECK:
+						opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - op_array->opcodes];
+					break;
+				}
+			}
+#endif
 		}
-#endif
 	}
-#endif
 
 	return copy;
 } /* }}} */

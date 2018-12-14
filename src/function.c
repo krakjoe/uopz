@@ -111,7 +111,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		uopz_handle_magic(clazz, name, function);
 	}
 
-	zend_string_release(key);
+	//zend_string_release(key);
 
 	return 1;
 } /* }}} */
@@ -212,9 +212,7 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 } /* }}} */
 
 static inline uopz_try_addref(zval *z) { /* {{{ */
-	if (Z_REFCOUNTED_P(z)) {
-		Z_ADDREF_P(z);
-	}
+	Z_TRY_ADDREF_P(z);
 } /* }}} */
 
 void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */
@@ -277,7 +275,11 @@ void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *retur
 	}
 
 	ZVAL_ARR(return_value, entry->op_array.static_variables);
+#if PHP_VERSION_ID >= 70300
+	GC_ADDREF(entry->op_array.static_variables);
+#else
 	GC_REFCOUNT(entry->op_array.static_variables)++;
+#endif
 } /* }}} */
 
 #endif	/* UOPZ_FUNCTION */
