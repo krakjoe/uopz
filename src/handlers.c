@@ -232,9 +232,17 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (key && EX(opline)->op2_type == IS_CONST) {
 				zval *function_name = EX_CONSTANT(EX(opline)->op2);
 				if (EX(opline)->op1_type == IS_CONST) {
+#if PHP_VERSION_ID >= 70300
+					/* I just, I dunno */
+#else
 					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
+#endif
 				} else {
+#if PHP_VERSION_ID >= 70300
+					/* I just, I dunno */
+#else
 					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
+#endif
 				}
 			}
 			
