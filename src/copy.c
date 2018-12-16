@@ -24,6 +24,8 @@
 #include "util.h"
 #include "copy.h"
 
+#include <Zend/zend_vm.h>
+
 /* {{{ */
 static inline HashTable* uopz_copy_statics(HashTable *old) {
 	return zend_array_dup(old);
