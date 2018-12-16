@@ -142,6 +142,11 @@ uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
 	}
 
 	if (!returns) {
+		if (function->common.prototype) {
+			return uopz_find_return(
+				function->common.prototype);
+		}
+
 		return NULL;
 	}
 
