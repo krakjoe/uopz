@@ -174,14 +174,18 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		case ZEND_INIT_FCALL_BY_NAME:
 		case ZEND_INIT_FCALL:
 		case ZEND_INIT_NS_FCALL_BY_NAME: {
+#if PHP_VERSION_ID >= 70300
+			CACHE_PTR(EX(opline)->result.num, NULL);
+#else
 			zval *function_name = EX_CONSTANT(EX(opline)->op2);
 			CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
+#endif
 		} break;
 
 		case ZEND_INIT_METHOD_CALL: {
 			if (EX(opline)->op2_type == IS_CONST) {
 #if PHP_VERSION_ID >= 70300
-				
+				CACHE_PTR(EX(opline)->result.num, NULL);
 #else
 				zval *function_name = EX_CONSTANT(EX(opline)->op2);
 				CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
