@@ -19,6 +19,9 @@
 #ifndef UOPZ_UTIL_H
 #define UOPZ_UTIL_H
 
+extern PHP_FUNCTION(uopz_call_user_func);
+extern PHP_FUNCTION(uopz_call_user_func_array);
+
 void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function *function);
 int uopz_find_function(HashTable *table, zend_string *name, zend_function **function);
 int uopz_find_method(zend_class_entry *ce, zend_string *name, zend_function **function);
@@ -34,6 +37,24 @@ void uopz_request_shutdown(void);
 static inline void uopz_zval_dtor(zval *zv) { /* {{{ */
 	zval_ptr_dtor(zv);
 } /* }}} */
+
+static inline zend_bool uopz_is_cuf(zend_execute_data *execute_data) {
+	if (EX(func)->type == ZEND_INTERNAL_FUNCTION) {
+		if (EX(func)->internal_function.handler == zif_uopz_call_user_func) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static inline zend_bool uopz_is_cufa(zend_execute_data *execute_data) {
+	if (EX(func)->type == ZEND_INTERNAL_FUNCTION) {
+		if (EX(func)->internal_function.handler == zif_uopz_call_user_func_array) {
+			return 1;
+		}
+	}
+	return 0;	
+}
 
 #endif	/* UOPZ_UTIL_H */
 

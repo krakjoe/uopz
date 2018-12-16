@@ -157,9 +157,11 @@ uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
 	return ureturn;
 } /* }}} */
 
+extern PHP_FUNCTION(php_call_user_func);
+
 void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value) { /* {{{ */
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fcc = empty_fcall_info_cache;
 	char *error = NULL;
 	zval closure, 
 		 rv,
@@ -187,10 +189,18 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 		goto _exit_uopz_execute_return;
 	}
 
-	fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
-	fci.params = ZEND_CALL_ARG(execute_data, 1);
-	fci.retval= result;
-	
+	if (uopz_is_cuf(execute_data)) {
+		fci.params = ZEND_CALL_ARG(execute_data, 2);
+		fci.param_count = ZEND_CALL_NUM_ARGS(execute_data) - 1;
+	} else if (uopz_is_cufa(execute_data)) {
+		zend_fcall_info_args(&fci, ZEND_CALL_ARG(execute_data, 2));
+	} else {
+		fci.params = ZEND_CALL_ARG(execute_data, 1);
+		fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
+	}
+
+	fci.retval = result;
+
 	if (zend_call_function(&fci, &fcc) == SUCCESS) {
 		if (!return_value) {
 			if (!Z_ISUNDEF(rv)) {
