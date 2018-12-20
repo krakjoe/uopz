@@ -197,7 +197,7 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			zend_class_entry *ce;
 			zval *mock;
 			zend_string *key = NULL;
-			
+
 			if (EX(opline)->op1_type == IS_CONST) {
 				key = zend_string_tolower(Z_STR_P(EX_CONSTANT(EX(opline)->op1)));
 			} else if (EX(opline)->op1_type != IS_UNUSED) 	{
@@ -233,13 +233,13 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				zval *function_name = EX_CONSTANT(EX(opline)->op2);
 				if (EX(opline)->op1_type == IS_CONST) {
 #if PHP_VERSION_ID >= 70300
-					/* I just, I dunno */
+					CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
 #else
 					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
 #endif
 				} else {
 #if PHP_VERSION_ID >= 70300
-					/* I just, I dunno */
+					CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
 #else
 					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
 #endif
