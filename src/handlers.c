@@ -508,9 +508,13 @@ int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 
 		zend_string_release(key);
+	} else {
+#if PHP_VERSION_ID < 70300
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
+#else
+		CACHE_PTR(EX(opline)->extended_value, NULL);
+#endif
 	}
-
-	CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
 
 	if (uopz_fetch_class_constant_handler) {
 		return uopz_fetch_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
