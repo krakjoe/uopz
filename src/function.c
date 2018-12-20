@@ -166,7 +166,7 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	zend_long current = 0;
 
 	if (!name || !ZSTR_LEN(name) || !ZSTR_VAL(name)) {
-		if (flags == LONG_MAX) {
+		if (flags == ZEND_LONG_MAX) {
 			RETURN_LONG(clazz->ce_flags);
 		}
 
@@ -202,7 +202,7 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 		return;
 	}
 
-	if (flags == LONG_MAX) {
+	if (flags == ZEND_LONG_MAX) {
 		RETURN_LONG(function->common.fn_flags);
 	}
 

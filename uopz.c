@@ -523,7 +523,7 @@ static PHP_FUNCTION(uopz_flags)
 {
 	zend_string *name = NULL;
 	zend_class_entry *clazz = NULL;
-	zend_long flags = LONG_MAX;
+	zend_long flags = ZEND_LONG_MAX;
 
 	uopz_disabled_guard();
 
