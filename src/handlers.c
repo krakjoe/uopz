@@ -186,6 +186,7 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (EX(opline)->op2_type == IS_CONST) {
 #if PHP_VERSION_ID >= 70300
 				CACHE_PTR(EX(opline)->result.num, NULL);
+				CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
 #else
 				zval *function_name = EX_CONSTANT(EX(opline)->op2);
 				CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
@@ -233,13 +234,14 @@ int uopz_call_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				zval *function_name = EX_CONSTANT(EX(opline)->op2);
 				if (EX(opline)->op1_type == IS_CONST) {
 #if PHP_VERSION_ID >= 70300
-					/* I just, I dunno */
+					CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
 #else
 					CACHE_PTR(Z_CACHE_SLOT_P(function_name), NULL);
 #endif
 				} else {
 #if PHP_VERSION_ID >= 70300
-					/* I just, I dunno */
+					CACHE_PTR(EX(opline)->result.num, NULL);
+					CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
 #else
 					CACHE_POLYMORPHIC_PTR(Z_CACHE_SLOT_P(function_name), NULL, NULL);
 #endif
@@ -510,7 +512,14 @@ int uopz_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		zend_string_release(key);
 	}
 
+#if PHP_VERSION_ID < 70300
 	CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
+#else
+	CACHE_PTR(EX(opline)->extended_value + sizeof(void*), NULL);
+	if (EX(opline)->op1_type != IS_CONST) {
+		CACHE_PTR(EX(opline)->extended_value, NULL);
+	}
+#endif
 
 	if (uopz_fetch_class_constant_handler) {
 		return uopz_fetch_class_constant_handler(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
@@ -561,7 +570,11 @@ int uopz_fetch_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 				if (ce) {
 					if (EX(opline)->op2_type == IS_CONST) {
+#if PHP_VERSION_ID < 70300
 						CACHE_PTR(Z_CACHE_SLOT_P(name), ce);
+#else
+						CACHE_PTR(EX(opline)->result.num, ce);
+#endif
 					}
 
 					Z_CE_P(EX_VAR(EX(opline)->result.var)) = ce;
@@ -662,10 +675,14 @@ int uopz_add_class_handler(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			zend_class_entry *ce = zend_lookup_class(Z_STR_P(mock));
 			
 			if (ce) {
+#if PHP_VERSION_ID < 70300
 				CACHE_PTR(Z_CACHE_SLOT_P(name), ce);
+#endif
 			}
 		} else {
+#if PHP_VERSION_ID < 70300
 			CACHE_PTR(Z_CACHE_SLOT_P(name), Z_OBJCE_P(mock));
+#endif
 		}
 	}
 	
