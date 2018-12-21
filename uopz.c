@@ -657,44 +657,50 @@ static PHP_FUNCTION(uopz_allow_exit) {
 /* {{{ proto mixed uopz_call_user_func(callable function, ... args) */
 PHP_FUNCTION(uopz_call_user_func) {
 	zval retval;
-	zend_fcall_info fci = empty_fcall_info;
-	zend_fcall_info_cache fcc = empty_fcall_info_cache;
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f*", &fci, &fcc, &fci.params, &fci.param_count) != SUCCESS) {
-		return;
-	}
+	ZEND_PARSE_PARAMETERS_START(1, -1)
+		Z_PARAM_FUNC(fci, fcc)
+		Z_PARAM_VARIADIC('*', fci.params, fci.param_count)
+	ZEND_PARSE_PARAMETERS_END();
 
 	fci.retval = &retval;
 
 	UOPZ_CALL_HOOKS();
 
 	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
+		if (Z_ISREF(retval)) {
+			zend_unwrap_reference(&retval);
+		}
 		ZVAL_COPY_VALUE(return_value, &retval);
 	}
-
 } /* }}} */
 
 /* {{{ proto mixed uopz_call_user_func_array(callable function, array args) */
 PHP_FUNCTION(uopz_call_user_func_array) {
 	zval *params, retval;
-	zend_fcall_info fci = empty_fcall_info;
-	zend_fcall_info_cache fcc = empty_fcall_info_cache;
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "fa/", &fci, &fcc, &params) == FAILURE) {
-		return;
-	}
+	ZEND_PARSE_PARAMETERS_START(2, 2)
+		Z_PARAM_FUNC(fci, fcc)
+		Z_PARAM_ARRAY(params)
+	ZEND_PARSE_PARAMETERS_END();
 
 	zend_fcall_info_args(&fci, params);
-	
 	fci.retval = &retval;
 
 	UOPZ_CALL_HOOKS();
 
 	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
+		if (Z_ISREF(retval)) {
+			zend_unwrap_reference(&retval);
+		}
 		ZVAL_COPY_VALUE(return_value, &retval);
 	}
 
-	zend_fcall_info_args_clear(&fci, 1);	
+	zend_fcall_info_args_clear(&fci, 1);
 } /* }}} */
 
 /* {{{ uopz_functions[]
