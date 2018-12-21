@@ -217,7 +217,8 @@ static inline void uopz_try_addref(zval *z) { /* {{{ */
 
 void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */
 	zend_function *entry;
-	zval *var = NULL;
+	zend_string *k = NULL;
+	zval *v = NULL;
 
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
@@ -237,20 +238,21 @@ void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *stati
 		return;
 	}
 
-	ZEND_HASH_FOREACH_VAL(entry->op_array.static_variables, var) {
-		if (Z_REFCOUNTED_P(var)) {
-			zval_ptr_dtor(var);
+	ZEND_HASH_FOREACH_STR_KEY_VAL(entry->op_array.static_variables, k, v) {
+		zval *y;
+
+		if (Z_REFCOUNTED_P(v)) {
+			zval_ptr_dtor(v);
 		}
 
-		ZVAL_NULL(var);
+		if (!(y = zend_hash_find(Z_ARRVAL_P(statics), k))) {
+			ZVAL_NULL(v);
+			
+			continue;
+		}
+		
+		ZVAL_COPY(v, y);
 	} ZEND_HASH_FOREACH_END();
-
-	if (zend_hash_num_elements(Z_ARRVAL_P(statics))) {
-		zend_hash_copy(
-			entry->op_array.static_variables, 
-			Z_ARRVAL_P(statics),
-			(copy_ctor_func_t) uopz_try_addref);	
-	}
 } /* }}} */
 
 void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
