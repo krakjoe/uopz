@@ -164,8 +164,8 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	if (uopz_find_function(table, name, &function) != SUCCESS) {
 		if (clazz) {
 			uopz_exception(
-			"failed to set or get flags of method %s::%s, it does not exist",
-			ZSTR_VAL(clazz->name), ZSTR_VAL(name));
+				"failed to set or get flags of method %s::%s, it does not exist",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(name));
 		} else {
 			uopz_exception(
 				"failed to set or get flags of function %s, it does not exist",
@@ -187,27 +187,53 @@ static inline void uopz_try_addref(zval *z) { /* {{{ */
 	Z_TRY_ADDREF_P(z);
 } /* }}} */
 
-void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */
+zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */
 	zend_function *entry;
 	zend_string *k = NULL;
 	zval *v = NULL;
 
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
-			return;
+			uopz_exception(
+				"failed to set statics in method %s::%s, it does not exist",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
+			return 0;
 		}
 	} else {
 		if (uopz_find_function(CG(function_table), function, &entry) != SUCCESS) {
-			return;
+			uopz_exception(
+				"failed to set statics in function %s, it does not exist",
+				ZSTR_VAL(function));
+			return 0;
 		}
 	}
 
 	if (entry->type != ZEND_USER_FUNCTION) {
-		return;
+		if (clazz) {
+			uopz_exception(
+				"failed to set statics in internal method %s::%s",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
+		} else {
+			uopz_exception(
+				"failed to set statics in internal function %s",
+				ZSTR_VAL(function));
+		}
+
+		return 0;
 	}
 
 	if (!entry->op_array.static_variables) {
-		return;
+		if (clazz) {
+			uopz_exception(
+				"failed to set statics in method %s::%s, no statics declared",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
+		} else {
+			uopz_exception(
+				"failed to set statics in function %s, no statics declared",
+				ZSTR_VAL(function));
+		}
+
+		return 0;
 	}
 
 	ZEND_HASH_FOREACH_STR_KEY_VAL(entry->op_array.static_variables, k, v) {
@@ -225,27 +251,55 @@ void uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *stati
 		
 		ZVAL_COPY(v, y);
 	} ZEND_HASH_FOREACH_END();
+
+	return 1;
 } /* }}} */
 
-void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
+zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
 	zend_function *entry;
 
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
-			return;
+			uopz_exception(
+				"failed to get statics from method %s::%s, it does not exist",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
+			return 0;
 		}
 	} else {
 		if (uopz_find_function(CG(function_table), function, &entry) != SUCCESS) {
-			return;
+			uopz_exception(
+				"failed to get statics from function %s, it does not exist",
+				ZSTR_VAL(function));
+			return 0;
 		}
 	}
 
 	if (entry->type != ZEND_USER_FUNCTION) {
-		return;
+		if (clazz) {
+			uopz_exception(
+				"failed to get statics from internal method %s::%s",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
+		} else {
+			uopz_exception(
+				"failed to get statics from internal function %s",
+				ZSTR_VAL(function));
+		}
+
+		return 0;
 	}
 
 	if (!entry->op_array.static_variables) {
-		return;
+		if (clazz) {
+			uopz_exception(
+				"failed to set statics in method %s::%s, no statics declared",
+				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
+		} else {
+			uopz_exception(
+				"failed to set statics in function %s, no statics declared",
+				ZSTR_VAL(function));
+		}
+
+		return 0;
 	}
 
 	ZVAL_ARR(return_value, entry->op_array.static_variables);
@@ -254,6 +308,7 @@ void uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *retur
 #else
 	GC_REFCOUNT(entry->op_array.static_variables)++;
 #endif
+	return 1;
 } /* }}} */
 
 #endif	/* UOPZ_FUNCTION */

@@ -75,12 +75,7 @@ zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *valu
 	ZVAL_COPY(&ret.value, value);
 	ret.flags = execute ? UOPZ_RETURN_EXECUTE : 0;
 
-	if (!zend_hash_update_mem(returns, key, &ret, sizeof(uopz_return_t))) {
-		zend_string_release(ret.function);
-		zval_ptr_dtor(&ret.value);
-		zend_string_release(key);
-		return 0;
-	}
+	zend_hash_update_mem(returns, key, &ret, sizeof(uopz_return_t));
 
 	zend_string_release(key);
 	return 1;

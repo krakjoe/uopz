@@ -29,11 +29,17 @@ try {
 } catch (Throwable $t) {
 	var_dump($t->getMessage());
 }
-?>
---EXPECT--
-bool(true)
-bool(true)
-bool(true)
-string(38) "Call to undefined method Foo::method()"
-string(58) "cannot delete method Foo::exists, it was not added by uopz"
 
+try {
+	uopz_del_function("phpversion");
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
+?>
+--EXPECTF--
+bool(true)
+bool(true)
+bool(true)
+string(%d) "Call to undefined method Foo::method()"
+string(%d) "cannot delete method %s::%s, it was not added by uopz"
+string(%d) "cannot delete function %s, it was not added by uopz"

@@ -11,7 +11,11 @@ class Foo {
 
 		$vars[] = 6;
 	}
+
+	public function nostatics() {}
 }
+
+function nostatics() {}
 
 $foo = new Foo();
 
@@ -26,8 +30,44 @@ uopz_set_static(Foo::class, "method", [
 $foo->method();
 
 var_dump(uopz_get_static(Foo::class, "method"));
+
+try {
+	uopz_set_static(Foo::class, "none", []);
+} catch(RuntimeException $ex) {
+	var_dump($ex->getMessage());
+}
+
+try {
+	uopz_set_static("none", []);
+} catch(RuntimeException $ex) {
+	var_dump($ex->getMessage());
+}
+
+try {
+	uopz_set_static("phpversion", []);
+} catch(RuntimeException $ex) {
+	var_dump($ex->getMessage());
+}
+
+try {
+	uopz_set_static(DateTime::class, "__construct", []);
+} catch(RuntimeException $ex) {
+	var_dump($ex->getMessage());
+}
+
+try {
+	uopz_set_static(Foo::class, "nostatics", []);
+} catch(RuntimeException $ex) {
+	var_dump($ex->getMessage());
+}
+
+try {
+	uopz_set_static("nostatics", []);
+} catch(RuntimeException $ex) {
+	var_dump($ex->getMessage());
+}
 ?>
---EXPECT--
+--EXPECTF--
 array(1) {
   ["vars"]=>
   array(6) {
@@ -52,3 +92,9 @@ array(1) {
     int(6)
   }
 }
+string(%d) "failed to set statics in method %s::%s, it does not exist"
+string(%d) "failed to set statics in function %s, it does not exist"
+string(%d) "failed to set statics in internal function %s"
+string(%d) "failed to set statics in internal method %s::%s"
+string(%d) "failed to set statics in method %s::%s, no statics declared"
+string(%d) "failed to set statics in function %s, no statics declared"
