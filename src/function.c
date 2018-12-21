@@ -58,41 +58,13 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 			&UOPZ(functions), (zend_long) table, functions);
 	}
 
-	if (!zend_hash_update(functions, key, closure)) {
-		if (clazz) {
-			uopz_exception(
-				"failed to update uopz function table while adding method %s::%s",
-				ZSTR_VAL(clazz->name),
-				ZSTR_VAL(name));
-		} else {
-			uopz_exception(
-				"failed to update uopz function table while adding function %s",
-				ZSTR_VAL(name));
-		}
-		zend_string_release(key);
-		return 0;
-	}
-
+	zend_hash_update(functions, key, closure);
 	zval_copy_ctor(closure);
 
-	function = uopz_copy_closure(clazz, (zend_function*) zend_get_closure_method_def(closure), flags);
+	function = uopz_copy_closure(clazz, 
+			(zend_function*) zend_get_closure_method_def(closure), flags);
 
-	if (!zend_hash_update_ptr(table, key, (void*) function)) {
-		if (clazz) {
-			uopz_exception(
-				"failed to update zend function table while adding method %s::%s",
-				ZSTR_VAL(clazz->name),
-				ZSTR_VAL(name));
-		} else {
-			uopz_exception(
-				"failed to update zend function table while adding function %s",
-				ZSTR_VAL(name));
-		}
-		zend_hash_del(functions, key);
-		zend_string_release(key);
-		destroy_zend_function(function);
-		return 0;
-	}
+	zend_hash_update_ptr(table, key, (void*) function);
 
 	if (clazz) {
 		if (all) {

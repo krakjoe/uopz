@@ -75,17 +75,7 @@ void uopz_get_mock(zend_string *clazz, zval *return_value) { /* {{{ */
 
 /* {{{ */
 zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
-	zend_bool is_final = clazz->ce_flags & ZEND_ACC_FINAL;
-
-	clazz->ce_flags &= ~ZEND_ACC_FINAL;
-
-	if ((clazz->ce_flags & ZEND_ACC_INTERFACE) &&
-		!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
-		uopz_exception(
-		    "the class provided (%s) cannot extend %s, because %s is not an interface",
-		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
-		return 0;
-	}
+	zend_bool is_final, is_trait;
 
 	if (instanceof_function(clazz, parent)) {
 		uopz_exception(
@@ -94,24 +84,40 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
 		return 0;
 	}
 
-	if (parent->ce_flags & ZEND_ACC_TRAIT) {
-		zend_do_implement_trait(clazz, parent);
-	} else zend_do_inheritance(clazz, parent);
+	if ((clazz->ce_flags & ZEND_ACC_TRAIT) &&
+		!(parent->ce_flags & ZEND_ACC_TRAIT)) {
+		uopz_exception(
+		    "the trait provided (%s) cannot extend %s, because %s is not a trait",
+		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
+		return 0;
+	}
 
-	if (parent->ce_flags & ZEND_ACC_TRAIT)
+	if ((clazz->ce_flags & ZEND_ACC_INTERFACE) &&
+		!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
+		uopz_exception(
+		    "the interface provided (%s) cannot extend %s, because %s is not an interface",
+		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
+		return 0;
+	}
+
+	is_final = clazz->ce_flags & ZEND_ACC_FINAL;
+	is_trait = (clazz->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT;
+
+	clazz->ce_flags &= ~ZEND_ACC_FINAL;
+
+	if ((parent->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT) {
+		zend_do_implement_trait(clazz, parent);
 		zend_do_bind_traits(clazz);
+	} else zend_do_inheritance(clazz, parent);
 
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
 
-	return instanceof_function(clazz, parent);
+	return is_trait ? 1 : instanceof_function(clazz, parent);
 } /* }}} */
 
 /* {{{ */
 zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
-	zend_bool is_final =
-		(clazz->ce_flags & ZEND_ACC_FINAL);
-
 	if (!(interface->ce_flags & ZEND_ACC_INTERFACE)) {
 		uopz_exception(
 			"the class provided (%s) is not an interface", 
@@ -127,13 +133,7 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 		return 0;
 	}
 
-	clazz->ce_flags &= ~ZEND_ACC_FINAL;
-
-	zend_do_implement_interface
-		(clazz, interface);
-
-	if (is_final)
-		clazz->ce_flags |= ZEND_ACC_FINAL;
+	zend_do_implement_interface(clazz, interface);
 
 	return instanceof_function(clazz, interface);
 } /* }}} */
@@ -190,15 +190,11 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 	} else {
 		uopz_set_scope(Z_OBJCE_P(object));
 	}
-	
-	prop = Z_OBJ_HT_P(object)
-		->read_property(object, member, BP_VAR_R, NULL, &rv);
+
+	prop = Z_OBJ_HT_P(object)->read_property(
+		object, member, BP_VAR_R, NULL, &rv);
 
 	uopz_set_scope(scope);
-
-	if (!prop) {
-		return;
-	}
 
 	ZVAL_COPY(value, prop);
 } /* }}} */
@@ -232,6 +228,10 @@ void uopz_set_static_property(zend_class_entry *ce, zend_string *property, zval 
 	uopz_set_scope(scope);
 
 	if (!prop) {
+		uopz_exception(
+			"cannot set non-existent static property %s::%s", 
+			ZSTR_VAL(ce->name),
+			ZSTR_VAL(property));
 		return;
 	}
 

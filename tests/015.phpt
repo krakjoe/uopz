@@ -18,7 +18,14 @@ try {
 } catch (Throwable $t) {
 	var_dump($t->getMessage());
 }
+
+try {
+	uopz_implement(Foo::class, Bar::class);
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
 ?>
---EXPECT--
+--EXPECTF--
 bool(true)
-string(54) "the class provided (Bar) already has the interface Foo"
+string(%d) "the class provided (%s) already has the interface %s"
+string(%d) "the class provided (%s) is not an interface"

@@ -30,28 +30,6 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
 
-	switch (Z_TYPE_P(variable)) {
-		case IS_LONG:
-		case IS_DOUBLE:
-		case IS_STRING:
-		case IS_TRUE:
-		case IS_FALSE:
-		case IS_ARRAY:
-		case IS_RESOURCE:
-		case IS_NULL:
-			break;
-
-		default:
-			if (clazz) {
-				uopz_exception(
-					"failed to redefine the constant %s::%s, type not allowed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
-			} else {
-				uopz_exception(
-					"failed to redefine the constant %s, type not allowed", ZSTR_VAL(name));
-			}
-			return 0;
-	}
-
 	if (!(zconstant = zend_hash_find_ptr(table, name))) {
 		if (!clazz) {
 			zend_constant create;
@@ -65,18 +43,10 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 #endif
 			create.name = zend_string_copy(name);
 
-			if (zend_register_constant(&create) != SUCCESS) {
-				uopz_exception(
-					"failed to redefine the constant %s, operation failed", ZSTR_VAL(name));
-				zval_dtor(&create.value);
-				return 0;
-			}
+			zend_register_constant(&create);
 		} else {
-			if (zend_declare_class_constant(clazz, ZSTR_VAL(name), ZSTR_LEN(name), variable) == FAILURE) {
-				uopz_exception(
-					"failed to redefine the constant %s::%s, update failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
-				return 0;
-			}
+			zend_declare_class_constant(clazz, 
+				ZSTR_VAL(name), ZSTR_LEN(name), variable);
 			Z_TRY_ADDREF_P(variable);
 		}
 
@@ -87,7 +57,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 #if PHP_VERSION_ID < 70300
 		if (zconstant->module_number == PHP_USER_CONSTANT) {
 #else
-		if (ZEND_CONSTANT_FLAGS(zconstant) & PHP_USER_CONSTANT) {
+		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) == PHP_USER_CONSTANT) {
 #endif
 			zval_dtor(&zconstant->value);
 			ZVAL_COPY(&zconstant->value, variable);
@@ -99,12 +69,9 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 
 	} else {
 		zend_hash_del(table, name);
-		
-		if (zend_declare_class_constant(clazz, ZSTR_VAL(name), ZSTR_LEN(name), variable) == FAILURE) {
-			uopz_exception(
-				"failed to redefine the constant %s::%s, update failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
-			return 0;
-		}
+
+		zend_declare_class_constant(clazz, 
+			ZSTR_VAL(name), ZSTR_LEN(name), variable);
 		Z_TRY_ADDREF_P(variable);
 	}
 
@@ -124,27 +91,19 @@ zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name) {
 #if PHP_VERSION_ID < 70300
 		if (zconstant->module_number != PHP_USER_CONSTANT) {
 #else
-		if (ZEND_CONSTANT_FLAGS(zconstant) & PHP_USER_CONSTANT) {
+		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) != PHP_USER_CONSTANT) {
 #endif
 			uopz_exception(
 				"failed to undefine the internal constant %s, not allowed", ZSTR_VAL(name));
 			return 0;
 		}
 
-		if (zend_hash_del(table, name) != SUCCESS) {
-			uopz_exception(
-				"failed to undefine the constant %s, delete failed", ZSTR_VAL(name));
-			return 0;
-		}
+		zend_hash_del(table, name);
 
 		return 1;
 	}
 
-	if (zend_hash_del(table, name) != SUCCESS) {
-		uopz_exception(
-			"failed to undefine the constant %s::%s, delete failed", ZSTR_VAL(clazz->name), ZSTR_VAL(name));
-		return 0;
-	}
+	zend_hash_del(table, name);
 
 	return 1;
 } /* }}} */
