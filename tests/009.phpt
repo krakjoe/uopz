@@ -10,6 +10,8 @@ class Foo {
 	}
 }
 
+function bar() {}
+
 var_dump(uopz_set_hook(Foo::class, "method", function($arg){
 	var_dump($arg);
 	var_dump($this);
@@ -26,11 +28,33 @@ try {
 } catch (Throwable $t) {
 	var_dump($t->getMessage());
 }
+
+try {
+	uopz_set_hook(Bar::class, "none", function(){});
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
+
+var_dump(uopz_set_hook("bar", function(){
+	var_dump("hook");
+}));
+
+bar();
+
+var_dump(uopz_unset_hook("bar"));
+
+bar();
+
+var_dump(uopz_unset_hook("none"));
 ?>
---EXPECT--
+--EXPECTF--
 bool(true)
 bool(true)
 object(Foo)#2 (0) {
 }
-string(64) "failed to set hook for Bar::method, the method is defined in Foo"
-
+string(%d) "failed to set hook for %s::%s, the method is defined in %s"
+string(%d) "failed to set hook for %s::%s, the method does not exist"
+bool(true)
+string(4) "hook"
+bool(true)
+bool(false)

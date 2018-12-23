@@ -8,6 +8,10 @@ class Foo {
 	public function bar(int $arg) : int {
 		return $arg;
 	}
+
+	public static function qux(int $arg) : int {
+		return $arg;
+	}
 }
 
 var_dump(uopz_set_return(Foo::class, "bar", true));
@@ -35,6 +39,14 @@ try {
 } catch (Throwable $t) {
 	var_dump($t->getMessage());
 }
+
+var_dump($foo::qux(10));
+
+uopz_set_Return(Foo::class, "qux", function(int $arg) : int {
+	return $arg * 2;
+}, true);
+
+var_dump($foo::qux(20));
 ?>
 --EXPECT--
 bool(true)
@@ -42,4 +54,5 @@ bool(true)
 int(4)
 string(61) "failed to set return for Foo::nope, the method does not exist"
 string(63) "failed to set return for Bar::bar, the method is defined in Foo"
-
+int(10)
+int(40)

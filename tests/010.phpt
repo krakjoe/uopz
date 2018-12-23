@@ -10,12 +10,22 @@ class Foo {
 	}
 }
 
+function bar() {}
+
 var_dump(uopz_set_hook(Foo::class, "method", function($arg){
 	var_dump($arg);
 	var_dump($this);
 }));
 
 var_dump(uopz_get_hook(Foo::class, "method"));
+
+uopz_set_hook("bar", function(){});
+
+var_dump(uopz_get_hook("bar"));
+
+var_dump(uopz_get_hook("none"));
+
+var_dump(uopz_get_hook(DateTime::class, "__construct"));
 ?>
 --EXPECT--
 bool(true)
@@ -26,3 +36,7 @@ object(Closure)#1 (1) {
     string(10) "<required>"
   }
 }
+object(Closure)#2 (0) {
+}
+NULL
+NULL

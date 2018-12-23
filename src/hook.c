@@ -74,13 +74,8 @@ zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closur
 	hook.function = zend_string_copy(name);
 	ZVAL_COPY(&hook.closure, closure);
 
-	if (!zend_hash_update_mem(hooks, key, &hook, sizeof(uopz_hook_t))) {
-		zend_string_release(hook.function);
-		zval_ptr_dtor(&hook.closure);
-		zend_string_release(key);
-		return 0;
-	}
-
+	zend_hash_update_mem(
+		hooks, key, &hook, sizeof(uopz_hook_t));
 	zend_string_release(key);
 	return 1;
 } /* }}} */
@@ -164,21 +159,7 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(&uhook->closure), 
 		uhook->clazz, uhook->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
-	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
-		if (EX(func)->common.scope) {
-			uopz_exception("cannot use hook set for %s::%s as function: %s",
-				ZSTR_VAL(EX(func)->common.scope->name),
-				ZSTR_VAL(EX(func)->common.function_name), error);
-		} else {
-			uopz_exception("cannot use hook set for %s as function: %s",
-				ZSTR_VAL(EX(func)->common.function_name), error);
-		}		
-		
-		if (error) {
-			efree(error);
-		}
-		goto _exit_uopz_execute_hook;
-	}
+	zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error);
 
 	fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
 	fci.params = ZEND_CALL_ARG(execute_data, 1);

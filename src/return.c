@@ -169,20 +169,7 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(&ureturn->value), 
 		ureturn->clazz, ureturn->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
-	if (zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error) != SUCCESS) {
-		if (EX(func)->common.scope) {
-			uopz_exception("cannot use return value set for %s::%s as function: %s",
-				ZSTR_VAL(EX(func)->common.scope->name), 
-				ZSTR_VAL(EX(func)->common.function_name), error);
-		} else {
-			uopz_exception("cannot use return value set for %s as function: %s",
-				ZSTR_VAL(EX(func)->common.function_name), error);
-		}
-		if (error) {
-			efree(error);
-		}
-		goto _exit_uopz_execute_return;
-	}
+	zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error);
 
 	if (uopz_is_cuf(execute_data)) {
 		fci.params = ZEND_CALL_ARG(execute_data, 2);
