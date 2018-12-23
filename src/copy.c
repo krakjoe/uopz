@@ -209,7 +209,7 @@ static inline zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg
 	return info;
 } /* }}} */
 
-zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *function, zend_long flags) { /* {{{ */
+zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *function, zend_long flags, zend_function *prototype) { /* {{{ */
 	zend_function  *copy;	
 	zend_op_array  *op_array;
 	zend_string   **variables;
@@ -233,7 +233,7 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	op_array->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
 	op_array->fn_flags |= flags;
 	op_array->scope = scope;
-	op_array->prototype = NULL;
+	op_array->prototype = prototype;
 
 	op_array->run_time_cache = zend_arena_alloc(&CG(arena), op_array->cache_size);
 

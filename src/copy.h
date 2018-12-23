@@ -18,7 +18,7 @@
 #ifndef HAVE_UOPZ_COPY_H
 #define HAVE_UOPZ_COPY_H
 
-zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *function, zend_long flags);
+zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *function, zend_long flags, zend_function *prototype);
 #endif
 
 

@@ -141,37 +141,28 @@ zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /
 static inline int uopz_closure_equals(zval *closure, zend_function *function) { /* {{{ */
 	const zend_function *cmp = zend_get_closure_method_def(closure);
 
-	if (cmp == function) {
-		return 1;
-	}
-
-	if (cmp->type == function->type && 
-		cmp->op_array.opcodes == function->op_array.opcodes) {
+	if (cmp == function || cmp->common.prototype == function->common.prototype) {
 		return 1;
 	}
 
 	return 0;
 } /* }}} */
 
-int uopz_clean_function(zval *zv) { /* {{{ */
+int uopz_clean_function(zval *zv, void *arg) { /* {{{ */
 	zend_function *fp = Z_PTR_P(zv);
+	zend_class_entry *scope = (zend_class_entry*) arg;
+	HashTable *table = scope ? &scope->function_table : CG(function_table);
+	HashTable *functions = 
+		zend_hash_index_find_ptr(&UOPZ(functions), (zend_long) table);
 
-	if (fp->common.fn_flags & ZEND_ACC_CLOSURE) {
-		HashTable *table = fp->common.scope ?
-			&fp->common.scope->function_table : CG(function_table);
+	if (functions) {
+		zval *closure = NULL;
 
-		HashTable *functions = 
-			zend_hash_index_find_ptr(&UOPZ(functions), (zend_long) table);
-
-		if (functions) {
-			zval *closure = NULL;
-
-			ZEND_HASH_FOREACH_VAL(functions, closure) {
-				if (uopz_closure_equals(closure, fp)) {
-					return ZEND_HASH_APPLY_REMOVE;
-				}
-			} ZEND_HASH_FOREACH_END();
-		}
+		ZEND_HASH_FOREACH_VAL(functions, closure) {
+			if (uopz_closure_equals(closure, fp)) {
+				return ZEND_HASH_APPLY_REMOVE;
+			}
+		} ZEND_HASH_FOREACH_END();
 	}
 
 	return ZEND_HASH_APPLY_KEEP;
@@ -180,8 +171,8 @@ int uopz_clean_function(zval *zv) { /* {{{ */
 int uopz_clean_class(zval *zv) { /* {{{ */
 	zend_class_entry *ce = Z_PTR_P(zv);
 
-	zend_hash_apply(
-		&ce->function_table, uopz_clean_function);
+	zend_hash_apply_with_argument(
+		&ce->function_table, uopz_clean_function, ce);
 	
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
@@ -302,7 +293,7 @@ void uopz_request_shutdown(void) { /* {{{ */
 	CG(compiler_options) = UOPZ(copts);
 
 	zend_hash_apply(CG(class_table), uopz_clean_class);
-	zend_hash_apply(CG(function_table), uopz_clean_function);
+	zend_hash_apply_with_argument(CG(function_table), uopz_clean_function, NULL);
 
 	zend_hash_destroy(&UOPZ(functions));
 	zend_hash_destroy(&UOPZ(mocks));

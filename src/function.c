@@ -51,7 +51,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		return 0;
 	}
 
-	if (!(functions = zend_hash_index_find_ptr(&UOPZ(functions), (zend_ulong) table))) {
+	if (!(functions = zend_hash_index_find_ptr(&UOPZ(functions), (zend_long) table))) {
 		ALLOC_HASHTABLE(functions);
 		zend_hash_init(functions, 8, NULL, uopz_zval_dtor, 0);
 		zend_hash_index_update_ptr(
@@ -62,7 +62,9 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	zval_copy_ctor(closure);
 
 	function = uopz_copy_closure(clazz, 
-			(zend_function*) zend_get_closure_method_def(closure), flags);
+			(zend_function*) zend_get_closure_method_def(closure),
+			flags, 
+			(zend_function*) zend_hash_find_ptr(table, key));
 
 	zend_hash_update_ptr(table, key, (void*) function);
 
