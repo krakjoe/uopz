@@ -28,7 +28,29 @@ uopz_add_function(Foo::class, "STATICFUNCTION", /** doc **/ function(){
 	}
 }, ZEND_ACC_STATIC);
 
+uopz_add_function(Foo::class, "__construct", function() {
+	var_dump("__construct");
+});
+
+uopz_add_function(Foo::class, "__destruct", function(){
+	var_dump("__destruct");
+});
+
+uopz_add_function(Foo::class, "__clone", function() {
+	var_dump("clone");
+
+	return $this;
+});
+
+uopz_add_function(Foo::class, "__tostring", function(){
+	return "string";
+});
+
 $foo = new Foo();
+
+var_dump((string) $foo);
+
+$x = clone $foo;
 
 var_dump($foo->method());
 
@@ -53,8 +75,13 @@ try {
 }
 ?>
 --EXPECTF--
+string(%d) "__construct"
+string(%d) "string"
+string(%d) "clone"
 bool(true)
 bool(true)
 string(50) "Call to private method Foo::priv() from context ''"
 string(%d) "will not replace existing method %s::%s, use uopz_set_return instead"
 string(%d) "will not replace existing function %s, use uopz_set_return instead"
+string(%d) "__destruct"
+string(%d) "__destruct"
