@@ -28,8 +28,12 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-zend_internal_function *zend_call_user_func;
-zend_internal_function *zend_call_user_func_array;
+zend_internal_function zend_call_user_func;
+zend_internal_function *zend_call_user_func_ptr;
+zend_internal_function zend_call_user_func_array;
+zend_internal_function *zend_call_user_func_array_ptr;
+zend_internal_function *uopz_call_user_func_ptr;
+zend_internal_function *uopz_call_user_func_array_ptr;
 
 static inline void uopz_table_dtor(zval *zv) { /* {{{ */
 	zend_hash_destroy(Z_PTR_P(zv));
@@ -178,89 +182,38 @@ int uopz_clean_class(zval *zv) { /* {{{ */
 } /* }}} */
 
 static void uopz_callers_init(void) { /* {{{ */
-	zend_internal_function *internal = zend_hash_str_find_ptr(
-		CG(function_table), "uopz_set_return", sizeof("uopz_set_return")-1);
-
-	do {
-		zend_call_user_func = zend_hash_str_find_ptr(
+	 uopz_call_user_func_ptr = zend_hash_str_find_ptr(
+			CG(function_table), "uopz_call_user_func", sizeof("uopz_call_user_func")-1);
+	 uopz_call_user_func_array_ptr = zend_hash_str_find_ptr(
+			CG(function_table), "uopz_call_user_func_array", sizeof("uopz_call_user_func_array")-1);
+	zend_call_user_func_ptr = zend_hash_str_find_ptr(
 			CG(function_table), "call_user_func", sizeof("call_user_func")-1);
-		{
-			zend_internal_function stack;
-			zend_internal_function *uopz = zend_hash_str_find_ptr(
-				CG(function_table), "uopz_call_user_func", sizeof("uopz_call_user_func")-1);
-
-			if (zend_call_user_func->module == internal->module) {
-				break;
-			}
-
-			stack = *zend_call_user_func;
-		
-			memcpy(zend_call_user_func, uopz, sizeof(zend_internal_function));
-			memcpy(uopz, &stack, sizeof(zend_internal_function));
-		}
-	} while (0);
-
-	do {
-		zend_call_user_func_array = zend_hash_str_find_ptr(
+	zend_call_user_func_array_ptr = zend_hash_str_find_ptr(
 			CG(function_table), "call_user_func_array", sizeof("call_user_func_array")-1);
-		{
-			zend_internal_function stack;
-			zend_internal_function *uopz = zend_hash_str_find_ptr(
-				CG(function_table), "uopz_call_user_func_array", sizeof("uopz_call_user_func_array")-1);
 
-			if (zend_call_user_func_array->module == internal->module) {
-				break;
-			}
+	if (zend_call_user_func_ptr) {
+		memcpy(&zend_call_user_func, 
+			zend_call_user_func_ptr, sizeof(zend_internal_function));
+		memcpy(zend_call_user_func_ptr, 
+			uopz_call_user_func_ptr, sizeof(zend_internal_function));
+	}
 
-			stack = *zend_call_user_func_array;
-		
-			memcpy(zend_call_user_func_array, uopz, sizeof(zend_internal_function));
-			memcpy(uopz, &stack, sizeof(zend_internal_function));
-		}
-	} while (0);
+	if (zend_call_user_func_array_ptr) {
+		memcpy(&zend_call_user_func_array,
+			zend_call_user_func_array_ptr, sizeof(zend_internal_function));
+		memcpy(zend_call_user_func_array_ptr, 
+			uopz_call_user_func_array_ptr, sizeof(zend_internal_function));
+	}
 } /* }}} */
 
 static void uopz_callers_shutdown(void) { /* {{{ */
-	zend_internal_function *internal = zend_hash_str_find_ptr(
-		CG(function_table), "uopz_set_return", sizeof("uopz_set_return")-1);
+	if (zend_call_user_func_ptr->module == uopz_call_user_func_ptr->module) {
+		memcpy(zend_call_user_func_ptr, &zend_call_user_func, sizeof(zend_internal_function));
+	}
 
-	do {
-		zend_call_user_func = zend_hash_str_find_ptr(
-			CG(function_table), "call_user_func", sizeof("call_user_func")-1);
-		{
-			zend_internal_function stack;
-			zend_internal_function *uopz = zend_hash_str_find_ptr(
-				CG(function_table), "uopz_call_user_func", sizeof("uopz_call_user_func")-1);
-
-			if (zend_call_user_func->module != internal->module) {
-				break;
-			}
-
-			stack = *zend_call_user_func;
-		
-			memcpy(zend_call_user_func, uopz, sizeof(zend_internal_function));
-			memcpy(uopz, &stack, sizeof(zend_internal_function));
-		}
-	} while (0);
-
-	do {
-		zend_call_user_func_array = zend_hash_str_find_ptr(
-			CG(function_table), "call_user_func_array", sizeof("call_user_func_array")-1);
-		{
-			zend_internal_function stack;
-			zend_internal_function *uopz = zend_hash_str_find_ptr(
-				CG(function_table), "uopz_call_user_func_array", sizeof("uopz_call_user_func_array")-1);
-
-			if (zend_call_user_func_array->module != internal->module) {
-				break;
-			}
-
-			stack = *zend_call_user_func_array;
-		
-			memcpy(zend_call_user_func_array, uopz, sizeof(zend_internal_function));
-			memcpy(uopz, &stack, sizeof(zend_internal_function));
-		}
-	} while (0);
+	if (zend_call_user_func_array_ptr->module == uopz_call_user_func_array_ptr->module) {
+		memcpy(zend_call_user_func_array_ptr, &zend_call_user_func_array, sizeof(zend_internal_function));
+	}
 } /* }}} */
 
 void uopz_request_init(void) { /* {{{ */
