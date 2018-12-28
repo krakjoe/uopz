@@ -33,6 +33,10 @@ static zend_internal_function *zend_call_user_func_array_ptr;
 static zend_internal_function *uopz_call_user_func_ptr;
 static zend_internal_function *uopz_call_user_func_array_ptr;
 
+#if PHP_VERSION_ID < 70200
+typedef void (*zif_handler)(INTERNAL_FUNCTION_PARAMETERS);
+#endif
+
 static inline void uopz_table_dtor(zval *zv) { /* {{{ */
 	zend_hash_destroy(Z_PTR_P(zv));
 	efree(Z_PTR_P(zv));
