@@ -28,12 +28,10 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-zend_internal_function zend_call_user_func;
-zend_internal_function *zend_call_user_func_ptr;
-zend_internal_function zend_call_user_func_array;
-zend_internal_function *zend_call_user_func_array_ptr;
-zend_internal_function *uopz_call_user_func_ptr;
-zend_internal_function *uopz_call_user_func_array_ptr;
+static zend_internal_function *zend_call_user_func_ptr;
+static zend_internal_function *zend_call_user_func_array_ptr;
+static zend_internal_function *uopz_call_user_func_ptr;
+static zend_internal_function *uopz_call_user_func_array_ptr;
 
 static inline void uopz_table_dtor(zval *zv) { /* {{{ */
 	zend_hash_destroy(Z_PTR_P(zv));
@@ -181,6 +179,14 @@ int uopz_clean_class(zval *zv) { /* {{{ */
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
+static inline void uopz_caller_switch(zif_handler *old, zif_handler *new) {
+	zif_handler *current = old;
+
+	*old = *new;
+
+	*new = *current;
+}
+
 static void uopz_callers_init(void) { /* {{{ */
 	 uopz_call_user_func_ptr = zend_hash_str_find_ptr(
 			CG(function_table), "uopz_call_user_func", sizeof("uopz_call_user_func")-1);
@@ -191,29 +197,13 @@ static void uopz_callers_init(void) { /* {{{ */
 	zend_call_user_func_array_ptr = zend_hash_str_find_ptr(
 			CG(function_table), "call_user_func_array", sizeof("call_user_func_array")-1);
 
-	if (zend_call_user_func_ptr) {
-		memcpy(&zend_call_user_func, 
-			zend_call_user_func_ptr, sizeof(zend_internal_function));
-		memcpy(zend_call_user_func_ptr, 
-			uopz_call_user_func_ptr, sizeof(zend_internal_function));
-	}
-
-	if (zend_call_user_func_array_ptr) {
-		memcpy(&zend_call_user_func_array,
-			zend_call_user_func_array_ptr, sizeof(zend_internal_function));
-		memcpy(zend_call_user_func_array_ptr, 
-			uopz_call_user_func_array_ptr, sizeof(zend_internal_function));
-	}
+	uopz_caller_switch(&zend_call_user_func_ptr->handler, &uopz_call_user_func_ptr->handler);
+	uopz_caller_switch(&zend_call_user_func_array_ptr->handler, &uopz_call_user_func_array_ptr->handler);
 } /* }}} */
 
 static void uopz_callers_shutdown(void) { /* {{{ */
-	if (zend_call_user_func_ptr->module == uopz_call_user_func_ptr->module) {
-		memcpy(zend_call_user_func_ptr, &zend_call_user_func, sizeof(zend_internal_function));
-	}
-
-	if (zend_call_user_func_array_ptr->module == uopz_call_user_func_array_ptr->module) {
-		memcpy(zend_call_user_func_array_ptr, &zend_call_user_func_array, sizeof(zend_internal_function));
-	}
+	uopz_caller_switch(&uopz_call_user_func_ptr->handler, &zend_call_user_func_ptr->handler);
+	uopz_caller_switch(&uopz_call_user_func_array_ptr->handler, &zend_call_user_func_array_ptr->handler);
 } /* }}} */
 
 void uopz_request_init(void) { /* {{{ */
