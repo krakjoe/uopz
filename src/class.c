@@ -60,17 +60,38 @@ void uopz_unset_mock(zend_string *clazz) { /* {{{ */
 	zend_string_release(key);
 } /* }}} */
 
-void uopz_get_mock(zend_string *clazz, zval *return_value) { /* {{{ */
+int uopz_get_mock(zend_string *clazz, zval *return_value) { /* {{{ */
 	zval *mock = NULL;
 	zend_string *key = zend_string_tolower(clazz);
 	
 	if (!(mock = zend_hash_find(&UOPZ(mocks), key))) {
 		zend_string_release(key);
-		return;
+		return FAILURE;
 	}
 
 	ZVAL_COPY(return_value, mock);
 	zend_string_release(key);
+
+	return SUCCESS;
+} /* }}} */
+
+int uopz_find_mock(zend_string *clazz, zend_class_entry **mock) { /* {{{ */
+	zend_string *key = zend_string_tolower(clazz);
+	zval *found = zend_hash_find(&UOPZ(mocks), key);
+
+	zend_string_release(key);
+
+	if (!found) {
+		return FAILURE;
+	}
+
+	if (Z_TYPE_P(found) == IS_STRING) {
+		*mock = zend_lookup_class(Z_STR_P(found));
+	} else {
+		*mock = Z_OBJCE_P(found);
+	}
+
+	return SUCCESS;
 } /* }}} */
 
 /* {{{ */
@@ -104,6 +125,26 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
 	is_trait = (clazz->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT;
 
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
+
+	if (clazz->parent) {
+		zend_function *method;
+		zend_string   *name;
+		dtor_func_t    dtor = clazz->function_table.pDestructor;
+
+		clazz->function_table.pDestructor = NULL;
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&clazz->function_table, name, method) {
+			if (method->common.fn_flags & ZEND_ACC_ABSTRACT) {
+				continue;
+			}
+
+			if (zend_hash_exists(&parent->function_table, name)) {
+				zend_hash_del(&clazz->function_table, name);
+			}
+		} ZEND_HASH_FOREACH_END();
+
+		clazz->function_table.pDestructor = dtor;
+	}
 
 	if ((parent->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT) {
 		zend_do_implement_trait(clazz, parent);
