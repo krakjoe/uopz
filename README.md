@@ -20,15 +20,6 @@ It supports the following activities:
 
 *Note: All of the above activities are compatible with opcache*
 
-PHP 7
-====
-
-PHP 7 is a different animal to PHP 5, making uopz work for PHP 7 was difficult, and required huge internal changes to uopz.
-
-This has brought about a new API that should allow nearly all the same dark magic as in PHP 5.
-
-Sorry for breaking BC ...
-
 API
 ===
 *The PHP API for ```uopz```*
@@ -313,11 +304,11 @@ function uopz_get_exit_status() : mixed;
 function uopz_allow_exit(bool allow) : void;
 ```
 
-Installation
-============
+Supported Versions
+==================
 
- - ```uopz``` should be loaded *before* opcache.
- 
+The currently supported version of uopz is 5.1 which requires PHP7.1+
+
 Testing
 =======
 *Running the test suite*
