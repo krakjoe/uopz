@@ -3,6 +3,7 @@ UOPZ
 *User Operations for Zend*
 
 [![Build Status](https://travis-ci.org/krakjoe/uopz.svg?branch=master)](https://travis-ci.org/krakjoe/uopz)
+[![Coverage Status](https://coveralls.io/repos/github/krakjoe/uopz/badge.svg?branch=master)](https://coveralls.io/github/krakjoe/uopz?branch=master)
 
 The ```uopz``` extension is focused on providing utilities to aid with unit testing PHP code.
 
@@ -81,7 +82,7 @@ function uopz_unset_return(string class, string function) : bool;
 function uopz_unset_return(string function) : bool;
 
 /**
-* Use mock in place of class for new objects
+* Use mock in place of class
 * @param string class
 * @param mixed mock
 * Mock can be an object, or the name of a class

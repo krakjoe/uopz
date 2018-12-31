@@ -1,17 +1,51 @@
 language: php
+compiler:
+  - gcc
+addons:
+  apt:
+    packages:
+      - valgrind
 php:
-    - 7.1
-    - 7.2
-    - 7.3
-    - nightly
-install:
-    - sudo apt-get update
-    - sudo apt-get install -y valgrind
+  - 7.1
+  - 7.2
+  - 7.3
+  - nightly
+
+env:
+  global:
+    - REPORT_EXIT_STATUS=1
+    - CONF="disable-uopz-coverage"
+    - RULE="all"
+    - DEF="-q --show-diff"
+  matrix:
+    - OPCACHE=0 TEST_PHP_ARGS="$DEF" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
+    - OPCACHE=1 TEST_PHP_ARGS="$DEF" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
+
 matrix:
   allow_failures:
     - php: nightly
+      env: OPCACHE=0 TEST_PHP_ARGS="$DEF" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
+    - php: nightly
+      env: OPCACHE=1 TEST_PHP_ARGS="$DEF" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
+
+before_install:
+  - test $CONF != "enable-uopz-coverage" || pip install --user cpp-coveralls
+
+before_script:
+  - echo "variables_order=EGPCS"                >> $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/php.ini
+  - echo                                        > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/xdebug.ini
+  - echo "extension=uopz.so"               > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/uopz.ini
+  - echo "opcache.enable_cli=$OPCACHE"          > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/opcache.ini
+  - echo "opcache.optimization_level=0"         >> $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/opcache.ini
+
 script:
-    - phpize
-    - ./configure
-    - make
-    - REPORT_EXIT_STATUS=1 TEST_PHP_ARGS="-q --show-diff" make test
+  - cd $TRAVIS_BUILD_DIR
+  - phpize
+  - wget -q -O run-tests.php https://raw.githubusercontent.com/php/php-src/master/run-tests.php
+  - ./configure --$CONF
+  - make $RULE
+  - make install
+  - php run-tests.php -P
+
+after_success:
+  - test $CONF != "enable-uopz-coverage" || coveralls -b $TRAVIS_BUILD_DIR -E Zend --gcov-options '\-lp'
