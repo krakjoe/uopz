@@ -95,6 +95,16 @@ It supports the following activities:
      <file name="019.phpt" role="test" />
      <file name="020.phpt" role="test" />
      <file name="021.phpt" role="test" />
+     <file name="022.phpt" role="test" />
+     <file name="023.phpt" role="test" />
+     <file name="024.phpt" role="test" />
+     <file name="025.phpt" role="test" />
+     <file name="026.phpt" role="test" />
+     <file name="027.phpt" role="test" />
+     <file name="028.phpt" role="test" />
+     <file name="029.phpt" role="test" />
+     <file name="030.phpt" role="test" />
+     <file name="031.phpt" role="test" />
      <file name="skipif.inc" role="test" />
      <dir name="/bugs">
       <file name="0001-uopz_set_static.phpt" role="test" />
@@ -113,7 +123,7 @@ It supports the following activities:
  <dependencies>
   <required>
    <php>
-    <min>7.0.0</min>
+    <min>7.1.0</min>
    </php>
    <pearinstaller>
     <min>1.10</min>

@@ -56,20 +56,7 @@ static inline zend_try_catch_element* uopz_copy_try(zend_try_catch_element *old,
 	return try_catch;
 } /* }}} */
 
-#if PHP_VERSION_ID < 70100
-/* {{{ */
-static inline zend_brk_cont_element* uopz_copy_brk(zend_brk_cont_element *old, int end) {
-	zend_brk_cont_element *brk_cont = safe_emalloc(end, sizeof(zend_brk_cont_element), 0);
-	
-	memcpy(
-		brk_cont,
-		old, 
-		sizeof(zend_brk_cont_element) * end);
-	
-	return brk_cont;
-} /* }}} */
-#else
-static inline zend_live_range* uopz_copy_live(zend_live_range *old, int end) {
+static inline zend_live_range* uopz_copy_live(zend_live_range *old, int end) { /* {{{ */
 	zend_live_range *range = safe_emalloc(end, sizeof(zend_live_range), 0);
 
 	memcpy(
@@ -78,8 +65,7 @@ static inline zend_live_range* uopz_copy_live(zend_live_range *old, int end) {
 		sizeof(zend_live_range) * end);
 
 	return range;
-}
-#endif
+} /* }}} */
 
 /* {{{ */
 static inline zval* uopz_copy_literals(zval *old, int end) {
@@ -251,15 +237,9 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 		op_array->arg_info = uopz_copy_arginfo(op_array, arg_info, op_array->num_args);
 	}
 
-#if PHP_VERSION_ID < 70100
-	if (op_array->brk_cont_array) {
-		op_array->brk_cont_array = uopz_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
-	}
-#else
 	if (op_array->live_range) {
 		op_array->live_range = uopz_copy_live(op_array->live_range, op_array->last_live_range);
 	}
-#endif
 
 	if (op_array->try_catch_array) {
 		op_array->try_catch_array = uopz_copy_try(op_array->try_catch_array, op_array->last_try_catch);

@@ -57,7 +57,7 @@ var_dump($foo->method());
 var_dump(Foo::staticFunction());
 
 try {
-	var_dump($foo->priv());
+	var_dump($foo->priv(false));
 } catch(Error $e) {
 	var_dump($e->getMessage());	
 }

@@ -171,6 +171,10 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 		}
 	}
 
+	if (EG(exception)) {
+		EG(current_execute_data)->opline = EG(opline_before_exception);
+	}
+
 _exit_uopz_execute_hook:
 	zval_ptr_dtor(&closure);
 
