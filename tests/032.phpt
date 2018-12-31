@@ -1,5 +1,5 @@
 --TEST--
-init fcall
+init ns fcall
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --INI--
