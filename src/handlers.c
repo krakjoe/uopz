@@ -919,7 +919,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 int uopz_vm_fetch_class(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zval *name;
 	zend_free_op free_op2;
-	
+
 	if (EX(opline)->op2_type == IS_UNUSED) {
 		Z_CE_P(EX_VAR(EX(opline)->result.var)) = 
 			zend_fetch_class(NULL, EX(opline)->op1.num);
