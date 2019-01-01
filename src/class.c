@@ -35,6 +35,14 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 #	define uopz_set_scope(s) EG(scope) = (s)
 #endif
 
+static zend_class_entry *php_componere_definition_ce;
+
+void uopz_mock_init(void) {
+	php_componere_definition_ce = zend_hash_str_find_ptr(
+		CG(class_table), 
+		"componere\\definition", sizeof("componere\\definition")-1);
+}
+
 void uopz_set_mock(zend_string *clazz, zval *mock) { /* {{{ */
 	zend_string *key = zend_string_tolower(clazz);
 
@@ -88,7 +96,12 @@ int uopz_find_mock(zend_string *clazz, zend_class_entry **mock) { /* {{{ */
 	if (Z_TYPE_P(found) == IS_STRING) {
 		*mock = zend_lookup_class(Z_STR_P(found));
 	} else {
-		*mock = Z_OBJCE_P(found);
+		if (php_componere_definition_ce && instanceof_function(Z_OBJCE_P(found), php_componere_definition_ce)) {
+			*mock = *(zend_class_entry**)
+					(((char*) Z_OBJ_P(found)) - Z_OBJ_HT_P(found)->offset);
+		} else {
+			*mock = Z_OBJCE_P(found);
+		}
 	}
 
 	return SUCCESS;

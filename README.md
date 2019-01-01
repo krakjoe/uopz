@@ -76,7 +76,10 @@ function uopz_unset_return(string function) : bool;
 * Use mock in place of class
 * @param string class
 * @param mixed mock
-* Mock can be an object, or the name of a class
+* Mock may be:
+*   the name of a class (string)
+*   Componere\Definition object (may be unregistered) 
+*   an object (the class of the object will be used)
 **/
 function uopz_set_mock(string class, mixed mock);
 

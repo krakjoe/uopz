@@ -131,6 +131,7 @@ static PHP_RINIT_FUNCTION(uopz)
 	/* this is not nice, but makes zend_extension (xdbg,o+) play nicer */
 	uopz_handlers_init();
 	uopz_request_init();
+	uopz_mock_init();
 
 	return SUCCESS;
 } /* }}} */
