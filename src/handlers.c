@@ -277,7 +277,17 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 } /* }}} */
 
-int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+/* {{{ */
+/*
+	It appears as if INIT_FCALL will not be generated while uopz sets compiler flags to
+	ignore internal and user function call optimization, which we must do ...
+
+	It remains because it might be the case that opcache reintroduces init_fcall as part
+	of some optimization.
+*/
+/* }}} */
+
+int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ LCOV_EXCL_START */
 	zval *name;
 	zend_function *fbc;
 	zend_execute_data *call;
@@ -310,7 +320,7 @@ int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	EX(call) = call;
 
 	UOPZ_VM_NEXT(1);
-} /* }}} */
+} /* LCOV_EXCL_STOP }}} */
 
 int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zval *name;
