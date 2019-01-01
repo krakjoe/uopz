@@ -34,9 +34,11 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
 #	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU
+#	define UOPZ_OPCODE_HANDLER_ARGS_CC
 #else
 #	define UOPZ_OPCODE_HANDLER_ARGS zend_execute_data *execute_data
 #	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU execute_data
+#	define UOPZ_OPCODE_HANDLER_ARGS_CC , execute_data
 #endif
 
 #ifndef GC_ADDREF
@@ -146,42 +148,132 @@ void uopz_handlers_shutdown(void) {
 	}
 }
 
-int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
-	if (UOPZ(exit)) {
-		if (zend_vm_exit)
-			return zend_vm_exit(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
+	zend_vm_handler_t zend = NULL;
 
-		return ZEND_USER_OPCODE_DISPATCH;
+	switch (EX(opline)->opcode) {
+		case ZEND_EXIT:
+			zend = zend_vm_exit;
+		break;
+
+		case ZEND_INIT_FCALL:
+			zend = zend_vm_init_fcall;
+		break;
+
+		case ZEND_INIT_FCALL_BY_NAME:
+			zend = zend_vm_init_fcall_by_name;
+		break;
+
+		case ZEND_INIT_NS_FCALL_BY_NAME:
+			zend = zend_vm_init_ns_fcall_by_name;
+		break;
+
+		case ZEND_INIT_STATIC_METHOD_CALL:
+			zend = zend_vm_init_static_method_call;
+		break;
+
+		case ZEND_INIT_METHOD_CALL:
+			zend = zend_vm_init_method_call;
+		break;
+
+		case ZEND_NEW:
+			zend = zend_vm_new;
+		break;
+
+		case ZEND_FETCH_CONSTANT:
+			zend = zend_vm_fetch_constant;
+		break;
+
+		case ZEND_FETCH_CLASS:
+			zend = zend_vm_fetch_class;
+		break;
+
+		case ZEND_FETCH_CLASS_CONSTANT:
+			zend = zend_vm_fetch_class_constant;
+		break;
+
+		case ZEND_DO_FCALL:
+			zend = zend_vm_do_fcall;
+		break;
+
+		case ZEND_ADD_TRAIT:
+			zend = zend_vm_add_trait;
+		break;
+
+		case ZEND_ADD_INTERFACE:
+			zend = zend_vm_add_interface;
+		break;
+	}
+
+	if (zend) {
+		return zend(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+	}
+
+	return ZEND_USER_OPCODE_DISPATCH;
+}
+
+#define UOPZ_VM_DISPATCH() return _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU)
+#define UOPZ_VM_RETURN()   return ZEND_USER_OPCODE_RETURN
+#define UOPZ_VM_CONTINUE() do { \
+	if (EG(exception)) { \
+		return ZEND_USER_OPCODE_RETURN; \
+	} else return ZEND_USER_OPCODE_CONTINUE; \
+} while(0)
+#define UOPZ_VM_NEXT(n)    do { \
+	EX(opline) = EX(opline) + (n); \
+	\
+	UOPZ_VM_CONTINUE(); \
+} while(0)
+#define UOPZ_VM_LEAVE()    return ZEND_USER_OPCODE_LEAVE
+
+int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	zval *estatus;
+	zend_free_op free_op1;
+
+	if (UOPZ(exit)) {
+		UOPZ_VM_DISPATCH();
 	}
 
 	if (EX(opline)->op1_type != IS_UNUSED) {
-		zval *estatus;
+		estatus = uopz_get_zval(
+				EX(opline),
+				EX(opline)->op1_type,
+				&EX(opline)->op1,
+				execute_data,
+				&free_op1, BP_VAR_R);
 
-		if (EX(opline)->op1_type == IS_CONST) {
-			estatus = EX_CONSTANT(EX(opline)->op1);
-		} else estatus = EX_VAR(EX(opline)->op1.var);
+		do {
+			if (Z_TYPE_P(estatus) == IS_LONG) {
+				EG(exit_status) = Z_LVAL_P(estatus);
+			} else {
+				if (EX(opline)->op1_type & (IS_VAR|IS_CV) && Z_ISREF_P(estatus)) {
+					estatus = Z_REFVAL_P(estatus);
 
-		if (Z_ISREF_P(estatus)) {
-			estatus = Z_REFVAL_P(estatus);
+					if (Z_TYPE_P(estatus) == IS_LONG) {
+						EG(exit_status) = Z_LVAL_P(estatus);
+						break;
+					}
+				}
+			}
+		} while (0);
+
+		if (free_op1) {
+			zval_ptr_dtor(free_op1);
 		}
-
-		if (Z_TYPE_P(estatus) == IS_LONG) {
-			EG(exit_status) = Z_LVAL_P(estatus);
-		} else EG(exit_status) = 0;
 
 		ZVAL_COPY(&UOPZ(estatus), estatus);
 	}
 
 	if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
-		EX(opline)++;
+		UOPZ_VM_NEXT(1);
 
 		while (EX(opline)->opcode == ZEND_EXT_STMT) {
-			EX(opline)++;
+			UOPZ_VM_NEXT(1);
 		}
 
-		return ZEND_USER_OPCODE_CONTINUE;
+		UOPZ_VM_CONTINUE();
 	} else {
-		return ZEND_USER_OPCODE_RETURN;
+		UOPZ_VM_RETURN();
 	}
 } /* }}} */
 
@@ -201,7 +293,7 @@ int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	fbc = (zend_function*) zend_hash_find_ptr(EG(function_table), Z_STR_P(name));
 
 	if (!fbc) {
-		return ZEND_USER_OPCODE_DISPATCH;	
+		UOPZ_VM_DISPATCH();	
 	}
 
 	if (fbc->type == ZEND_USER_FUNCTION && !fbc->op_array.run_time_cache) {
@@ -216,9 +308,8 @@ int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		ZEND_CALL_NESTED_FUNCTION, fbc, EX(opline)->extended_value, NULL, NULL);
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
-	EX(opline) = EX(opline) + 1;
 
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -237,7 +328,7 @@ int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	fbc = (zend_function*) zend_hash_find_ptr(EG(function_table), Z_STR_P(name+1));
 
 	if (!fbc) {
-		return ZEND_USER_OPCODE_DISPATCH;	
+		UOPZ_VM_DISPATCH();	
 	}
 
 	if (fbc->type == ZEND_USER_FUNCTION && !fbc->op_array.run_time_cache) {
@@ -252,9 +343,8 @@ int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		fbc, EX(opline)->extended_value, NULL, NULL);
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
-	EX(opline) = EX(opline) + 1;
-
-	return ZEND_USER_OPCODE_CONTINUE;
+	
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -279,7 +369,7 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			zend_throw_error(NULL,
 				"Call to undefined function %s()",
 				Z_STRVAL_P(EX_CONSTANT(EX(opline)->op2)));
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 	}
 
@@ -295,9 +385,8 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		fbc, EX(opline)->extended_value, NULL, NULL);
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
-	EX(opline) = EX(opline) + 1;
 
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -312,28 +401,19 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	if (EX(opline)->op1_type == IS_CONST) {
 		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(EX(opline)->op1)), &ce) != SUCCESS) {
-			if (zend_vm_init_static_method_call)
-				return zend_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-			return ZEND_USER_OPCODE_DISPATCH;
+			UOPZ_VM_DISPATCH();
 		}
 	} else if (EX(opline)->op1_type == IS_UNUSED) {
 		ce = zend_fetch_class(NULL, EX(opline)->op1.num);
 
 		if (uopz_find_mock(ce->name, &ce) != SUCCESS) {
-			if (zend_vm_init_static_method_call)
-				return zend_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-			return ZEND_USER_OPCODE_DISPATCH;
+			UOPZ_VM_DISPATCH();
 		}
 	} else {
 		ce = Z_CE_P(EX_VAR(EX(opline)->op1.var));
 
 		if (uopz_find_mock(ce->name, &ce) != SUCCESS) {
-			if (zend_vm_init_static_method_call)
-				return zend_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-			return ZEND_USER_OPCODE_DISPATCH;
+			UOPZ_VM_DISPATCH();
 		}
 	}
 
@@ -356,10 +436,7 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 						}
 					}
 
-					if (zend_vm_init_static_method_call)
-						return zend_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-					return ZEND_USER_OPCODE_DISPATCH;
+					UOPZ_VM_DISPATCH();
 				} while (0);
 			}
 		}
@@ -374,10 +451,7 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 
 		if (fbc == NULL) {
-			if (zend_vm_init_static_method_call)
-				return zend_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-			return ZEND_USER_OPCODE_DISPATCH;
+			UOPZ_VM_DISPATCH();
 		}
 
 		if (fbc->type == ZEND_USER_FUNCTION && !fbc->op_array.run_time_cache) {
@@ -395,13 +469,13 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		if (ce->constructor == NULL) {
 			zend_throw_error(NULL, 
 				"Cannot call constructor");
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 
 		if (Z_TYPE(EX(This)) == IS_OBJECT && Z_OBJ(EX(This))->ce != ce->constructor->common.scope && (ce->constructor->common.fn_flags & ZEND_ACC_PRIVATE)) {
 			zend_throw_error(NULL, 
 				"Cannot call private %s::__construct()", ZSTR_VAL(ce->name));
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 
 		fbc = ce->constructor;
@@ -433,7 +507,7 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			}
 
 			if (EG(exception)) {
-				return ZEND_USER_OPCODE_CONTINUE;
+				UOPZ_VM_CONTINUE();
 			}
 		}
 	}
@@ -456,9 +530,8 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
-	EX(opline) = EX(opline) + 1;
 
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -481,10 +554,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			&free_op1, BP_VAR_R);
 
 	if (!object || Z_TYPE_P(object) == IS_UNDEF) {
-		if (zend_vm_init_method_call)
-			return zend_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-		return ZEND_USER_OPCODE_DISPATCH;
+		UOPZ_VM_DISPATCH();
 	}
 
 	method = uopz_get_zval(
@@ -495,10 +565,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			&free_op2, BP_VAR_R);
 
 	if (!method) {
-		if (zend_vm_init_method_call)
-			return zend_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-		return ZEND_USER_OPCODE_DISPATCH;
+		UOPZ_VM_DISPATCH();
 	}
 
 	if (Z_TYPE_P(method) != IS_STRING) {
@@ -511,10 +578,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				}
 			}
 			
-			if (zend_vm_init_method_call)
-				return zend_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-			return ZEND_USER_OPCODE_DISPATCH;
+			UOPZ_VM_DISPATCH();
 		} while(0);
 	}
 
@@ -531,10 +595,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				}
 			}
 
-			if (zend_vm_init_method_call)
-				return zend_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-			return ZEND_USER_OPCODE_DISPATCH;
+			UOPZ_VM_DISPATCH();
 		} while (0);
 	}
 
@@ -542,10 +603,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	scope = obj->ce;
 
 	if (obj->handlers->get_method == NULL) {
-		if (zend_vm_init_method_call)
-			return zend_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-		return ZEND_USER_OPCODE_DISPATCH;
+		UOPZ_VM_DISPATCH();
 	}
 
 	fbc = obj->handlers->get_method(&obj, 
@@ -554,10 +612,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				(EX_CONSTANT(EX(opline)->op2) + 1) : NULL));
 
 	if (!fbc) {
-		if (zend_vm_init_method_call)
-			return zend_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-
-		return ZEND_USER_OPCODE_DISPATCH;
+		UOPZ_VM_DISPATCH();
 	}
 
 	if (EX(opline)->op2_type != IS_CONST) {
@@ -581,7 +636,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 
 		if ((EX(opline)->op1_type & (IS_VAR|IS_TMP_VAR)) && EG(exception)) {
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 #endif
 	} else if (EX(opline)->op1_type & (IS_VAR|IS_TMP_VAR|IS_CV)) {
@@ -609,7 +664,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 	if ((EX(opline)->op1_type & (IS_VAR|IS_TMP_VAR)) && EG(exception)) {
-		return ZEND_USER_OPCODE_CONTINUE;
+		UOPZ_VM_CONTINUE();
 	}
 #endif
 
@@ -624,9 +679,8 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
-	EX(opline) = EX(opline) + 1;
 
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -645,7 +699,7 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (ce == NULL) {
 				ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
 
-				return ZEND_USER_OPCODE_DISPATCH;
+				UOPZ_VM_DISPATCH();
 			}
 		}
 	} else if (EX(opline)->op1_type == IS_UNUSED) {
@@ -663,20 +717,18 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (object_init_ex(result, ce) != SUCCESS) {
 		ZVAL_UNDEF(result);
 
-		return ZEND_USER_OPCODE_CONTINUE;
+		UOPZ_VM_CONTINUE();
 	}
 
 	constructor = Z_OBJ_HT_P(result)->get_constructor(Z_OBJ_P(result));
 
 	if (!constructor) {
 		if (EG(exception)) {
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 
 		if (EX(opline)->extended_value == 0 && (EX(opline)+1)->opcode == ZEND_DO_FCALL) {
-			EX(opline) = EX(opline) + 2;
-
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_NEXT(2);
 		}
 
 		call = zend_vm_stack_push_call_frame(
@@ -702,9 +754,7 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
 
-	EX(opline) = EX(opline) + 1;
-
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 static zend_always_inline void uopz_run_hook(zend_function *function, zend_execute_data *execute_data) { /* {{{ */
@@ -724,7 +774,7 @@ static zend_always_inline int php_uopz_leave_helper(zend_execute_data *execute_d
 
 	zend_vm_stack_free_call_frame(call);
 
-	return ZEND_USER_OPCODE_LEAVE;
+	UOPZ_VM_LEAVE();
 } /* }}} */
 
 int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -765,11 +815,7 @@ int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 _uopz_vm_do_fcall_dispatch:
-	if (zend_vm_do_fcall) {
-		return zend_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-	}
-
-	return ZEND_USER_OPCODE_DISPATCH;
+	UOPZ_VM_DISPATCH();
 } /* }}} */
 
 int uopz_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -781,11 +827,7 @@ int uopz_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 #endif
 
-	if (zend_vm_fetch_constant) {
-		return zend_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
-	}
-
-	return ZEND_USER_OPCODE_DISPATCH;
+	UOPZ_VM_DISPATCH();
 } /* }}} */
 
 int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -803,7 +845,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (!ce) {
 				ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
 
-				return ZEND_USER_OPCODE_CONTINUE;
+				UOPZ_VM_CONTINUE();
 			}
 		}
 	} else {
@@ -812,7 +854,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (!ce) {
 				ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
 
-				return ZEND_USER_OPCODE_CONTINUE;
+				UOPZ_VM_CONTINUE();
 			}
 			uopz_find_mock(ce->name, &ce);
 		} else {
@@ -830,7 +872,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				ZSTR_VAL(ce->name), Z_STRVAL_P(EX_CONSTANT(EX(opline)->op2)));
 			ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
 
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 
 		value = &c->value;
@@ -839,7 +881,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (EG(exception)) {
 				ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
 
-				return ZEND_USER_OPCODE_CONTINUE;
+				UOPZ_VM_CONTINUE();
 			}
 		}
 	} else {
@@ -848,7 +890,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			Z_STRVAL_P(EX_CONSTANT(EX(opline)->op2)));
 		ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
 
-		return ZEND_USER_OPCODE_CONTINUE;
+		UOPZ_VM_CONTINUE();
 	}
 
 #ifdef ZTS
@@ -861,9 +903,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	ZVAL_COPY(EX_VAR(EX(opline)->result.var), value);
 #endif
 
-	EX(opline) = EX(opline) + 1;
-
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_fetch_class(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -880,8 +920,7 @@ int uopz_vm_fetch_class(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				&Z_CE_P(EX_VAR(EX(opline)->result.var)));
 		}
 
-		EX(opline) = EX(opline) + 1;
-		return ZEND_USER_OPCODE_CONTINUE;
+		UOPZ_VM_NEXT(1);
 	} else if (EX(opline)->op2_type == IS_CONST) {
 		name = uopz_get_zval(
 			EX(opline),
@@ -918,7 +957,7 @@ _uopz_vm_fetch_class_try:
 		} else {
 			if (EX(opline)->op2_type == IS_CV && Z_TYPE_P(name) == IS_UNDEF) {
 				if (EG(exception)) {
-					return ZEND_USER_OPCODE_CONTINUE;
+					UOPZ_VM_CONTINUE();
 				}
 			}
 			zend_throw_error(NULL, "Class name must be a valid object or a string");
@@ -929,9 +968,7 @@ _uopz_vm_fetch_class_try:
 		zval_ptr_dtor(free_op2);
 	}
 
-	EX(opline) = EX(opline) + 1;
-	
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_add_trait(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -946,7 +983,7 @@ int uopz_vm_add_trait(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				ZEND_FETCH_CLASS_TRAIT);
 
 		if (!trait) {
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 	}
 
@@ -956,9 +993,7 @@ int uopz_vm_add_trait(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	zend_do_implement_trait(ce, trait);
 
-	EX(opline) = EX(opline) + 1;
-
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 int uopz_vm_add_interface(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
@@ -973,7 +1008,7 @@ int uopz_vm_add_interface(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				ZEND_FETCH_CLASS_TRAIT);
 
 		if (!iface) {
-			return ZEND_USER_OPCODE_CONTINUE;
+			UOPZ_VM_CONTINUE();
 		}
 	}
 
@@ -983,9 +1018,7 @@ int uopz_vm_add_interface(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	zend_do_implement_interface(ce, iface);
 
-	EX(opline) = EX(opline) + 1;
-
-	return ZEND_USER_OPCODE_CONTINUE;
+	UOPZ_VM_NEXT(1);
 } /* }}} */
 
 #endif	/* UOPZ_HANDLERS_H */

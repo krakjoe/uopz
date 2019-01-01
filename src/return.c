@@ -195,10 +195,6 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 		}
 	}
 
-	if (EG(exception)) {
-		EG(current_execute_data)->opline = EG(opline_before_exception);
-	}
-
 _exit_uopz_execute_return:
 	zval_ptr_dtor(&closure);
 
