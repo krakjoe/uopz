@@ -19,7 +19,6 @@
 #ifndef UOPZ_CLASS_H
 #define UOPZ_CLASS_H
 
-void uopz_mock_init(void);
 void uopz_set_mock(zend_string *clazz, zval *mock);
 void uopz_unset_mock(zend_string *clazz);
 
