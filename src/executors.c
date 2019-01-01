@@ -50,17 +50,17 @@ void uopz_executors_shutdown(void) { /* {{{ */
 	zend_execute_ex = zend_execute_function;
 } /* }}} */
 
-void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) { /* {{{ */
+void php_uopz_execute_internal(zend_execute_data *execute_data, zval *return_value) { /* {{{ LCOV_EXCL_START */
 	if (zend_execute_internal_function) {
 		zend_execute_internal_function(execute_data, return_value);
 	} else execute_internal(execute_data, return_value);
-} /* }}} */
+} /* LCOV_EXCL_STOP }}} */
 
-void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ */
+void php_uopz_execute(zend_execute_data *execute_data) { /* {{{ LCOV_EXCL_START */
 	if (zend_execute_function) {
 		zend_execute_function(execute_data);
 	} else execute_ex(execute_data);
-} /* }}} */
+} /* LCOV_EXCL_STOP }}} */
 
 #endif	/* UOPZ_HANDLERS_H */
 

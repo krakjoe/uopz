@@ -1,5 +1,5 @@
 --TEST--
-fetch class string ref no mock
+fetch class undef class no mock
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --FILE--
