@@ -490,7 +490,6 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	object = NULL;
 	
 	if (!(fbc->common.fn_flags & ZEND_ACC_STATIC)) {
-		zend_class_entry *mock;
 		if (Z_TYPE(EX(This)) == IS_OBJECT) {
 			object = Z_OBJ(EX(This));
 			ce = object->ce;
