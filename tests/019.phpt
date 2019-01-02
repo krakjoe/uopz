@@ -2,6 +2,8 @@
 uopz_set_property/uopz_get_property
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Foo {

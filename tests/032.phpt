@@ -3,6 +3,7 @@ init ns fcall
 --SKIPIF--
 <?php include("skipif.inc"); ?>
 --INI--
+uopz.disable=0
 opcache.enable_cli=0
 --FILE--
 <?php

@@ -2,6 +2,8 @@
 init static method call constructor with constructor
 --SKIPIF--
 <?php include("skipif.inc"); ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Foo {}

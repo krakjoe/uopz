@@ -2,6 +2,8 @@
 fetch class undef class no mock
 --SKIPIF--
 <?php include("skipif.inc"); ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 var_dump($class::qux());

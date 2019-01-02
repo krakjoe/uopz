@@ -2,6 +2,8 @@
 new IS_UNUSED op1 with mock
 --SKIPIF--
 <?php include("skipif.inc"); ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Test {

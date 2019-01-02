@@ -2,6 +2,8 @@
 set return on interface method
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 

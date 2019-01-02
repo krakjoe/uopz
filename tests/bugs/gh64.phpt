@@ -2,6 +2,8 @@
 Segfault after uopz_set_static
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class A {

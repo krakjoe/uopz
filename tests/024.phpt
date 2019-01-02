@@ -2,6 +2,8 @@
 init method call non constant method name
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Foo {

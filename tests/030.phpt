@@ -2,6 +2,8 @@
 init static method call self
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Foo {

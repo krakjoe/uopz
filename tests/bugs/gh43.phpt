@@ -2,6 +2,8 @@
 github #43
 --DESCRIPTION--
 Setting hook on __invoke method doesn't work on call_user_func
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Handler {

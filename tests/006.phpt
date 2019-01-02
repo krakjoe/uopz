@@ -2,6 +2,8 @@
 uopz_unset_mock
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Bar {}

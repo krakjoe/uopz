@@ -2,6 +2,8 @@
 uopz_set_static with array
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class Foo {

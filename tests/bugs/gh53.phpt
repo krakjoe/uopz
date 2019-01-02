@@ -2,6 +2,8 @@
 github #53
 --DESCRIPTION--
 uopz_redefine() refuses to redefine a constant as array
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 class testClass

@@ -2,6 +2,8 @@
 cuf/cufa wierdness
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 

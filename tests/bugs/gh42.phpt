@@ -2,6 +2,8 @@
 uopz_set_mock consistency
 --SKIPIF--
 <?php include("skipif.inc") ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 
