@@ -171,7 +171,6 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 		}
 	}
 
-_exit_uopz_execute_hook:
 	zval_ptr_dtor(&closure);
 
 	uhook->busy = 0;
