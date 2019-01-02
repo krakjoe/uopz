@@ -31,7 +31,7 @@ It supports the following activities:
  </lead>
  <date>2019-01-02</date>
  <version>
-  <release>5.1.0</release>
+  <release>5.1.1dev</release>
   <api>5.1.0</api>
  </version>
  <stability>
@@ -40,19 +40,7 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #89 uopz_flags bugs on 64bit windows
-- Fix #87 segfault when hook throws fatal error
-- Fix #86 interface support for uopz_set_return
-- Fix #85 cuf/cufa bugs
-- Fix #76 uopz_extend changing linkage
-- Fix #73 cuf/cufa bugs
-- Fix #68 hang when using anon class as mock
-- Fix #64 segfault after uopz_set_static
-- Fix #63 class constant redefinition depends on opcache
-- Fix #61 mocking not working with xdebug
-- Fix #51 hooks and returns bug
-- Fix #42 uopz_set_mock not working in some cases
-- Fix PHP 7.3 compatibility
+-
  </notes>
  <contents>
   <dir name="/">
@@ -155,6 +143,33 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2019-01-02</date>
+   <version>
+    <release>5.1.0</release>
+    <api>5.1.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #89 uopz_flags bugs on 64bit windows
+- Fix #87 segfault when hook throws fatal error
+- Fix #86 interface support for uopz_set_return
+- Fix #85 cuf/cufa bugs
+- Fix #76 uopz_extend changing linkage
+- Fix #73 cuf/cufa bugs
+- Fix #68 hang when using anon class as mock
+- Fix #64 segfault after uopz_set_static
+- Fix #63 class constant redefinition depends on opcache
+- Fix #61 mocking not working with xdebug
+- Fix #51 hooks and returns bug
+- Fix #42 uopz_set_mock not working in some cases
+- Fix PHP 7.3 compatibility
+   </notes>
+  </release>
   <release>
    <date>2017-08-03</date>
    <version>
