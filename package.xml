@@ -29,10 +29,10 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2017-08-03</date>
+ <date>2019-01-02</date>
  <version>
-  <release>5.0.2</release>
-  <api>5.0.0</api>
+  <release>5.1.0</release>
+  <api>5.1.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -40,16 +40,19 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- add uopz.disable ini switch (default 0)
-- fix gh#43: setting hook on __invoke method doesn't work on call_user_func
-- fix gh#48: segmentation fault (uopz_set_return)
-- add 4 new functions:
-    - uopz_call_user_func(callable function, ... args)
-    - uopz_get_exit_status()
-    - uopz_allow_exit(bool allow)
-    - uopz_call_user_func_array(callable function, array args)
-- fix PHP 7.1 compatibility
-- fix PHP 7.2 compatibility
+- Fix #89 uopz_flags bugs on 64bit windows
+- Fix #87 segfault when hook throws fatal error
+- Fix #86 interface support for uopz_set_return
+- Fix #85 cuf/cufa bugs
+- Fix #76 uopz_extend changing linkage
+- Fix #73 cuf/cufa bugs
+- Fix #68 hang when using anon class as mock
+- Fix #64 segfault after uopz_set_static
+- Fix #63 class constant redefinition depends on opcache
+- Fix #61 mocking not working with xdebug
+- Fix #51 hooks and returns bug
+- Fix #42 uopz_set_mock not working in some cases
+- Fix PHP 7.3 compatibility
  </notes>
  <contents>
   <dir name="/">
@@ -105,11 +108,30 @@ It supports the following activities:
      <file name="029.phpt" role="test" />
      <file name="030.phpt" role="test" />
      <file name="031.phpt" role="test" />
+     <file name="032.phpt" role="test" />
+     <file name="033.phpt" role="test" />
+     <file name="034.phpt" role="test" />
+     <file name="035.phpt" role="test" />
+     <file name="036.phpt" role="test" />
+     <file name="037.phpt" role="test" />
+     <file name="038.phpt" role="test" />
+     <file name="039.phpt" role="test" />
+     <file name="040.phpt" role="test" />
      <file name="skipif.inc" role="test" />
      <dir name="/bugs">
       <file name="0001-uopz_set_static.phpt" role="test" />
       <file name="0002-uopz_set_static_clear.phpt" role="test" />
+      <file name="0003-uopz_get_property.phpt" role="test" />
+      <file name="0004-uopz_set_property.phpt" role="test" />
+      <file name="gh42.phpt" role="test" />
       <file name="gh43.phpt" role="test" />
+      <file name="gh53.phpt" role="test" />
+      <file name="gh64.phpt" role="test" />
+      <file name="gh68.phpt" role="test" />
+      <file name="gh73.phpt" role="test" />
+      <file name="gh76.phpt" role="test" />
+      <file name="gh85.phpt" role="test" />
+      <file name="gh86.phpt" role="test" />
      </dir>
     </dir>
     <file name="uopz.h" role="src" />
@@ -133,6 +155,30 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2017-08-03</date>
+   <version>
+    <release>5.0.2</release>
+    <api>5.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- add uopz.disable ini switch (default 0)
+- fix gh#43: setting hook on __invoke method doesn't work on call_user_func
+- fix gh#48: segmentation fault (uopz_set_return)
+- add 4 new functions:
+    - uopz_call_user_func(callable function, ... args)
+    - uopz_get_exit_status()
+    - uopz_allow_exit(bool allow)
+    - uopz_call_user_func_array(callable function, array args)
+- fix PHP 7.1 compatibility
+- fix PHP 7.2 compatibility
+   </notes>
+  </release>
   <release>
    <date>2016-04-13</date>
    <version>
