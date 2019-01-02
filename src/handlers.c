@@ -400,13 +400,11 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 } /* }}} */
 
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
-	zend_string *clazz;
 	zend_object *object;
 	zval *method;
 	zend_class_entry *ce;
 	zend_function *fbc;
 	zend_execute_data *call;
-	zend_free_op free_op1;
 	zend_free_op free_op2;
 
 	if (EX(opline)->op1_type == IS_CONST) {
@@ -546,7 +544,7 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zval *object;
-	zend_object *obj, *oobj;
+	zend_object *obj;
 	zend_function *fbc;
 	zend_class_entry *scope;
 	zend_execute_data *call;
@@ -609,7 +607,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		} while (0);
 	}
 
-	oobj = obj = Z_OBJ_P(object);
+	obj = Z_OBJ_P(object);
 	scope = obj->ce;
 
 	if (obj->handlers->get_method == NULL) {
