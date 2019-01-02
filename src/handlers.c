@@ -631,7 +631,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 	}
 
-	if (uopz_find_mock(scope->name, &mock) == SUCCESS) {
+	if (uopz_find_mock(fbc->common.scope->name, &mock) == SUCCESS) {
 		uopz_find_method(
 			mock, Z_STR_P(method), &fbc);
 	}
