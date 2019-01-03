@@ -660,6 +660,7 @@ PHP_FUNCTION(uopz_call_user_func) {
 	zval retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
+	zend_class_entry *mock;
 
 	ZEND_PARSE_PARAMETERS_START(1, -1)
 		Z_PARAM_FUNC(fci, fcc)
@@ -669,6 +670,17 @@ PHP_FUNCTION(uopz_call_user_func) {
 	fci.retval = &retval;
 
 	UOPZ_CALL_HOOKS();
+
+	if (fcc.function_handler->common.scope) {
+		if (uopz_find_mock(fcc.function_handler->common.scope->name, &mock) == SUCCESS) {
+						php_printf("f: %p\n", fcc.function_handler);
+			uopz_find_method(
+				mock, 
+				fcc.function_handler->common.function_name, 
+				&fcc.function_handler);
+			php_printf("f: %p\n", fcc.function_handler);
+		}
+	}
 
 	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
 		if (Z_ISREF(retval)) {
