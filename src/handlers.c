@@ -66,7 +66,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 #define RETURN_VALUE_USED(opline) ((opline)->result_type != IS_UNUSED)
 
 #if PHP_VERSION_ID >= 70300
-#	define EX_CONSTANT(e) RT_CONSTANT(EX(opline), e)
+#	define EX_CONSTANT(e) RT_CONSTANT(UOPZ_OPLINE, e)
 #endif
 
 #define UOPZ_HANDLERS_DECL_BEGIN() uopz_vm_handler_t uopz_vm_handlers[UOPZ_HANDLERS_COUNT] = {
@@ -344,10 +344,10 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 	if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
-		UOPZ_VM_NEXT(0, 1);
+		UOPZ_OPLINE = UOPZ_OPLINE + 1;
 
 		while (EX(opline)->opcode == ZEND_EXT_STMT) {
-			UOPZ_VM_NEXT(0, 1);
+			UOPZ_OPLINE = UOPZ_OPLINE + 1;
 		}
 
 		UOPZ_VM_CONTINUE();
@@ -374,9 +374,9 @@ int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ LCOV_EXCL_START */
 	zend_free_op free_op2;
 
 	name = uopz_get_zval(
-		EX(opline),
-		EX(opline)->op2_type,
-		&EX(opline)->op2,
+		opline,
+		opline->op2_type,
+		&opline->op2,
 		execute_data,
 		&free_op2, BP_VAR_R);
 
@@ -396,8 +396,8 @@ int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ LCOV_EXCL_START */
 	}
 
 	call = zend_vm_stack_push_call_frame_ex(
-		EX(opline)->op1.num, 
-		ZEND_CALL_NESTED_FUNCTION, fbc, EX(opline)->extended_value, NULL, NULL);
+		opline->op1.num, 
+		ZEND_CALL_NESTED_FUNCTION, fbc, opline->extended_value, NULL, NULL);
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
 
@@ -412,9 +412,9 @@ int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_free_op free_op2;
 
 	name = uopz_get_zval(
-		EX(opline),
-		EX(opline)->op2_type,
-		&EX(opline)->op2,
+		opline,
+		opline->op2_type,
+		&opline->op2,
 		execute_data,
 		&free_op2, BP_VAR_R);
 
@@ -435,7 +435,7 @@ int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	call = zend_vm_stack_push_call_frame(
 		ZEND_CALL_NESTED_FUNCTION, 
-		fbc, EX(opline)->extended_value, NULL, NULL);
+		fbc, opline->extended_value, NULL, NULL);
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
 	
@@ -450,9 +450,9 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_free_op free_op2;
 
 	name = uopz_get_zval(
-		EX(opline),
-		EX(opline)->op2_type,
-		&EX(opline)->op2,
+		opline,
+		opline->op2_type,
+		&opline->op2,
 		execute_data,
 		&free_op2, BP_VAR_R) + 1;
 
@@ -465,7 +465,7 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			UOPZ_SAVE_OPLINE();
 			zend_throw_error(NULL,
 				"Call to undefined function %s()",
-				Z_STRVAL_P(EX_CONSTANT(EX(opline)->op2)));
+				Z_STRVAL_P(EX_CONSTANT(opline->op2)));
 			UOPZ_HANDLE_EXCEPTION();
 		}
 	}
@@ -479,7 +479,7 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	call = zend_vm_stack_push_call_frame(
 		ZEND_CALL_NESTED_FUNCTION, 
-		fbc, EX(opline)->extended_value, NULL, NULL);
+		fbc, opline->extended_value, NULL, NULL);
 	call->prev_execute_data = EX(call);
 	EX(call) = call;
 
@@ -925,11 +925,12 @@ _uopz_vm_do_fcall_dispatch:
 } /* }}} */
 
 int uopz_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	UOPZ_USE_OPLINE;
 #if PHP_VERSION_ID >= 70300
-	CACHE_PTR(EX(opline)->extended_value, NULL);
+	CACHE_PTR(opline->extended_value, NULL);
 #else
-	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)))) {
-		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(EX(opline)->op2)), NULL);
+	if (CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)))) {
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), NULL);
 	}
 #endif
 
@@ -1206,14 +1207,14 @@ int uopz_vm_unset_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
 	ZVAL_UNDEF(&tmp);
 
 	vname = uopz_get_zval(
-			EX(opline),
-			EX(opline)->op1_type,
-			&EX(opline)->op1,
+			opline,
+			opline->op1_type,
+			&opline->op1,
 			execute_data,
 			&free_op1, BP_VAR_R);
 
-	if (EX(opline)->op1_type != IS_CONST && Z_TYPE_P(vname) != IS_STRING) {
-		if (EX(opline)->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
+	if (opline->op1_type != IS_CONST && Z_TYPE_P(vname) != IS_STRING) {
+		if (opline->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
 			UOPZ_VM_DISPATCH();
 		}
 
@@ -1222,42 +1223,42 @@ int uopz_vm_unset_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
 	}
 #endif
 
-	if (EX(opline)->op2_type == IS_CONST) {
-		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(EX(opline)->op2)), &ce) != SUCCESS) {
+	if (opline->op2_type == IS_CONST) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op2)), &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
-				Z_STR_P(EX_CONSTANT(EX(opline)->op2)), 
-				EX_CONSTANT(EX(opline)->op2) + 1, 
+				Z_STR_P(EX_CONSTANT(opline->op2)), 
+				EX_CONSTANT(opline->op2) + 1, 
 				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
 			if (ce == NULL) {
 				/* FREE_UNFETCHED_OP */
 				UOPZ_HANDLE_EXCEPTION();
 			}
 		}
-	} else if (EX(opline)->op2_type == IS_UNUSED) {
+	} else if (opline->op2_type == IS_UNUSED) {
 		ce = zend_fetch_class(NULL, 
-			EX(opline)->op2.num);
+			opline->op2.num);
 		uopz_find_mock(ce->name, &ce);
 	} else {
 		ce = Z_CE_P(
-			EX_VAR(EX(opline)->op2.var));
+			EX_VAR(opline->op2.var));
 		uopz_find_mock(ce->name, &ce);
 	}
 #if PHP_VERSION_ID >= 70300
 	vname = uopz_get_zval(
-			EX(opline),
-			EX(opline)->op1_type,
-			&EX(opline)->op1,
+			opline,
+			opline->op1_type,
+			&opline->op1,
 			execute_data,
 			&free_op1, BP_VAR_R);
 
-	if (EX(opline)->op1_type == IS_CONST) {
+	if (opline->op1_type == IS_CONST) {
 		pname = Z_STR_P(vname);
 		tname = NULL;
 	} else if (Z_TYPE_P(vname) == IS_STRING) {
 		pname = Z_STR_P(vname);
 		tname = NULL;
 	} else {
-		if (EX(opline)->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
+		if (opline->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
 			/* vname = GET_OP1_UNDEF_CV(vname, BP_VAR_R); */
 		}
 		pname = zval_get_tmp_string(vname, &tname);
@@ -1453,7 +1454,7 @@ int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC) { /* {{{ *
 		tname = NULL;
 	} else {
 		if (opline->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
-			/* uopz_undefined_cv(EX(opline)->op1.var) */
+			/* uopz_undefined_cv(opline->op1.var) */
 		}
 		pname = zval_get_tmp_string(vname, &tname);
 	}
