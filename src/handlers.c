@@ -29,14 +29,16 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#define UOPZ_HANDLERS_COUNT 14
+#define UOPZ_HANDLERS_COUNT 22
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
 #	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU
 #	define UOPZ_OPCODE_HANDLER_ARGS_CC
+#	define UOPZ_OPCODE_HANDLER_ARGS_DC
 #else
 #	define UOPZ_OPCODE_HANDLER_ARGS zend_execute_data *execute_data
+#	define UOPZ_OPCODE_HANDLER_ARGS_DC , zend_execute_data *execute_data
 #	define UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU execute_data
 #	define UOPZ_OPCODE_HANDLER_ARGS_CC , execute_data
 #endif
@@ -86,6 +88,15 @@ zend_vm_handler_t zend_vm_add_trait;
 zend_vm_handler_t zend_vm_add_interface;
 zend_vm_handler_t zend_vm_fetch_class_constant;
 
+zend_vm_handler_t zend_vm_fetch_static_prop_r;
+zend_vm_handler_t zend_vm_fetch_static_prop_w;
+zend_vm_handler_t zend_vm_fetch_static_prop_rw;
+zend_vm_handler_t zend_vm_fetch_static_prop_is;
+zend_vm_handler_t zend_vm_fetch_static_prop_func_arg;
+zend_vm_handler_t zend_vm_fetch_static_prop_unset;
+zend_vm_handler_t zend_vm_unset_static_prop;
+zend_vm_handler_t zend_vm_isset_isempty_static_prop;
+
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS);
@@ -99,6 +110,17 @@ int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_add_trait(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_add_interface(UOPZ_OPCODE_HANDLER_ARGS);
+
+int uopz_vm_fetch_static_prop_r(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_static_prop_w(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_static_prop_rw(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_static_prop_is(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_static_prop_func_arg(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_static_prop_unset(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_unset_static_prop(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_isset_isempty_static_prop(UOPZ_OPCODE_HANDLER_ARGS);
+
+int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC);
 
 UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_EXIT,                    exit)
@@ -114,6 +136,14 @@ UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_DO_FCALL,                do_fcall)
 	UOPZ_HANDLER_DECL(ZEND_ADD_TRAIT,               add_trait)
 	UOPZ_HANDLER_DECL(ZEND_ADD_INTERFACE,           add_interface)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_R,        fetch_static_prop_r)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_W,        fetch_static_prop_w)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_RW,       fetch_static_prop_rw)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_IS,       fetch_static_prop_is)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_FUNC_ARG, fetch_static_prop_func_arg)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_UNSET,    fetch_static_prop_unset)
+	UOPZ_HANDLER_DECL(ZEND_UNSET_STATIC_PROP,          unset_static_prop)
+	UOPZ_HANDLER_DECL(ZEND_ISSET_ISEMPTY_STATIC_PROP,  isset_isempty_static_prop)
 UOPZ_HANDLERS_DECL_END()
 
 static zend_always_inline zval* uopz_get_zval(const zend_op *opline, int op_type, const znode_op *node, const zend_execute_data *execute_data, zend_free_op *should_free, int type) {
@@ -202,6 +232,38 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 
 		case ZEND_ADD_INTERFACE:
 			zend = zend_vm_add_interface;
+		break;
+
+		case ZEND_FETCH_STATIC_PROP_R:
+			zend = zend_vm_fetch_static_prop_r;
+		break;
+
+		case ZEND_FETCH_STATIC_PROP_W:
+			zend = zend_vm_fetch_static_prop_w;
+		break;
+
+		case ZEND_FETCH_STATIC_PROP_RW:
+			zend = zend_vm_fetch_static_prop_rw;
+		break;
+
+		case ZEND_FETCH_STATIC_PROP_IS:
+			zend = zend_vm_fetch_static_prop_is;
+		break;
+
+		case ZEND_FETCH_STATIC_PROP_FUNC_ARG:
+			zend = zend_vm_fetch_static_prop_func_arg;
+		break;
+
+		case ZEND_FETCH_STATIC_PROP_UNSET:
+			zend = zend_vm_fetch_static_prop_unset;
+		break;
+
+		case ZEND_UNSET_STATIC_PROP:
+			zend = zend_vm_unset_static_prop;
+		break;
+
+		case ZEND_ISSET_ISEMPTY_STATIC_PROP:
+			zend = zend_vm_isset_isempty_static_prop;
 		break;
 	}
 
@@ -1027,6 +1089,354 @@ int uopz_vm_add_interface(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 	zend_do_implement_interface(ce, iface);
+
+	UOPZ_VM_NEXT(1);
+} /* }}} */
+
+/* {{{ */
+int uopz_vm_fetch_static_prop_r(UOPZ_OPCODE_HANDLER_ARGS) {
+	return uopz_vm_fetch_static_helper(BP_VAR_R UOPZ_OPCODE_HANDLER_ARGS_CC);
+}
+
+int uopz_vm_fetch_static_prop_w(UOPZ_OPCODE_HANDLER_ARGS) {
+	return uopz_vm_fetch_static_helper(BP_VAR_W UOPZ_OPCODE_HANDLER_ARGS_CC);
+}
+
+int uopz_vm_fetch_static_prop_rw(UOPZ_OPCODE_HANDLER_ARGS) {
+	return uopz_vm_fetch_static_helper(BP_VAR_RW UOPZ_OPCODE_HANDLER_ARGS_CC);
+}
+
+int uopz_vm_fetch_static_prop_is(UOPZ_OPCODE_HANDLER_ARGS) {
+	return uopz_vm_fetch_static_helper(BP_VAR_IS UOPZ_OPCODE_HANDLER_ARGS_CC);
+}
+
+#if PHP_VERSION_ID < 70300
+static zend_always_inline int uopz_is_by_ref_func_arg_fetch(const zend_op *opline, zend_execute_data *call) {
+	uint32_t args = opline->extended_value & ZEND_FETCH_ARG_MASK;
+
+	if (args < MAX_ARG_FLAG_NUM) {
+		return QUICK_ARG_SHOULD_BE_SENT_BY_REF(call->func, args);
+	}
+
+	return ARG_SHOULD_BE_SENT_BY_REF(call->func, args);
+}
+#endif
+
+int uopz_vm_fetch_static_prop_func_arg(UOPZ_OPCODE_HANDLER_ARGS) {
+#if PHP_VERSION_ID >= 70300
+	return uopz_vm_fetch_static_helper(
+		(ZEND_CALL_INFO(EX(call)) & ZEND_CALL_SEND_ARG_BY_REF) ?
+			BP_VAR_W : BP_VAR_R
+		 UOPZ_OPCODE_HANDLER_ARGS_CC);
+#else
+	if (uopz_is_by_ref_func_arg_fetch(EX(opline), EX(call))) {
+		return uopz_vm_fetch_static_helper(BP_VAR_W UOPZ_OPCODE_HANDLER_ARGS_CC);
+	} else {
+		return uopz_vm_fetch_static_helper(BP_VAR_R UOPZ_OPCODE_HANDLER_ARGS_CC);
+	}
+#endif
+}
+
+int uopz_vm_fetch_static_prop_unset(UOPZ_OPCODE_HANDLER_ARGS) {
+	return uopz_vm_fetch_static_helper(BP_VAR_UNSET UOPZ_OPCODE_HANDLER_ARGS_CC);
+}
+
+int uopz_vm_unset_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
+	zend_free_op free_op1;
+#if PHP_VERSION_ID >= 70300
+	zval *vname;
+	zend_string *pname, *tname;
+#else
+	zval tmp, *vname;
+#endif
+	zend_class_entry *ce;
+
+#if PHP_VERSION_ID < 70300
+	ZVAL_UNDEF(&tmp);
+
+	vname = uopz_get_zval(
+			EX(opline),
+			EX(opline)->op1_type,
+			&EX(opline)->op1,
+			execute_data,
+			&free_op1, BP_VAR_R);
+
+	if (EX(opline)->op1_type != IS_CONST && Z_TYPE_P(vname) != IS_STRING) {
+		if (EX(opline)->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
+			UOPZ_VM_DISPATCH();
+		}
+
+		ZVAL_STR(&tmp, zval_get_string(vname));
+		vname = &tmp;
+	}
+#endif
+
+	if (EX(opline)->op2_type == IS_CONST) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(EX(opline)->op2)), &ce) != SUCCESS) {
+			ce = zend_fetch_class_by_name(
+				Z_STR_P(EX_CONSTANT(EX(opline)->op2)), 
+				EX_CONSTANT(EX(opline)->op2) + 1, 
+				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+			if (ce == NULL) {
+				/* FREE_UNFETCHED_OP */
+				UOPZ_VM_DISPATCH();
+			}
+		}
+	} else if (EX(opline)->op2_type == IS_UNUSED) {
+		ce = zend_fetch_class(NULL, 
+			EX(opline)->op2.num);
+		uopz_find_mock(ce->name, &ce);
+	} else {
+		ce = Z_CE_P(
+			EX_VAR(EX(opline)->op2.var));
+		uopz_find_mock(ce->name, &ce);
+	}
+#if PHP_VERSION_ID >= 70300
+	vname = uopz_get_zval(
+			EX(opline),
+			EX(opline)->op1_type,
+			&EX(opline)->op1,
+			execute_data,
+			&free_op1, BP_VAR_R);
+
+	if (EX(opline)->op1_type == IS_CONST) {
+		pname = Z_STR_P(vname);
+		tname = NULL;
+	} else if (Z_TYPE_P(vname) == IS_STRING) {
+		pname = Z_STR_P(vname);
+		tname = NULL;
+	} else {
+		if (EX(opline)->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
+			/* vname = GET_OP1_UNDEF_CV(vname, BP_VAR_R); */
+		}
+		pname = zval_get_tmp_string(vname, &tname);
+	}
+	zend_std_unset_static_property(ce, pname);
+	
+	if (tname) {
+		zend_tmp_string_release(tname);
+	}
+#else
+	zend_std_unset_static_property(ce, Z_STR_P(vname));
+
+	if (Z_TYPE(tmp) != IS_UNDEF) {
+		zend_string_release(Z_STR(tmp));
+	}
+#endif
+
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (EG(exception)) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	UOPZ_VM_NEXT(1);
+}
+
+int uopz_vm_isset_isempty_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
+	zval *value;
+	int result;
+	zend_free_op free_op1;
+#if PHP_VERSION_ID >= 70300
+	zval *vname;
+	zend_string *pname, *tname;
+#else
+	zval tmp, *vname;
+#endif
+	zend_class_entry *ce;
+
+#if PHP_VERSION_ID < 70300
+	ZVAL_UNDEF(&tmp);
+
+	vname = uopz_get_zval(
+			EX(opline),
+			EX(opline)->op1_type,
+			&EX(opline)->op1,
+			execute_data,
+			&free_op1, BP_VAR_R);
+
+	if (EX(opline)->op1_type != IS_CONST && Z_TYPE_P(vname) != IS_STRING) {
+		ZVAL_STR(&tmp, zval_get_string(vname));
+		vname = &tmp;
+	}
+#endif
+
+	if (EX(opline)->op2_type == IS_CONST) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(EX(opline)->op2)), &ce) != SUCCESS) {
+			ce = zend_fetch_class_by_name(
+				Z_STR_P(EX_CONSTANT(EX(opline)->op2)), 
+				EX_CONSTANT(EX(opline)->op2) + 1, 
+				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+			if (ce == NULL) {
+				ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
+				UOPZ_VM_DISPATCH();
+			}
+		}
+	} else {
+		if (EX(opline)->op2_type == IS_UNUSED) {
+			ce = zend_fetch_class(NULL, 
+				EX(opline)->op2.num);
+			uopz_find_mock(ce->name, &ce);
+		} else {
+			ce = Z_CE_P(
+				EX_VAR(EX(opline)->op2.var));
+			uopz_find_mock(ce->name, &ce);
+		}
+	}
+
+#if PHP_VERSION_ID >= 70300
+	vname = uopz_get_zval(
+			EX(opline),
+			EX(opline)->op1_type,
+			&EX(opline)->op1,
+			execute_data,
+			&free_op1, BP_VAR_R);
+
+	if (EX(opline)->op1_type == IS_CONST) {
+		pname = Z_STR_P(vname);
+	} else {
+		pname = zval_get_tmp_string(vname, &tname);
+	}
+
+	value = zend_std_get_static_property(ce, pname, 1);
+
+	if (EX(opline)->op1_type != IS_CONST) {
+		zend_tmp_string_release(tname);
+	}
+#else
+	value = zend_std_get_static_property(ce, Z_STR_P(vname), 1);
+
+	if (Z_TYPE(tmp) != IS_UNDEF) {
+		zend_string_release(Z_STR(tmp));
+	}
+#endif
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (!(EX(opline)->extended_value & ZEND_ISEMPTY)) {
+		result = value && Z_TYPE_P(value) > IS_NULL &&
+		    (!Z_ISREF_P(value) || Z_TYPE_P(Z_REFVAL_P(value)) != IS_NULL);
+	} else {
+		result = !value || !zend_is_true(value);
+	}
+	ZVAL_BOOL(EX_VAR(EX(opline)->result.var), result);
+
+	UOPZ_VM_NEXT(1);
+}
+/* }}} */
+
+int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC) { /* {{{ */
+	zend_free_op free_op1;
+#if PHP_VERSION_ID >= 70300
+	zval *vname;
+	zend_string *pname, *tname;
+#else
+	zval tmp, *vname;
+#endif
+	zval *rv;
+	zend_class_entry *ce;
+
+#if PHP_VERSION_ID < 70300
+	ZVAL_UNDEF(&tmp);
+
+	vname = uopz_get_zval(
+			EX(opline),
+			EX(opline)->op1_type,
+			&EX(opline)->op1,
+			execute_data,
+			&free_op1, BP_VAR_R);
+
+	if (EX(opline)->op1_type != IS_CONST && Z_TYPE_P(vname) != IS_STRING) {
+		ZVAL_STR(&tmp, zval_get_string(vname));
+		vname = &tmp;
+	}
+#endif
+
+	if (EX(opline)->op2_type == IS_CONST) {
+		zval *clazz = EX_CONSTANT(EX(opline)->op2);
+		if (uopz_find_mock(Z_STR_P(clazz), &ce) != SUCCESS) {
+			ce = zend_fetch_class_by_name(
+				Z_STR_P(clazz), clazz + 1, 
+				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+		}
+	} else {
+		if (EX(opline)->op2_type == IS_UNUSED) {
+			ce = zend_fetch_class(NULL,
+				EX(opline)->op2.num);
+			if (ce == NULL) {
+				UOPZ_VM_DISPATCH();
+			}
+			uopz_find_mock(ce->name, &ce);
+		} else {
+			ce = Z_CE_P(
+				EX_VAR(EX(opline)->op2.var));
+
+			uopz_find_mock(ce->name, &ce);
+		}
+	}
+
+#if PHP_VERSION_ID >= 70300
+	vname = uopz_get_zval(
+			EX(opline),
+			EX(opline)->op1_type,
+			&EX(opline)->op1,
+			execute_data,
+			&free_op1, BP_VAR_R);
+
+	if (EX(opline)->op1_type == IS_CONST) {
+		pname = Z_STR_P(vname); 
+	} else if (Z_TYPE_P(vname) == IS_STRING) {
+		pname = Z_STR_P(vname);
+		tname = NULL;
+	} else {
+		if (EX(opline)->op1_type == IS_CV && Z_TYPE_P(vname) == IS_UNDEF) {
+			/* uopz_undefined_cv(EX(opline)->op1.var) */
+			UOPZ_VM_DISPATCH();
+		}
+		pname = zval_get_tmp_string(vname, &tname);
+	}
+
+	rv = zend_std_get_static_property(ce, pname, type == BP_VAR_IS);
+
+	if (EX(opline)->op1_type != IS_CONST) {
+		zend_tmp_string_release(tname);
+	}
+#else
+	rv = zend_std_get_static_property(ce, Z_STR_P(vname), type == BP_VAR_IS);
+
+	if (Z_TYPE(tmp) != IS_UNDEF) {
+		zend_string_release(Z_STR(tmp));
+	}
+#endif
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (rv == NULL) {
+		if (EG(exception)) {
+			ZVAL_UNDEF(EX_VAR(EX(opline)->result.var));
+			UOPZ_VM_DISPATCH();
+		} else {
+			rv = &EG(uninitialized_zval);
+		}
+	}
+
+	if (type == BP_VAR_R || type == BP_VAR_IS) {
+#if PHP_VERSION_ID >= 70300
+		ZVAL_COPY_DEREF(EX_VAR(EX(opline->result.var)), rv);
+#else
+		ZVAL_COPY_UNREF(EX_VAR(EX(opline->result.var)), rv);
+#endif
+	} else {
+		ZVAL_INDIRECT(EX_VAR(EX(opline)->result.var), rv);
+	}
+
+	if (EG(exception)) {
+		UOPZ_VM_DISPATCH();
+	}
 
 	UOPZ_VM_NEXT(1);
 } /* }}} */
