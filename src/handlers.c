@@ -313,11 +313,11 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		UOPZ_VM_DISPATCH();
 	}
 
-	if (EX(opline)->op1_type != IS_UNUSED) {
+	if (opline->op1_type != IS_UNUSED) {
 		estatus = uopz_get_zval(
-				EX(opline),
-				EX(opline)->op1_type,
-				&EX(opline)->op1,
+				opline,
+				opline->op1_type,
+				&opline->op1,
 				execute_data,
 				&free_op1, BP_VAR_R);
 
@@ -325,7 +325,7 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			if (Z_TYPE_P(estatus) == IS_LONG) {
 				EG(exit_status) = Z_LVAL_P(estatus);
 			} else {
-				if (EX(opline)->op1_type & (IS_VAR|IS_CV) && Z_ISREF_P(estatus)) {
+				if (opline->op1_type & (IS_VAR|IS_CV) && Z_ISREF_P(estatus)) {
 					estatus = Z_REFVAL_P(estatus);
 
 					if (Z_TYPE_P(estatus) == IS_LONG) {
@@ -343,10 +343,10 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		ZVAL_COPY(&UOPZ(estatus), estatus);
 	}
 
-	if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
+	if (opline < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
 		UOPZ_LOAD_NEXT_OPLINE();
 
-		while (EX(opline)->opcode == ZEND_EXT_STMT) {
+		while (opline->opcode == ZEND_EXT_STMT) {
 			UOPZ_LOAD_NEXT_OPLINE();
 		}
 
