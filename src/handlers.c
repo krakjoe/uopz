@@ -1647,7 +1647,11 @@ int uopz_vm_fetch_obj_r(UOPZ_OPCODE_HANDLER_ARGS) {
 	retval = Z_OBJ_HT(mock)->read_property(&mock, offset, BP_VAR_R, NULL, EX_VAR(opline->result.var));
 	
 	if (retval != EX_VAR(opline->result.var)) {
+#if PHP_VERSION_ID >= 70300
 		ZVAL_COPY_DEREF(EX_VAR(opline->result.var), retval);
+#else
+		ZVAL_COPY_UNREF(EX_VAR(opline->result.var), retval);
+#endif
 	} else if(Z_ISREF_P(retval)) {
 		zend_unwrap_reference(retval);
 	}
