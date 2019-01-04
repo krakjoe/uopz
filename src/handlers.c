@@ -1882,9 +1882,7 @@ int uopz_vm_assign_obj(UOPZ_OPCODE_HANDLER_ARGS) {
 					break;
 				}
 			}
-			if (free_op_data) {
-				zval_ptr_dtor_nogc(free_op_data);
-			}
+			
 			UOPZ_VM_DISPATCH();
 		}
 	} while (0);
