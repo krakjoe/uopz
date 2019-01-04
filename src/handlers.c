@@ -1855,6 +1855,10 @@ int uopz_vm_assign_obj(UOPZ_OPCODE_HANDLER_ARGS) {
 		UOPZ_VM_DISPATCH();
 	}
 
+	if (!obj) {
+		UOPZ_VM_DISPATCH();
+	}
+
 	ZVAL_OBJ(&tmp, obj);
 
 	obj->handlers->write_property(&tmp, property, value, NULL);
