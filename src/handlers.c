@@ -193,6 +193,18 @@ static zend_always_inline zval* uopz_get_zval(const zend_op *opline, int op_type
 #endif
 }
 
+#if PHP_VERSION_ID < 70300
+static zend_always_inline int uopz_is_by_ref_func_arg_fetch(const zend_op *opline, zend_execute_data *call) {
+	uint32_t args = opline->extended_value & ZEND_FETCH_ARG_MASK;
+
+	if (args < MAX_ARG_FLAG_NUM) {
+		return QUICK_ARG_SHOULD_BE_SENT_BY_REF(call->func, args);
+	}
+
+	return ARG_SHOULD_BE_SENT_BY_REF(call->func, args);
+}
+#endif
+
 void uopz_handlers_init(void) {
 	uopz_vm_handler_t *handler = uopz_vm_handlers;
 
@@ -1232,18 +1244,6 @@ int uopz_vm_fetch_static_prop_is(UOPZ_OPCODE_HANDLER_ARGS) {
 	return uopz_vm_fetch_static_helper(BP_VAR_IS UOPZ_OPCODE_HANDLER_ARGS_CC);
 }
 
-#if PHP_VERSION_ID < 70300
-static zend_always_inline int uopz_is_by_ref_func_arg_fetch(const zend_op *opline, zend_execute_data *call) {
-	uint32_t args = opline->extended_value & ZEND_FETCH_ARG_MASK;
-
-	if (args < MAX_ARG_FLAG_NUM) {
-		return QUICK_ARG_SHOULD_BE_SENT_BY_REF(call->func, args);
-	}
-
-	return ARG_SHOULD_BE_SENT_BY_REF(call->func, args);
-}
-#endif
-
 int uopz_vm_fetch_static_prop_func_arg(UOPZ_OPCODE_HANDLER_ARGS) {
 #if PHP_VERSION_ID >= 70300
 	return uopz_vm_fetch_static_helper(
@@ -1765,7 +1765,7 @@ int uopz_vm_fetch_obj_func_arg(UOPZ_OPCODE_HANDLER_ARGS) {
 #if PHP_VERSION_ID >= 70300
 	if (ZEND_CALL_INFO(EX(call)) & ZEND_CALL_SEND_ARG_BY_REF) {
 #else
-	if (uopz_is_by_ref_func_arg_fetch(EX(opline), EX(call))) {
+	if (uopz_is_by_ref_func_arg_fetch(opline, EX(call))) {
 #endif
 		if (opline->op1_type & (IS_CONST|IS_TMP_VAR)) {
 			UOPZ_VM_DISPATCH();
