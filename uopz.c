@@ -672,11 +672,15 @@ PHP_FUNCTION(uopz_call_user_func) {
 	UOPZ_CALL_HOOKS();
 
 	if (fcc.function_handler->common.scope) {
-		if (uopz_find_mock(fcc.function_handler->common.scope->name, NULL, &mock) == SUCCESS) {
+		if (uopz_find_mock(fcc.function_handler->common.scope->name, &fcc.object, &mock) == SUCCESS) {
 			uopz_find_method(
 				mock, 
 				fcc.function_handler->common.function_name, 
 				&fcc.function_handler);
+
+			if (fcc.object != fci.object) {
+				fci.object = fcc.object;
+			}
 		}
 	}
 
@@ -693,6 +697,7 @@ PHP_FUNCTION(uopz_call_user_func_array) {
 	zval *params, retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
+	zend_class_entry *mock;
 
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_FUNC(fci, fcc)
@@ -703,6 +708,19 @@ PHP_FUNCTION(uopz_call_user_func_array) {
 	fci.retval = &retval;
 
 	UOPZ_CALL_HOOKS();
+
+	if (fcc.function_handler->common.scope) {
+		if (uopz_find_mock(fcc.function_handler->common.scope->name, &fcc.object, &mock) == SUCCESS) {
+			uopz_find_method(
+				mock, 
+				fcc.function_handler->common.function_name, 
+				&fcc.function_handler);
+
+			if (fcc.object != fci.object) {
+				fci.object = fcc.object;
+			}
+		}
+	}
 
 	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
 		if (Z_ISREF(retval)) {
