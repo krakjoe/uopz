@@ -29,7 +29,7 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#define UOPZ_HANDLERS_COUNT 22
+#define UOPZ_HANDLERS_COUNT 29
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
@@ -113,6 +113,14 @@ zend_vm_handler_t zend_vm_fetch_static_prop_unset;
 zend_vm_handler_t zend_vm_unset_static_prop;
 zend_vm_handler_t zend_vm_isset_isempty_static_prop;
 
+zend_vm_handler_t zend_vm_fetch_obj_r;
+zend_vm_handler_t zend_vm_fetch_obj_w;
+zend_vm_handler_t zend_vm_fetch_obj_rw;
+zend_vm_handler_t zend_vm_fetch_obj_is;
+zend_vm_handler_t zend_vm_fetch_obj_func_arg;
+zend_vm_handler_t zend_vm_fetch_obj_unset;
+zend_vm_handler_t zend_vm_assign_obj;
+
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS);
@@ -138,6 +146,14 @@ int uopz_vm_isset_isempty_static_prop(UOPZ_OPCODE_HANDLER_ARGS);
 
 int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC);
 
+int uopz_vm_fetch_obj_r(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_obj_w(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_obj_rw(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_obj_is(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_obj_func_arg(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_fetch_obj_unset(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_assign_obj(UOPZ_OPCODE_HANDLER_ARGS);
+
 UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_EXIT,                    exit)
 	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL,              init_fcall)
@@ -160,6 +176,13 @@ UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_FETCH_STATIC_PROP_UNSET,    fetch_static_prop_unset)
 	UOPZ_HANDLER_DECL(ZEND_UNSET_STATIC_PROP,          unset_static_prop)
 	UOPZ_HANDLER_DECL(ZEND_ISSET_ISEMPTY_STATIC_PROP,  isset_isempty_static_prop)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_R,                fetch_obj_r)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_W,                fetch_obj_w)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_RW,               fetch_obj_rw)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_IS,               fetch_obj_is)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_FUNC_ARG,         fetch_obj_func_arg)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_UNSET,            fetch_obj_unset)
+	UOPZ_HANDLER_DECL(ZEND_ASSIGN_OBJ,                 assign_obj)
 UOPZ_HANDLERS_DECL_END()
 
 static zend_always_inline zval* uopz_get_zval(const zend_op *opline, int op_type, const znode_op *node, const zend_execute_data *execute_data, zend_free_op *should_free, int type) {
@@ -177,6 +200,7 @@ void uopz_handlers_init(void) {
 		if (!handler->opcode) {
 			break;
 		}
+
 		UOPZ_HANDLER_OVERLOAD(handler);
 		handler++;
 	}
@@ -280,6 +304,30 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 
 		case ZEND_ISSET_ISEMPTY_STATIC_PROP:
 			zend = zend_vm_isset_isempty_static_prop;
+		break;
+
+		case ZEND_FETCH_OBJ_R:
+			zend = zend_vm_fetch_obj_r;
+		break;
+
+		case ZEND_FETCH_OBJ_W:
+			zend = zend_vm_fetch_obj_w;
+		break;
+
+		case ZEND_FETCH_OBJ_RW:
+			zend = zend_vm_fetch_obj_rw;
+		break;
+
+		case ZEND_FETCH_OBJ_IS:
+			zend = zend_vm_fetch_obj_is;
+		break;
+
+		case ZEND_FETCH_OBJ_FUNC_ARG:
+			zend = zend_vm_fetch_obj_func_arg;
+		break;
+
+		case ZEND_FETCH_OBJ_UNSET:
+			zend = zend_vm_fetch_obj_unset;
 		break;
 	}
 
@@ -1521,6 +1569,311 @@ int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC) { /* {{{ *
 
 	UOPZ_VM_NEXT(0, 1);
 } /* }}} */
+
+/* {{{ */
+static zend_always_inline int uopz_vm_fetch_obj_helper(zval **container, zval **offset, zval *mock, zend_free_op *free_op1, zend_free_op *free_op2 UOPZ_OPCODE_HANDLER_ARGS_DC) {
+	UOPZ_USE_OPLINE;
+	zend_object *object = NULL;
+	zend_class_entry *ce;
+
+	*container = uopz_get_zval(
+			opline,
+			opline->op1_type,
+			&opline->op1,
+			execute_data,
+			free_op1, BP_VAR_R);
+
+	if (opline->op1_type == IS_UNUSED && (!*container || Z_TYPE_P(*container) == IS_UNDEF)) {
+		return FAILURE;
+	}
+
+	*offset = uopz_get_zval(
+			opline,
+			opline->op2_type,
+			&opline->op2,
+			execute_data,
+			free_op2, BP_VAR_R);
+
+	if ((opline->op1_type == IS_CONST) || 
+	    (opline->op1_type != IS_UNUSED && Z_TYPE_P(*container) != IS_OBJECT)) {
+		if ((opline->op1_type & (IS_VAR|IS_CV)) && Z_ISREF_P(*container)) {
+			*container = Z_REFVAL_P(*container);
+			if (!Z_TYPE_P(*container) != IS_OBJECT) {
+				return FAILURE;
+			}
+		} else {
+			return FAILURE;
+		}
+	}
+
+	if (uopz_find_mock(Z_OBJCE_P(*container)->name, &object, &ce) != SUCCESS) {
+		return FAILURE;
+	}
+
+	if (!object) {
+		return FAILURE;
+	}
+
+	ZVAL_OBJ(mock, object);
+
+	*container = mock;
+	
+	return SUCCESS;
+}
+
+int uopz_vm_fetch_obj_r(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	zval *retval;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	retval = Z_OBJ_HT(mock)->read_property(&mock, offset, BP_VAR_R, NULL, EX_VAR(opline->result.var));
+	
+	if (retval != EX_VAR(opline->result.var)) {
+		ZVAL_COPY_DEREF(EX_VAR(opline->result.var), retval);
+	} else if(Z_ISREF_P(retval)) {
+		zend_unwrap_reference(retval);
+	}
+
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);	
+	}
+
+	UOPZ_VM_NEXT(1, 1);
+}
+
+int uopz_vm_fetch_obj_w(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	zval *retval;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	retval = Z_OBJ_HT(mock)->read_property(&mock, offset, BP_VAR_W, NULL, EX_VAR(opline->result.var));
+	
+	if (retval != EX_VAR(opline->result.var)) {
+		ZVAL_INDIRECT(EX_VAR(opline->result.var), retval);
+	} else if(Z_ISREF_P(retval) && Z_REFCOUNT_P(retval) == 1) {
+		ZVAL_UNREF(retval);
+	}
+
+	/* TODO FREE_VAR_PTR_AND_EXTRACT_RESULT_IF_NECESSARY */
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);	
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);	
+	}
+
+	UOPZ_VM_NEXT(1, 1);
+}
+
+int uopz_vm_fetch_obj_rw(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	zval *retval;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	retval = Z_OBJ_HT(mock)->read_property(&mock, offset, BP_VAR_RW, NULL, EX_VAR(opline->result.var));
+	
+	if (retval != EX_VAR(opline->result.var)) {
+		ZVAL_INDIRECT(EX_VAR(opline->result.var), retval);
+	} else if(Z_ISREF_P(retval) && Z_REFCOUNT_P(retval) == 1) {
+		ZVAL_UNREF(retval);
+	}
+
+	/* TODO FREE_VAR_PTR_AND_EXTRACT_RESULT_IF_NECESSARY */
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);	
+	}
+
+	UOPZ_VM_NEXT(1, 1);
+}
+
+int uopz_vm_fetch_obj_is(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	zval *retval;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	retval = Z_OBJ_HT(mock)->read_property(&mock, offset, BP_VAR_IS, NULL, EX_VAR(opline->result.var));
+
+	if (retval != EX_VAR(opline->result.var)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), retval);
+	}
+
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);	
+	}
+	
+	UOPZ_VM_NEXT(1, 1);
+}
+
+int uopz_vm_fetch_obj_func_arg(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	zend_object *object;
+	zend_class_entry *ce;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	if (ZEND_CALL_INFO(EX(call)) & ZEND_CALL_SEND_ARG_BY_REF) {
+		if (opline->op1_type & (IS_CONST|IS_TMP_VAR)) {
+			UOPZ_VM_DISPATCH();
+		}
+		return uopz_vm_fetch_obj_w(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+	} else {
+		return uopz_vm_fetch_obj_r(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+	}
+}
+
+int uopz_vm_fetch_obj_unset(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	zval *retval;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	retval = Z_OBJ_HT(mock)->read_property(&mock, offset, BP_VAR_UNSET, NULL, EX_VAR(opline->result.var));
+	
+	if (retval != EX_VAR(opline->result.var)) {
+		ZVAL_INDIRECT(EX_VAR(opline->result.var), retval);
+	} else if(Z_ISREF_P(retval) && Z_REFCOUNT_P(retval) == 1) {
+		ZVAL_UNREF(retval);
+	}
+
+	/* TODO FREE_VAR_PTR_AND_EXTRACT_RESULT_IF_NECESSARY */
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);	
+	}
+}
+
+int uopz_vm_assign_obj(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2, free_op_data;
+	zval *object, *property, *value, tmp;
+	zend_object *obj;
+	zend_class_entry *ce;
+
+	UOPZ_SAVE_OPLINE();
+
+	object = uopz_get_zval(
+			opline,
+			opline->op1_type,
+			&opline->op1,
+			execute_data,
+			&free_op1, BP_VAR_W);
+
+	if (opline->op1_type == IS_UNUSED && (!object || Z_TYPE_P(object) == IS_UNDEF)) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	property = uopz_get_zval(
+			opline,
+			opline->op2_type,
+			&opline->op2,
+			execute_data,
+			&free_op2, BP_VAR_R);
+
+	value =    uopz_get_zval(
+			(opline + 1),
+			(opline + 1)->op1_type,
+			&(opline + 1)->op1,
+			execute_data,
+			&free_op_data, BP_VAR_R);
+	
+	do {
+		if (opline->op2_type != IS_UNUSED && Z_TYPE_P(object) != IS_OBJECT) {
+			if (Z_ISREF_P(object)) {
+				object = Z_REFVAL_P(object);
+				if (Z_TYPE_P(object) == IS_OBJECT) {
+					break;
+				}
+			}
+			if (free_op_data) {
+				zval_ptr_dtor_nogc(free_op_data);
+			}
+			UOPZ_VM_DISPATCH();
+		}
+	} while (0);
+
+	if (uopz_find_mock(Z_OBJCE_P(object)->name, &obj, &ce) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	ZVAL_OBJ(&tmp, obj);
+
+	obj->handlers->write_property(&tmp, property, value, NULL);
+
+	if (RETURN_VALUE_USED(opline)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), value);
+	}
+
+	if (free_op_data) {
+		zval_ptr_dtor_nogc(free_op_data);
+	}
+	
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);
+	}
+
+	UOPZ_VM_NEXT(1, 2);
+}
+/* }}} */
 
 #endif	/* UOPZ_HANDLERS_H */
 
