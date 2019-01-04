@@ -29,7 +29,7 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#define UOPZ_HANDLERS_COUNT 29
+#define UOPZ_HANDLERS_COUNT 30
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
@@ -120,6 +120,7 @@ zend_vm_handler_t zend_vm_fetch_obj_is;
 zend_vm_handler_t zend_vm_fetch_obj_func_arg;
 zend_vm_handler_t zend_vm_fetch_obj_unset;
 zend_vm_handler_t zend_vm_assign_obj;
+zend_vm_handler_t zend_vm_isset_isempty_prop_obj;
 
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS);
@@ -152,6 +153,7 @@ int uopz_vm_fetch_obj_rw(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_obj_is(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_obj_func_arg(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_obj_unset(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_isset_isempty_prop_obj(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_assign_obj(UOPZ_OPCODE_HANDLER_ARGS);
 
 UOPZ_HANDLERS_DECL_BEGIN()
@@ -183,6 +185,7 @@ UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_FUNC_ARG,         fetch_obj_func_arg)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_OBJ_UNSET,            fetch_obj_unset)
 	UOPZ_HANDLER_DECL(ZEND_ASSIGN_OBJ,                 assign_obj)
+	UOPZ_HANDLER_DECL(ZEND_ISSET_ISEMPTY_PROP_OBJ,     isset_isempty_prop_obj)
 UOPZ_HANDLERS_DECL_END()
 
 static zend_always_inline zval* uopz_get_zval(const zend_op *opline, int op_type, const znode_op *node, const zend_execute_data *execute_data, zend_free_op *should_free, int type) {
@@ -344,6 +347,10 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 
 		case ZEND_ASSIGN_OBJ:
 			zend = zend_vm_assign_obj;
+		break;
+
+		case ZEND_ISSET_ISEMPTY_PROP_OBJ:
+			zend = zend_vm_isset_isempty_prop_obj;
 		break;
 	}
 
@@ -1575,7 +1582,7 @@ int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC) { /* {{{ *
 } /* }}} */
 
 /* {{{ */
-static zend_always_inline int uopz_vm_fetch_obj_helper(zval **container, zval **offset, zval *mock, zend_free_op *free_op1, zend_free_op *free_op2 UOPZ_OPCODE_HANDLER_ARGS_DC) {
+static zend_always_inline int uopz_vm_fetch_obj_helper(zval **container, uint32_t cfetch, zval **offset, uint32_t ofetch, zval *mock, zend_free_op *free_op1, zend_free_op *free_op2 UOPZ_OPCODE_HANDLER_ARGS_DC) {
 	UOPZ_USE_OPLINE;
 	zend_object *object = NULL;
 	zend_class_entry *ce;
@@ -1585,7 +1592,7 @@ static zend_always_inline int uopz_vm_fetch_obj_helper(zval **container, zval **
 			opline->op1_type,
 			&opline->op1,
 			execute_data,
-			free_op1, BP_VAR_R);
+			free_op1, cfetch);
 
 	if (opline->op1_type == IS_UNUSED && (!*container || Z_TYPE_P(*container) == IS_UNDEF)) {
 		return FAILURE;
@@ -1596,7 +1603,7 @@ static zend_always_inline int uopz_vm_fetch_obj_helper(zval **container, zval **
 			opline->op2_type,
 			&opline->op2,
 			execute_data,
-			free_op2, BP_VAR_R);
+			free_op2, ofetch);
 
 	if ((opline->op1_type == IS_CONST) || 
 	    (opline->op1_type != IS_UNUSED && Z_TYPE_P(*container) != IS_OBJECT)) {
@@ -1633,7 +1640,7 @@ int uopz_vm_fetch_obj_r(UOPZ_OPCODE_HANDLER_ARGS) {
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+	if (uopz_vm_fetch_obj_helper(&container, BP_VAR_R, &offset, BP_VAR_R, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
 		UOPZ_VM_DISPATCH();
 	}
 
@@ -1664,7 +1671,7 @@ int uopz_vm_fetch_obj_w(UOPZ_OPCODE_HANDLER_ARGS) {
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+	if (uopz_vm_fetch_obj_helper(&container, BP_VAR_W, &offset, BP_VAR_R, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
 		UOPZ_VM_DISPATCH();
 	}
 
@@ -1696,7 +1703,7 @@ int uopz_vm_fetch_obj_rw(UOPZ_OPCODE_HANDLER_ARGS) {
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+	if (uopz_vm_fetch_obj_helper(&container, BP_VAR_RW, &offset, BP_VAR_R, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
 		UOPZ_VM_DISPATCH();
 	}
 
@@ -1728,7 +1735,7 @@ int uopz_vm_fetch_obj_is(UOPZ_OPCODE_HANDLER_ARGS) {
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+	if (uopz_vm_fetch_obj_helper(&container, BP_VAR_IS, &offset, BP_VAR_R, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
 		UOPZ_VM_DISPATCH();
 	}
 
@@ -1751,17 +1758,6 @@ int uopz_vm_fetch_obj_is(UOPZ_OPCODE_HANDLER_ARGS) {
 
 int uopz_vm_fetch_obj_func_arg(UOPZ_OPCODE_HANDLER_ARGS) {
 	UOPZ_USE_OPLINE;
-	zend_free_op free_op1, free_op2;
-	zval mock, *container, *offset;
-	zend_object *object;
-	zend_class_entry *ce;
-
-	UOPZ_SAVE_OPLINE();
-
-	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
-		UOPZ_VM_DISPATCH();
-	}
-
 #if PHP_VERSION_ID >= 70300
 	if (ZEND_CALL_INFO(EX(call)) & ZEND_CALL_SEND_ARG_BY_REF) {
 #else
@@ -1784,7 +1780,7 @@ int uopz_vm_fetch_obj_unset(UOPZ_OPCODE_HANDLER_ARGS) {
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_vm_fetch_obj_helper(&container, &offset, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+	if (uopz_vm_fetch_obj_helper(&container, BP_VAR_UNSET, &offset, BP_VAR_R, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
 		UOPZ_VM_DISPATCH();
 	}
 
@@ -1804,6 +1800,40 @@ int uopz_vm_fetch_obj_unset(UOPZ_OPCODE_HANDLER_ARGS) {
 	if (free_op2) {
 		zval_ptr_dtor_nogc(free_op2);	
 	}
+}
+
+int uopz_vm_isset_isempty_prop_obj(UOPZ_OPCODE_HANDLER_ARGS) {
+	UOPZ_USE_OPLINE;
+	zend_free_op free_op1, free_op2;
+	zval mock, *container, *offset;
+	int result;
+
+	UOPZ_SAVE_OPLINE();
+
+	if (uopz_vm_fetch_obj_helper(&container, BP_VAR_IS, &offset, BP_VAR_R, &mock, &free_op1, &free_op2 UOPZ_OPCODE_HANDLER_ARGS_CC) != SUCCESS) {
+		UOPZ_VM_DISPATCH();
+	}
+
+	if (!Z_OBJ_HT(mock)->has_property) {
+		result = (opline->extended_value & ZEND_ISEMPTY);
+	} else {
+		result = (opline->extended_value & ZEND_ISEMPTY) ^ Z_OBJ_HT(mock)->has_property(
+				&mock, offset, 
+				(opline->extended_value & ZEND_ISEMPTY), 
+				NULL);
+	}
+
+	if (free_op1) {
+		zval_ptr_dtor_nogc(free_op1);
+	}
+
+	if (free_op2) {
+		zval_ptr_dtor_nogc(free_op2);	
+	}
+
+	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+
+	UOPZ_VM_NEXT(1, 1);
 }
 
 int uopz_vm_assign_obj(UOPZ_OPCODE_HANDLER_ARGS) {
