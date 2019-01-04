@@ -25,7 +25,7 @@ void uopz_unset_mock(zend_string *clazz);
 zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent);
 zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface);
 int uopz_get_mock(zend_string *clazz, zval *return_value);
-int uopz_find_mock(zend_string *clazz, zend_class_entry **mock);
+int uopz_find_mock(zend_string *clazz, zend_object **object, zend_class_entry **mock);
 
 void uopz_set_property(zval *object, zval *member, zval *value);
 void uopz_get_property(zval *object, zval *member, zval *value);

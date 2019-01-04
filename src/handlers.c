@@ -498,19 +498,19 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_SAVE_OPLINE();
 
 	if (opline->op1_type == IS_CONST) {
-		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &ce) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &object, &ce) != SUCCESS) {
 			UOPZ_VM_DISPATCH();
 		}
 	} else if (opline->op1_type == IS_UNUSED) {
 		ce = zend_fetch_class(NULL, opline->op1.num);
 
-		if (uopz_find_mock(ce->name, &ce) != SUCCESS) {
+		if (uopz_find_mock(ce->name, &object, &ce) != SUCCESS) {
 			UOPZ_VM_DISPATCH();
 		}
 	} else {
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 
-		if (uopz_find_mock(ce->name, &ce) != SUCCESS) {
+		if (uopz_find_mock(ce->name, &object, &ce) != SUCCESS) {
 			UOPZ_VM_DISPATCH();
 		}
 	}
@@ -585,12 +585,12 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 	}
 
-	object = NULL;
-	
 	if (!(fbc->common.fn_flags & ZEND_ACC_STATIC)) {
 		if (Z_TYPE(EX(This)) == IS_OBJECT) {
-			object = Z_OBJ(EX(This));
-			ce = object->ce;
+			if (!object) {
+				object = Z_OBJ(EX(This));
+				ce = object->ce;
+			}
 		} else {
 			if (fbc->common.fn_flags & ZEND_ACC_ALLOW_STATIC) {
 				zend_error(
@@ -724,7 +724,7 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 #endif
 
-	if (uopz_find_mock(fbc->common.scope->name, &mock) == SUCCESS) {
+	if (uopz_find_mock(fbc->common.scope->name, &obj, &mock) == SUCCESS) {
 		uopz_find_method(
 			mock, Z_STR_P(method), &fbc);
 	}
@@ -747,13 +747,13 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 #if PHP_VERSION_ID >= 70300
 		if (opline->op1_type == IS_CV) {
-			GC_ADDREF(Z_OBJ_P(object));
+			GC_ADDREF(obj);
 		} else if (free_op1 != object) {
-			GC_ADDREF(Z_OBJ_P(object));
+			GC_ADDREF(obj);
 			zval_ptr_dtor_nogc(free_op1);
 		}
 #else
-		GC_ADDREF(Z_OBJ_P(object));
+		GC_ADDREF(obj);
 #endif
 	}
 
@@ -792,11 +792,12 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_function *constructor;
 	zend_class_entry *ce;
 	zend_execute_data *call;
+	zend_object *obj = NULL;
 	
 	UOPZ_SAVE_OPLINE();
 
 	if (opline->op1_type == IS_CONST) {
-		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &ce) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &obj, &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
 				Z_STR_P(EX_CONSTANT(opline->op1)), 
 				EX_CONSTANT(opline->op1) + 1, 
@@ -811,11 +812,30 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	} else if (opline->op1_type == IS_UNUSED) {
 		ce = zend_fetch_class(
 			NULL, opline->op1.num);
-		uopz_find_mock(ce->name, &ce);	
+		uopz_find_mock(ce->name, &obj, &ce);	
 	} else {
 		ce = Z_CE_P(
 			EX_VAR(opline->op1.var));
-		uopz_find_mock(ce->name, &ce);
+		uopz_find_mock(ce->name, &obj, &ce);
+	}
+
+	if (obj != NULL) {
+		ZVAL_OBJ(
+			EX_VAR(opline->result.var), obj);
+		Z_ADDREF_P(EX_VAR(opline->result.var));
+
+		if (opline->extended_value == 0 && (opline+1)->opcode == ZEND_DO_FCALL) {
+			UOPZ_VM_NEXT(0, 2);
+		}
+
+		call = zend_vm_stack_push_call_frame(
+			ZEND_CALL_FUNCTION, (zend_function *) &zend_pass_function,
+			opline->extended_value, NULL, NULL);
+
+		call->prev_execute_data = EX(call);
+		EX(call) = call;
+
+		UOPZ_VM_NEXT(0, 1);
 	}
 
 	result = EX_VAR(opline->result.var);
@@ -946,7 +966,7 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_SAVE_OPLINE();
 	
 	if (opline->op1_type == IS_CONST) {
-		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &ce) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), NULL, &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
 				Z_STR_P(EX_CONSTANT(opline->op1)), 
 				EX_CONSTANT(opline->op1) + 1, 
@@ -966,11 +986,11 @@ int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 				UOPZ_HANDLE_EXCEPTION();
 			}
-			uopz_find_mock(ce->name, &ce);
+			uopz_find_mock(ce->name, NULL, &ce);
 		} else {
 			ce = 
 				Z_CE_P(EX_VAR(opline->op1.var));
-			uopz_find_mock(ce->name, &ce);
+			uopz_find_mock(ce->name, NULL, &ce);
 		}
 	}
 
@@ -1032,7 +1052,8 @@ int uopz_vm_fetch_class(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		}
 
 		uopz_find_mock(
-			Z_CE_P(EX_VAR(opline->result.var))->name, 
+			Z_CE_P(EX_VAR(opline->result.var))->name,
+			NULL, 
 			&Z_CE_P(EX_VAR(opline->result.var)));
 
 		UOPZ_VM_NEXT(0, 1);
@@ -1044,7 +1065,7 @@ int uopz_vm_fetch_class(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			execute_data,
 			&free_op2, BP_VAR_R);
 
-		if (uopz_find_mock(Z_STR_P(name), &Z_CE_P(EX_VAR(opline->result.var))) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(name), NULL, &Z_CE_P(EX_VAR(opline->result.var))) != SUCCESS) {
 			Z_CE_P(EX_VAR(opline->result.var)) = zend_fetch_class_by_name(
 									Z_STR_P(name), 
 									name + 1, 
@@ -1059,11 +1080,11 @@ int uopz_vm_fetch_class(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			&free_op2, BP_VAR_R);
 _uopz_vm_fetch_class_try:
 		if (Z_TYPE_P(name) == IS_OBJECT) {
-			if (uopz_find_mock(Z_OBJCE_P(name)->name, &Z_CE_P(EX_VAR(opline->result.var))) != SUCCESS) {
+			if (uopz_find_mock(Z_OBJCE_P(name)->name, NULL, &Z_CE_P(EX_VAR(opline->result.var))) != SUCCESS) {
 				Z_CE_P(EX_VAR(opline->result.var)) = Z_OBJCE_P(name);	
 			}
 		} else if (Z_TYPE_P(name) == IS_STRING) {
-			if (uopz_find_mock(Z_STR_P(name), &Z_CE_P(EX_VAR(opline->result.var))) != SUCCESS) {
+			if (uopz_find_mock(Z_STR_P(name), NULL, &Z_CE_P(EX_VAR(opline->result.var))) != SUCCESS) {
 				Z_CE_P(EX_VAR(opline->result.var)) = zend_fetch_class(Z_STR_P(name), opline->op1.num);
 			}
 		} else if (opline->op2_type & (IS_VAR|IS_CV) && Z_TYPE_P(name) == IS_REFERENCE) {
@@ -1094,7 +1115,7 @@ int uopz_vm_add_trait(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_find_mock(Z_STR_P(name), &trait) != SUCCESS) {
+	if (uopz_find_mock(Z_STR_P(name), NULL, &trait) != SUCCESS) {
 		trait = zend_fetch_class_by_name(
 				Z_STR_P(name), 
 				name + 1, 
@@ -1122,7 +1143,7 @@ int uopz_vm_add_interface(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	UOPZ_SAVE_OPLINE();
 
-	if (uopz_find_mock(Z_STR_P(name), &iface) != SUCCESS) {
+	if (uopz_find_mock(Z_STR_P(name), NULL, &iface) != SUCCESS) {
 		iface = zend_fetch_class_by_name(
 				Z_STR_P(name), 
 				name + 1, 
@@ -1224,7 +1245,7 @@ int uopz_vm_unset_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
 #endif
 
 	if (opline->op2_type == IS_CONST) {
-		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op2)), &ce) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op2)), NULL, &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
 				Z_STR_P(EX_CONSTANT(opline->op2)), 
 				EX_CONSTANT(opline->op2) + 1, 
@@ -1237,11 +1258,11 @@ int uopz_vm_unset_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
 	} else if (opline->op2_type == IS_UNUSED) {
 		ce = zend_fetch_class(NULL, 
 			opline->op2.num);
-		uopz_find_mock(ce->name, &ce);
+		uopz_find_mock(ce->name, NULL, &ce);
 	} else {
 		ce = Z_CE_P(
 			EX_VAR(opline->op2.var));
-		uopz_find_mock(ce->name, &ce);
+		uopz_find_mock(ce->name, NULL, &ce);
 	}
 #if PHP_VERSION_ID >= 70300
 	vname = uopz_get_zval(
@@ -1319,7 +1340,7 @@ int uopz_vm_isset_isempty_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
 #endif
 
 	if (opline->op2_type == IS_CONST) {
-		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op2)), &ce) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op2)), NULL, &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
 				Z_STR_P(EX_CONSTANT(opline->op2)), 
 				EX_CONSTANT(opline->op2) + 1, 
@@ -1333,11 +1354,11 @@ int uopz_vm_isset_isempty_static_prop(UOPZ_OPCODE_HANDLER_ARGS) {
 		if (opline->op2_type == IS_UNUSED) {
 			ce = zend_fetch_class(NULL, 
 				opline->op2.num);
-			uopz_find_mock(ce->name, &ce);
+			uopz_find_mock(ce->name, NULL, &ce);
 		} else {
 			ce = Z_CE_P(
 				EX_VAR(opline->op2.var));
-			uopz_find_mock(ce->name, &ce);
+			uopz_find_mock(ce->name, NULL, &ce);
 		}
 	}
 
@@ -1415,7 +1436,7 @@ int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC) { /* {{{ *
 
 	if (opline->op2_type == IS_CONST) {
 		zval *clazz = EX_CONSTANT(opline->op2);
-		if (uopz_find_mock(Z_STR_P(clazz), &ce) != SUCCESS) {
+		if (uopz_find_mock(Z_STR_P(clazz), NULL, &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
 				Z_STR_P(clazz), clazz + 1, 
 				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
@@ -1430,12 +1451,12 @@ int uopz_vm_fetch_static_helper(int type UOPZ_OPCODE_HANDLER_ARGS_DC) { /* {{{ *
 			if (ce == NULL) {
 				UOPZ_HANDLE_EXCEPTION();
 			}
-			uopz_find_mock(ce->name, &ce);
+			uopz_find_mock(ce->name, NULL, &ce);
 		} else {
 			ce = Z_CE_P(
 				EX_VAR(opline->op2.var));
 
-			uopz_find_mock(ce->name, &ce);
+			uopz_find_mock(ce->name, NULL, &ce);
 		}
 	}
 
