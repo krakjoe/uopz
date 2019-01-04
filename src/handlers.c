@@ -1762,7 +1762,11 @@ int uopz_vm_fetch_obj_func_arg(UOPZ_OPCODE_HANDLER_ARGS) {
 		UOPZ_VM_DISPATCH();
 	}
 
+#if PHP_VERSION_ID >= 70300
 	if (ZEND_CALL_INFO(EX(call)) & ZEND_CALL_SEND_ARG_BY_REF) {
+#else
+	if (uopz_is_by_ref_func_arg_fetch(EX(opline), EX(call))) {
+#endif
 		if (opline->op1_type & (IS_CONST|IS_TMP_VAR)) {
 			UOPZ_VM_DISPATCH();
 		}
