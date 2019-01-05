@@ -47,7 +47,6 @@ before_script:
   - echo  "#!/bin/bash"                                           >> $HOME/bin/valgrind
   - echo "/usr/bin/valgrind --suppressions=$HOME/default.supp \$@" >> $HOME/bin/valgrind
   - chmod +x $HOME/bin/valgrind
-  - cat $HOME/bin/valgrind
   - export PATH=$HOME/bin:$PATH
   - echo "variables_order=EGPCS"                >> $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/php.ini
   - echo                                        > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/xdebug.ini
