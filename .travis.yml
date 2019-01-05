@@ -34,6 +34,8 @@ matrix:
       env: OPCACHE=0 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
     - php: nightly
       env: OPCACHE=1 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
+    - php: 7.3
+      env: OPCACHE=1 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-uopz-coverage" RULE="uopz-test-coverage-travis"
 
 before_install:
   - test $CONF != "enable-uopz-coverage" || pip install --user cpp-coveralls
