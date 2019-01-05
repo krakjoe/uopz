@@ -220,8 +220,9 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	op_array->fn_flags |= flags;
 	op_array->scope = scope;
 	op_array->prototype = prototype;
-
 	op_array->run_time_cache = zend_arena_alloc(&CG(arena), op_array->cache_size);
+
+	memset(op_array->run_time_cache, 0, op_array->cache_size);
 
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_copy(op_array->doc_comment);
