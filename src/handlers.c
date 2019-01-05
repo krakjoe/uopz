@@ -559,7 +559,7 @@ int uopz_vm_init_ns_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_USE_OPLINE;
-	zend_object *object;
+	zend_object *object = NULL;
 	zval *method;
 	zend_class_entry *ce;
 	zend_function *fbc;
