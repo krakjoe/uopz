@@ -84,6 +84,7 @@ static PHP_MINIT_FUNCTION(uopz)
 	REGISTER_LONG_CONSTANT("ZEND_ACC_ABSTRACT", 			ZEND_ACC_ABSTRACT,				CONST_CS|CONST_PERSISTENT);
 
 	uopz_executors_init();
+	uopz_handlers_init();
 
 	return SUCCESS;
 }
@@ -96,6 +97,7 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 		return SUCCESS;
 	}
 
+	uopz_handlers_shutdown();
 	uopz_executors_shutdown();
 
 	return SUCCESS;
@@ -128,8 +130,6 @@ static PHP_RINIT_FUNCTION(uopz)
 				ce : zend_exception_get_default();
 	zend_string_release(spl);
 
-	/* this is not nice, but makes zend_extension (xdbg,o+) play nicer */
-	uopz_handlers_init();
 	uopz_request_init();
 
 	return SUCCESS;
@@ -144,7 +144,6 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 	}
 
 	uopz_request_shutdown();
-	uopz_handlers_shutdown();
 
 	return SUCCESS;
 }
