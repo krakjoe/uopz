@@ -141,7 +141,9 @@ uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
 	}
 
 	if (!returns) {
-		if (function->common.prototype) {
+		if (function->common.prototype && 
+		    function->common.prototype->common.scope &&
+		    function->common.prototype->common.scope->ce_flags & ZEND_ACC_INTERFACE) {
 			return uopz_find_return(
 				function->common.prototype);
 		}

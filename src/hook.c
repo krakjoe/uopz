@@ -136,6 +136,12 @@ uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
 	}
 
 	if (!hooks) {
+		if (function->common.prototype && 
+		    function->common.prototype->common.scope &&
+		    function->common.prototype->common.scope->ce_flags & ZEND_ACC_INTERFACE) {
+			return uopz_find_hook(
+				function->common.prototype);
+		}
 		return NULL;
 	}
 
