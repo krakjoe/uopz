@@ -28,7 +28,7 @@ int uopz_find_method(zend_class_entry *ce, zend_string *name, zend_function **fu
 
 zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function);
 
-int uopz_clean_function(zval *zv, void *arg);
+int uopz_clean_function(zval *zv);
 int uopz_clean_class(zval *zv);
 
 void uopz_request_init(void);

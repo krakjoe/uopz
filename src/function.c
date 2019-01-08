@@ -63,8 +63,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 
 	function = uopz_copy_closure(clazz, 
 			(zend_function*) zend_get_closure_method_def(closure),
-			flags, 
-			(zend_function*) zend_hash_find_ptr(table, key));
+			flags);
 
 	zend_hash_update_ptr(table, key, (void*) function);
 
