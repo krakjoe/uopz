@@ -102,22 +102,22 @@ zend_bool uopz_unset_hook(zend_class_entry *clazz, zend_string *function) { /* {
 void uopz_get_hook(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
 	HashTable *hooks;
 	uopz_hook_t *uhook;
+	zend_string *key = zend_string_tolower(function);
 	
 	if (clazz) {
 		hooks = zend_hash_find_ptr(&UOPZ(hooks), clazz->name);
 	} else hooks = zend_hash_index_find_ptr(&UOPZ(hooks), 0);
 
-	if (!hooks) {
+	if (!hooks || !zend_hash_exists(hooks, key)) {
+		zend_string_release(key);
 		return;
 	}
 
-	uhook = zend_hash_find_ptr(hooks, function);
-
-	if (!uhook) {
-		return;
-	}
+	uhook = zend_hash_find_ptr(hooks, key);
 
 	ZVAL_COPY(return_value, &uhook->closure);
+
+	zend_string_release(key);
 } /* }}} */
 
 uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
