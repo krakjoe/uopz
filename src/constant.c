@@ -27,10 +27,31 @@
 
 /* {{{ */
 zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zval *variable) {
-	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
+	zend_string   *key = zend_string_copy(name);
+	zend_constant *zconstant = zend_hash_find_ptr(table, key);
 
-	if (!(zconstant = zend_hash_find_ptr(table, name))) {
+	if (!zconstant && !clazz) {
+		char *ns = zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
+		size_t nss;
+
+		if (ns) {
+			zend_string *heap = zend_string_tolower(key);	
+		
+			ns++;
+			nss =  (ZSTR_VAL(name) + ZSTR_LEN(name)) - ns;
+			
+			memcpy(&ZSTR_VAL(heap)[ZSTR_LEN(heap) - nss], ns, nss);
+			
+			zconstant = zend_hash_find_ptr(table, heap);
+
+			zend_string_release(key);
+
+			key = heap;
+		}
+	}
+
+	if (!zconstant) {
 		if (!clazz) {
 			zend_constant create;
 
@@ -41,7 +62,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 #else
 			ZEND_CONSTANT_SET_FLAGS(&create, CONST_CS, PHP_USER_CONSTANT);
 #endif
-			create.name = zend_string_copy(name);
+			create.name = zend_string_copy(key);
 
 			zend_register_constant(&create);
 		} else {
@@ -50,6 +71,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 			Z_TRY_ADDREF_P(variable);
 		}
 
+		zend_string_release(key);
 		return 1;
 	}
 
@@ -64,17 +86,19 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 		} else {
 			uopz_exception(
 				"failed to redefine the internal %s, not allowed", ZSTR_VAL(name));
+			zend_string_release(key);
 			return 0;
 		}
 
 	} else {
-		zend_hash_del(table, name);
+		zend_hash_del(table, key);
 
 		zend_declare_class_constant(clazz, 
 			ZSTR_VAL(name), ZSTR_LEN(name), variable);
 		Z_TRY_ADDREF_P(variable);
 	}
 
+	zend_string_release(key);
 	return 1;
 } /* }}} */
 
