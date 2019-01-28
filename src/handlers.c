@@ -344,10 +344,10 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 
 	if (EX(opline) < &EX(func)->op_array.opcodes[EX(func)->op_array.last - 1]) {
-		UOPZ_LOAD_NEXT_OPLINE();
+		UOPZ_OPLINE = UOPZ_OPLINE + 1;
 
 		while (EX(opline)->opcode == ZEND_EXT_STMT) {
-			UOPZ_LOAD_NEXT_OPLINE();
+			UOPZ_OPLINE = UOPZ_OPLINE + 1;
 		}
 
 		UOPZ_VM_CONTINUE();
