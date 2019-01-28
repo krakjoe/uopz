@@ -76,12 +76,12 @@ int(5)
 int(10)
 object(Bar)#1 (0) {
 }
-object(Qux)#1 (0) {
+object(Qux)#2 (0) {
 }
 int(50)
 int(50)
 int(20)
-object(Interfacing)#2 (0) {
+object(Interfacing)#3 (0) {
 }
-object(Traiting)#2 (0) {
+object(Traiting)#3 (0) {
 }
