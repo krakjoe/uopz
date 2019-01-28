@@ -215,9 +215,31 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
 
-	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE | ZEND_ACC_PPP_MASK;	
+	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE;	
 	op_array->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
-	op_array->fn_flags |= flags;
+
+	if (flags & ZEND_ACC_PPP_MASK) {
+		op_array->fn_flags &= ~ZEND_ACC_PPP_MASK;
+
+		switch (flags & ZEND_ACC_PPP_MASK) {
+			case ZEND_ACC_PUBLIC:
+				op_array->fn_flags |= ZEND_ACC_PUBLIC;
+			break;
+
+			case ZEND_ACC_PROTECTED:
+				op_array->fn_flags |= ZEND_ACC_PROTECTED;
+			break;
+
+			case ZEND_ACC_PRIVATE:
+				op_array->fn_flags |= ZEND_ACC_PRIVATE;
+			break;
+		}
+	}
+
+	if (flags & ZEND_ACC_STATIC) {
+		op_array->fn_flags |= ZEND_ACC_STATIC;
+	}
+	
 	op_array->scope = scope;
 	op_array->prototype = NULL;
 	op_array->run_time_cache = zend_arena_alloc(&CG(arena), op_array->cache_size);

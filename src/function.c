@@ -180,7 +180,9 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	}
 
 	current = function->common.fn_flags;
-	function->common.fn_flags = flags;
+	if (flags) {
+		function->common.fn_flags = flags;
+	}
 	RETURN_LONG(current);
 } /* }}} */
 
