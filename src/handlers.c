@@ -329,10 +329,6 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 		case ZEND_FETCH_OBJ_UNSET:
 			zend = zend_vm_fetch_obj_unset;
 		break;
-
-		case ZEND_ASSIGN_OBJ:
-			zend = zend_vm_assign_obj;
-		break;
 	}
 
 	if (zend) {
