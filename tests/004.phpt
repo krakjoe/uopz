@@ -6,82 +6,34 @@ uopz_set_mock
 uopz.disable=0
 --FILE--
 <?php
+class Foo {
+	static $prop = 1;
+
+	public static function method() {
+		return -1;	
+	}
+}
+
 class Bar {
-	const THING = 5;
-
-	public static function thing() {
-		return 10;
-	}
+	static $prop = 2;
 }
 
-uopz_set_mock("Foo", "Bar");
+uopz_set_mock(Foo::class, Bar::class);
 
-var_dump($foo = new Foo);
+var_dump(new Foo(), Foo::$prop);
 
-var_dump(FOO::THING);
+var_dump(Foo::method());
 
-var_dump($foo::THING);
+uopz_unset_mock(Foo::class);
 
-var_dump(Foo::thing());
+uopz_set_mock(Bar::class, new Foo);
 
-$foo = "Foo";
-
-var_dump(new $foo);
-
-class Qux {
-	const THING = 50;
-
-	public static function thing() {
-		return 20;
-	}
-}
-
-uopz_set_mock(Foo::class, new Qux);
-
-var_dump($foo = new Foo);
-
-var_dump(FOO::THING);
-
-var_dump($foo::THING);
-
-var_dump(Foo::thing());
-
-interface IFaceMock {
-	
-}
-
-uopz_set_mock(IFace::class, IFaceMock::class);
-
-class Interfacing implements IFace {}
-
-var_dump(new Interfacing);
-
-trait ITraitMock {
-
-}
-
-uopz_set_mock(ITrait::class, ITraitMock::class);
-
-class Traiting {
-	use ITrait;
-}
-
-var_dump(new Traiting());
+var_dump(new Bar());
 ?>
---EXPECT--
-object(Bar)#1 (0) {
+--EXPECTF--
+object(Bar)#%d (0) {
 }
-int(5)
-int(5)
-int(10)
-object(Bar)#1 (0) {
-}
-object(Qux)#2 (0) {
-}
-int(50)
-int(50)
-int(20)
-object(Interfacing)#3 (0) {
-}
-object(Traiting)#3 (0) {
+int(1)
+int(-1)
+object(Foo)#%d (0) {
 }

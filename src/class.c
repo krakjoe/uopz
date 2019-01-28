@@ -75,7 +75,7 @@ int uopz_get_mock(zend_string *clazz, zval *return_value) { /* {{{ */
 	return SUCCESS;
 } /* }}} */
 
-int uopz_find_mock(zend_string *clazz, zend_class_entry **mock) { /* {{{ */
+int uopz_find_mock(zend_string *clazz, zend_object **object, zend_class_entry **mock) { /* {{{ */
 	zend_string *key = zend_string_tolower(clazz);
 	zval *found = zend_hash_find(&UOPZ(mocks), key);
 
@@ -89,6 +89,9 @@ int uopz_find_mock(zend_string *clazz, zend_class_entry **mock) { /* {{{ */
 		*mock = zend_lookup_class(Z_STR_P(found));
 	} else {
 		*mock = Z_OBJCE_P(found);
+		if (object) {
+			*object = Z_OBJ_P(found);
+		}
 	}
 
 	return SUCCESS;
