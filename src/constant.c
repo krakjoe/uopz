@@ -143,12 +143,14 @@ _uopz_constant_undefine:
 #else
 		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) != PHP_USER_CONSTANT) {
 #endif
+
+			uopz_exception(
+				"failed to undefine the internal constant %s, not allowed", ZSTR_VAL(name));
+
 			if (heap) {
 				zend_string_release(heap);
 			}
 
-			uopz_exception(
-				"failed to undefine the internal constant %s, not allowed", ZSTR_VAL(name));
 			return 0;
 		}
 
