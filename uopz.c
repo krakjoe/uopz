@@ -118,6 +118,22 @@ static PHP_RINIT_FUNCTION(uopz)
 		return SUCCESS;
 	}
 
+	if (INI_INT("opcache.optimization_level") & (1<<0)) {
+		/* must disable block pass 1 constant substitution */
+		zend_string *optimizer = zend_string_init(
+			ZEND_STRL("opcache.optimization_level"), 1);
+		zend_string *level = zend_strpprintf(0, 
+			"0x%0X", (unsigned int) INI_INT("opcache.optimization_level"));
+
+		ZSTR_VAL(level)[ZSTR_LEN(level)] = '0';
+
+		zend_alter_ini_entry(optimizer, level, 
+			ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE);
+
+		zend_string_release(optimizer);
+		zend_string_release(level);
+	}
+
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
 	spl_ce_RuntimeException =
 			(ce = zend_lookup_class(spl)) ?
