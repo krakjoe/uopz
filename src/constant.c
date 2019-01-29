@@ -163,10 +163,6 @@ _uopz_constant_undefine:
 
 	zend_hash_del(table, name);
 
-	if (heap) {
-		zend_string_release(heap);
-	}
-
 	return 1;
 } /* }}} */
 
