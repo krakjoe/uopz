@@ -152,19 +152,20 @@ _uopz_constant_undefine:
 			return 0;
 		}
 
+		zend_hash_del(table, name);
+
 		if (heap) {
 			zend_string_release(heap);
 		}
 
-		zend_hash_del(table, name);
-
 		return 1;
 	}
+
+	zend_hash_del(table, name);
 
 	if (heap) {
 		zend_string_release(heap);
 	}
-	zend_hash_del(table, name);
 
 	return 1;
 } /* }}} */
