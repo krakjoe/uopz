@@ -106,20 +106,54 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name) {
 	zend_constant *zconstant;
 	HashTable *table = clazz ? &clazz->constants_table : EG(zend_constants);
+	zend_string *heap = NULL;
 
 	if (!(zconstant = zend_hash_find_ptr(table, name))) {
+		if (!clazz) {
+			char *ns = zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
+			size_t nss;
+
+			if (ns) {
+				zend_string *heap = zend_string_tolower(name);	
+
+				ns++;
+				nss =  (ZSTR_VAL(name) + ZSTR_LEN(name)) - ns;
+				
+				memcpy(&ZSTR_VAL(heap)[ZSTR_LEN(heap) - nss], ns, nss);
+				
+				zconstant = zend_hash_find_ptr(table, heap);
+
+				if (!zconstant) {
+					zend_string_release(heap);
+					return 0;
+				}
+
+				name = heap;
+
+				goto _uopz_constant_undefine;
+			}
+		}
 		return 0;
 	}
 
+_uopz_constant_undefine:
 	if (!clazz) {
 #if PHP_VERSION_ID < 70300
 		if (zconstant->module_number != PHP_USER_CONSTANT) {
 #else
 		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) != PHP_USER_CONSTANT) {
 #endif
+			if (heap) {
+				zend_string_release(heap);
+			}
+
 			uopz_exception(
 				"failed to undefine the internal constant %s, not allowed", ZSTR_VAL(name));
 			return 0;
+		}
+
+		if (heap) {
+			zend_string_release(heap);
 		}
 
 		zend_hash_del(table, name);
@@ -127,6 +161,9 @@ zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name) {
 		return 1;
 	}
 
+	if (heap) {
+		zend_string_release(heap);
+	}
 	zend_hash_del(table, name);
 
 	return 1;
