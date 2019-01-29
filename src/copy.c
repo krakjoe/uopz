@@ -242,10 +242,15 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	
 	op_array->scope = scope;
 	op_array->prototype = NULL;
+#if PHP_VERSION_ID >= 70400
+	ZEND_MAP_PTR_INIT(op_array->run_time_cache, 
+		zend_arena_alloc(&CG(arena), sizeof(void*)));
+	ZEND_MAP_PTR_SET(op_array->run_time_cache, NULL);
+#else
 	op_array->run_time_cache = zend_arena_alloc(&CG(arena), op_array->cache_size);
 
 	memset(op_array->run_time_cache, 0, op_array->cache_size);
-
+#endif
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_copy(op_array->doc_comment);
 	}
