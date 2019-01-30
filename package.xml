@@ -29,10 +29,10 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-01-02</date>
+ <date>2019-01-30</date>
  <version>
-  <release>5.1.1dev</release>
-  <api>5.1.0</api>
+  <release>6.0.0</release>
+  <api>6.0.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -86,22 +86,13 @@ It supports the following activities:
      <file name="019.phpt" role="test" />
      <file name="020.phpt" role="test" />
      <file name="021.phpt" role="test" />
-     <file name="022.phpt" role="test" />
-     <file name="023.phpt" role="test" />
-     <file name="024.phpt" role="test" />
-     <file name="025.phpt" role="test" />
-     <file name="026.phpt" role="test" />
      <file name="027.phpt" role="test" />
      <file name="028.phpt" role="test" />
      <file name="029.phpt" role="test" />
-     <file name="030.phpt" role="test" />
-     <file name="031.phpt" role="test" />
      <file name="032.phpt" role="test" />
      <file name="033.phpt" role="test" />
-     <file name="034.phpt" role="test" />
      <file name="035.phpt" role="test" />
      <file name="036.phpt" role="test" />
-     <file name="037.phpt" role="test" />
      <file name="038.phpt" role="test" />
      <file name="039.phpt" role="test" />
      <file name="040.phpt" role="test" />
@@ -111,7 +102,8 @@ It supports the following activities:
       <file name="0002-uopz_set_static_clear.phpt" role="test" />
       <file name="0003-uopz_get_property.phpt" role="test" />
       <file name="0004-uopz_set_property.phpt" role="test" />
-      <file name="gh42.phpt" role="test" />
+      <file name="0005-uopz_set_return_prototype.phpt" role="test" />
+      <file name="0006-uopz-opcache-const-subst.phpt" role="test" />
       <file name="gh43.phpt" role="test" />
       <file name="gh53.phpt" role="test" />
       <file name="gh64.phpt" role="test" />
@@ -120,6 +112,9 @@ It supports the following activities:
       <file name="gh76.phpt" role="test" />
       <file name="gh85.phpt" role="test" />
       <file name="gh86.phpt" role="test" />
+      <file name="gh99.phpt" role="test" />
+      <file name="gh100.phpt" role="test" />
+      <file name="gh102.phpt" role="test" />
      </dir>
     </dir>
     <file name="uopz.h" role="src" />
