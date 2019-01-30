@@ -120,19 +120,16 @@ static PHP_RINIT_FUNCTION(uopz)
 
 	if (INI_INT("opcache.optimization_level") & (1<<0)) {
 		/* must disable block pass 1 constant substitution */
-		char level[11];
-		size_t len;
 		zend_string *optimizer = zend_string_init(
 			ZEND_STRL("opcache.optimization_level"), 1);
+		zend_string *level = strpprintf(0, "0x%08X",
+			(unsigned int) INI_INT("opcache.optimization_level") & ~1);
 
-		len = php_sprintf(level, "0x%08X",
-			(unsigned int) INI_INT("opcache.optimization_level"));
-		level[len-1] = '0';
-
-		zend_alter_ini_entry_chars(optimizer, level, len,
+		zend_alter_ini_entry(optimizer, level,
 			ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE);
 
 		zend_string_release(optimizer);
+		zend_string_release(level);
 	}
 
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
