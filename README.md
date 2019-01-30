@@ -307,7 +307,7 @@ function uopz_allow_exit(bool allow) : void;
 Supported Versions
 ==================
 
-The currently supported version of uopz is 5.1 which requires PHP7.1+
+The currently supported version of uopz is 6.0 which requires PHP7.1+
 
 Testing
 =======
