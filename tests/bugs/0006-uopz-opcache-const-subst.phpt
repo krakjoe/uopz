@@ -4,7 +4,8 @@ opcache constant substitution disable
 <?php
 	include("skipif.inc");
 	uopz_allow_exit(true);
-	if (!ini_get("opcache.enable_cli")) die("skip opcache required");
+	$opcache = ini_get("opcache.enable_cli");
+	if ($opcache === false || $opcache === "0") die("skip opcache required");
 ?>
 --INI--
 uopz.disable=0
