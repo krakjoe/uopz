@@ -29,7 +29,7 @@ namespace {
 --EXPECTF--
 bool(true)
 
-Fatal error: Uncaught Error: Call to undefined function Moo\none() in %s:4
+Fatal error: Uncaught Error: Call to undefined function%snone() in %s:4
 Stack trace:
 #0 %s(19): Moo\fail()
 #1 {main}
