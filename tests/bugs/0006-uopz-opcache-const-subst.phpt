@@ -1,8 +1,9 @@
 --TEST--
 opcache constant substitution disable
 --SKIPIF--
-<?php 
-	include("skipif.inc") ;
+<?php
+	include("skipif.inc");
+	uopz_allow_exit(true);
 	if (!extension_loaded("opcache")) die("skip opcache required");
 ?>
 --INI--
@@ -12,7 +13,6 @@ opcache.enable_cli=1
 opcache.optimization_level=0x7FFFBFFF
 --FILE--
 <?php
-
 class Foo {
     const USE_B = false;
  
