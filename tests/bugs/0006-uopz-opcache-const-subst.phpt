@@ -4,7 +4,7 @@ opcache constant substitution disable
 <?php
 	include("skipif.inc");
 	uopz_allow_exit(true);
-	if (!extension_loaded("opcache")) die("skip opcache required");
+	if (!extension_loaded("Zend OPcache")) die("skip opcache required");
 ?>
 --INI--
 uopz.disable=0
