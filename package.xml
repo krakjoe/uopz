@@ -40,7 +40,10 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
--
+- Breaking change to uopz_set_mock: now behaves like the old test-helpers new overload
+- Fixed redefine/undefine namespaced constants
+- Fix flags being ignored when adding functions
+- Remove executor hook for maximum compatibility
  </notes>
  <contents>
   <dir name="/">
