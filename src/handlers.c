@@ -29,7 +29,7 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#define UOPZ_HANDLERS_COUNT 11
+#define UOPZ_HANDLERS_COUNT 12
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
@@ -108,6 +108,7 @@ zend_vm_handler_t zend_vm_exit;
 zend_vm_handler_t zend_vm_new;
 zend_vm_handler_t zend_vm_fetch_constant;
 zend_vm_handler_t zend_vm_do_fcall;
+zend_vm_handler_t zend_vm_do_ucall;
 zend_vm_handler_t zend_vm_fetch_class;
 zend_vm_handler_t zend_vm_fetch_class_constant;
 zend_vm_handler_t zend_vm_init_fcall;
@@ -120,6 +121,7 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS);
+int uopz_vm_do_ucall(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_class_constant(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_fcall_by_name(UOPZ_OPCODE_HANDLER_ARGS);
@@ -133,6 +135,7 @@ UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CONSTANT,          fetch_constant)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CLASS_CONSTANT,    fetch_class_constant)
 	UOPZ_HANDLER_DECL(ZEND_DO_FCALL,                do_fcall)
+	UOPZ_HANDLER_DECL(ZEND_DO_UCALL,                do_ucall)
 	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL,              init_fcall)
 	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL_BY_NAME,      init_fcall_by_name)
 	UOPZ_HANDLER_DECL(ZEND_INIT_NS_FCALL_BY_NAME,   init_ns_fcall_by_name)
@@ -214,6 +217,10 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 
 		case ZEND_DO_FCALL:
 			zend = zend_vm_do_fcall;
+		break;
+
+		case ZEND_DO_UCALL:
+			zend = zend_vm_do_ucall;
 		break;
 	}
 
@@ -393,7 +400,7 @@ static zend_always_inline int php_uopz_leave_helper(zend_execute_data *execute_d
 	UOPZ_VM_LEAVE();
 } /* }}} */
 
-int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+int uopz_vm_do_call_common(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_execute_data *call = EX(call);
 
 	if (call) {
@@ -432,6 +439,14 @@ int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 _uopz_vm_do_fcall_dispatch:
 	UOPZ_VM_DISPATCH();
+} /* }}} */
+
+int uopz_vm_do_ucall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	return uopz_vm_do_call_common(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
+} /* }}} */
+
+int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	return uopz_vm_do_call_common(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
 } /* }}} */
 
 int uopz_vm_call_common(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
