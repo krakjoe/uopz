@@ -1,15 +1,18 @@
 --TEST--
-prototype mixup setting return
+opcache constant substitution disable
 --SKIPIF--
-<?php include("skipif.inc") ?>
-<?php if (!extension_loaded("opcache")) die("skip opcache required") ?>
+<?php 
+	include("skipif.inc") ;
+	if (!extension_loaded("opcache")) die("skip opcache required");
+?>
 --INI--
 uopz.disable=0
+opcache.enabled=1
 opcache.enable_cli=1
 opcache.optimization_level=0x7FFFBFFF
 --FILE--
 <?php
- 
+
 class Foo {
     const USE_B = false;
  

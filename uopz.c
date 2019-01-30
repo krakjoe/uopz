@@ -120,12 +120,13 @@ static PHP_RINIT_FUNCTION(uopz)
 
 	if (INI_INT("opcache.optimization_level") & (1<<0)) {
 		/* must disable block pass 1 constant substitution */
-		char level[100];
+		char level[11];
 		size_t len;
 		zend_string *optimizer = zend_string_init(
 			ZEND_STRL("opcache.optimization_level"), 1);
 
-		len = php_sprintf(level, "0x%0X", (unsigned int) INI_INT("opcache.optimization_level"));
+		len = php_sprintf(level, "0x%08X",
+			(unsigned int) INI_INT("opcache.optimization_level"));
 		level[len-1] = '0';
 
 		zend_alter_ini_entry_chars(optimizer, level, len,
