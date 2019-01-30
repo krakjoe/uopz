@@ -235,7 +235,6 @@ PHP_FUNCTION(uopz_call_user_func) {
 	zval retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
-	zend_class_entry *mock;
 
 	ZEND_PARSE_PARAMETERS_START(1, -1)
 		Z_PARAM_FUNC(fci, fcc)
@@ -259,7 +258,6 @@ PHP_FUNCTION(uopz_call_user_func_array) {
 	zval *params, retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
-	zend_class_entry *mock;
 
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_FUNC(fci, fcc)

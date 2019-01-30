@@ -32,7 +32,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 	zend_constant *zconstant = zend_hash_find_ptr(table, key);
 
 	if (!zconstant && !clazz) {
-		char *ns = zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
+		const char *ns = zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
 		size_t nss;
 
 		if (ns) {
@@ -110,7 +110,7 @@ zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name) {
 
 	if (!(zconstant = zend_hash_find_ptr(table, name))) {
 		if (!clazz) {
-			char *ns = zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
+			const char *ns = zend_memrchr(ZSTR_VAL(name), '\\', ZSTR_LEN(name));
 			size_t nss;
 
 			if (ns) {
