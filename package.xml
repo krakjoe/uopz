@@ -31,7 +31,7 @@ It supports the following activities:
  </lead>
  <date>2019-01-30</date>
  <version>
-  <release>6.0.0</release>
+  <release>6.0.1dev</release>
   <api>6.0.0</api>
  </version>
  <stability>
@@ -40,10 +40,7 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Breaking change to uopz_set_mock: now behaves like the old test-helpers new overload
-- Fixed redefine/undefine namespaced constants
-- Fix flags being ignored when adding functions
-- Remove executor hook for maximum compatibility
+-
  </notes>
  <contents>
   <dir name="/">
@@ -141,6 +138,24 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2019-01-30</date>
+   <version>
+    <release>6.0.0</release>
+    <api>6.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Breaking change to uopz_set_mock: now behaves like the old test-helpers new overload
+- Fixed redefine/undefine namespaced constants
+- Fix flags being ignored when adding functions
+- Remove executor hook for maximum compatibility
+   </notes>
+  </release>
   <release>
    <date>2019-01-02</date>
    <version>
