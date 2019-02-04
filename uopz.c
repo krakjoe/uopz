@@ -56,6 +56,7 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
 PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("uopz.disable", "0", PHP_INI_SYSTEM, OnUpdateBool, disable, zend_uopz_globals, uopz_globals)
+	STD_PHP_INI_ENTRY("uopz.exit",    "0", PHP_INI_SYSTEM, OnUpdateBool, exit,    zend_uopz_globals, uopz_globals)
 PHP_INI_END()
 
 /* {{{ */
@@ -118,18 +119,29 @@ static PHP_RINIT_FUNCTION(uopz)
 		return SUCCESS;
 	}
 
-	if (INI_INT("opcache.optimization_level") & (1<<0)) {
-		/* must disable block pass 1 constant substitution */
+	if (INI_INT("opcache.optimization_level")) {
+
 		zend_string *optimizer = zend_string_init(
 			ZEND_STRL("opcache.optimization_level"), 1);
-		zend_string *level = strpprintf(0, "0x%08X",
-			(unsigned int) INI_INT("opcache.optimization_level") & ~1);
+		zend_long level = INI_INT("opcache.optimization_level");
+		zend_string *value;
 
-		zend_alter_ini_entry(optimizer, level,
+		/* must disable block pass 1 constant substitution */
+		level &= ~(1<<0);
+		
+		/* disable CFG optimization (exit optimized away here) */
+		level &= ~(1<<4);
+
+		/* disable DCE (want code after exit) */
+		level &= ~(1<<13);
+
+		value = strpprintf(0, "0x%08X", (unsigned int) level);
+
+		zend_alter_ini_entry(optimizer, value,
 			ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE);
 
 		zend_string_release(optimizer);
-		zend_string_release(level);
+		zend_string_release(value);
 	}
 
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
