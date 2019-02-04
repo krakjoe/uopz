@@ -56,6 +56,7 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
 PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("uopz.disable", "0", PHP_INI_SYSTEM, OnUpdateBool, disable, zend_uopz_globals, uopz_globals)
+	STD_PHP_INI_ENTRY("uopz.allow_exit", "0", PHP_INI_SYSTEM, OnUpdateBool, exit, zend_uopz_globals, uopz_globals)
 PHP_INI_END()
 
 /* {{{ */
