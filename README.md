@@ -20,6 +20,11 @@ It supports the following activities:
 
 *Note: All of the above activities are compatible with opcache*
 
+Requirements and Installation
+=============================
+
+See [INSTALL.md](INSTALL.md)
+
 API
 ===
 *The PHP API for ```uopz```*
