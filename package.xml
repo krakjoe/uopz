@@ -29,9 +29,9 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-01-30</date>
+ <date>2019-02-06</date>
  <version>
-  <release>6.0.1dev</release>
+  <release>6.0.1</release>
   <api>6.0.0</api>
  </version>
  <stability>
@@ -40,7 +40,10 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
--
+- Add "uopz.exit" configuration option, to allow the execution of exit
+  opcodes or not (default=0 to keep current behavior)
+- Improve opcache optimizer compatibility
+- Display ini settings in module info
  </notes>
  <contents>
   <dir name="/">
@@ -115,6 +118,8 @@ It supports the following activities:
       <file name="gh99.phpt" role="test" />
       <file name="gh100.phpt" role="test" />
       <file name="gh102.phpt" role="test" />
+      <file name="gh106.phpt" role="test" />
+      <file name="gh106a.phpt" role="test" />
      </dir>
     </dir>
     <file name="uopz.h" role="src" />
