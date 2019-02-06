@@ -487,7 +487,9 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (EX(opline)->op2_type == IS_CONST) {
+#if PHP_VERSION_ID < 70300
 		zval *function_name = EX_CONSTANT(EX(opline)->op2);
+#endif
 		if (EX(opline)->op1_type == IS_CONST) {
 #if PHP_VERSION_ID >= 70300
 			CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
