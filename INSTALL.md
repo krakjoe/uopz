@@ -22,9 +22,9 @@ Installation
 
 **Binary distributions**
 
-  * Microsoft Windows: use zip archive from [https://windows.php.net/downloads/pecl/releases/uopz/](https://windows.php.net/downloads/pecl/releases/uopz/)
+  * **Microsoft Windows**: use zip archive from [https://windows.php.net/downloads/pecl/releases/uopz/](https://windows.php.net/downloads/pecl/releases/uopz/)
 
-  * Fedora: use the [php-pecl-uopz](https://apps.fedoraproject.org/packages/php-pecl-uopz) package
+  * **Fedora**: use the [php-pecl-uopz](https://apps.fedoraproject.org/packages/php-pecl-uopz) package
 
     dnf install php-pecl-uopz
 
