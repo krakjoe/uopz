@@ -260,7 +260,6 @@ function uopz_flags(string class, string method [, int flags]) : int;
  * Get or set flags on $method()
  * @param string method
  * @param int flags
- * Note: use ZEND_ACC_FETCH as flags to get flags
  */
 function uopz_flags(string function, [, int flags]) : int;
 
