@@ -45,14 +45,14 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
 #ifdef ZEND_VM_IP_GLOBAL_REG
 #	define UOPZ_OPLINE opline
-#	define UOPZ_USE_OPLINE 
+#	define UOPZ_USE_OPLINE
 #	define UOPZ_LOAD_OPLINE() opline = EX(opline)
 #	define UOPZ_LOAD_NEXT_OPLINE() opline = EX(opline) + 1
 #	define UOPZ_SAVE_OPLINE() EX(opline) = opline
 #else
 #	define UOPZ_OPLINE EX(opline)
 #	define UOPZ_USE_OPLINE const zend_op *opline = EX(opline)
-#	define UOPZ_LOAD_OPLINE() 
+#	define UOPZ_LOAD_OPLINE()
 #	define UOPZ_LOAD_NEXT_OPLINE() UOPZ_OPLINE++
 #	define UOPZ_SAVE_OPLINE()
 #endif
@@ -296,8 +296,12 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (opline->op1_type == IS_CONST) {
 		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &obj, &ce) != SUCCESS) {
 			ce = zend_fetch_class_by_name(
-				Z_STR_P(EX_CONSTANT(opline->op1)), 
-				EX_CONSTANT(opline->op1) + 1, 
+				Z_STR_P(EX_CONSTANT(opline->op1)),
+#if PHP_VERSION_ID >= 70400
+                Z_STR_P(EX_CONSTANT(opline->op1) + 1),
+#else
+				EX_CONSTANT(opline->op1) + 1,
+#endif
 				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
 
 			if (ce == NULL) {
@@ -327,7 +331,13 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 		call = zend_vm_stack_push_call_frame(
 			ZEND_CALL_FUNCTION, (zend_function *) &zend_pass_function,
-			opline->extended_value, NULL, NULL);
+			opline->extended_value,
+#if PHP_VERSION_ID >= 70400
+            NULL
+#else
+            NULL, NULL
+#endif
+        );
 
 		call->prev_execute_data = EX(call);
 		EX(call) = call;
@@ -356,20 +366,44 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 		call = zend_vm_stack_push_call_frame(
 			ZEND_CALL_FUNCTION, (zend_function *) &zend_pass_function,
-			opline->extended_value, NULL, NULL);
+			opline->extended_value,
+#if PHP_VERSION_ID >= 70400
+            NULL);
+#else
+            NULL, NULL);
+#endif
 	} else {
+#if PHP_VERSION_ID >= 70400
+        if (constructor->type == ZEND_USER_FUNCTION && !RUN_TIME_CACHE(&constructor->op_array)) {
+            void **run_time_cache =
+                zend_arena_alloc(&CG(arena), constructor->op_array.cache_size);
+            memset(run_time_cache, 0, constructor->op_array.cache_size);
+
+            ZEND_MAP_PTR_SET(constructor->op_array.run_time_cache, run_time_cache);
+        }
+#else
 		if (constructor->type == ZEND_USER_FUNCTION && !constructor->op_array.run_time_cache) {
-			constructor->op_array.run_time_cache = 
+			constructor->op_array.run_time_cache =
 				zend_arena_alloc(&CG(arena), constructor->op_array.cache_size);
 			memset(constructor->op_array.run_time_cache, 0, constructor->op_array.cache_size);
 		}
+#endif
 
 		call = zend_vm_stack_push_call_frame(
+#ifdef ZEND_CALL_CTOR
 			ZEND_CALL_FUNCTION | ZEND_CALL_RELEASE_THIS | ZEND_CALL_CTOR,
+#else
+			ZEND_CALL_FUNCTION | ZEND_CALL_RELEASE_THIS | ZEND_CALL_HAS_THIS,
+#endif
 			constructor,
 			opline->extended_value,
+#if PHP_VERSION_ID >= 70400
+            Z_OBJ_P(result)
+#else
 			ce,
-			Z_OBJ_P(result));
+			Z_OBJ_P(result)
+#endif
+            );
 
 		Z_ADDREF_P(result);
 	}
@@ -412,7 +446,7 @@ int uopz_vm_do_call_common(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 		if (ureturn) {
 			const zend_op *opline = EX(opline);
-			zval rv, *return_value = RETURN_VALUE_USED(opline) ? 
+			zval rv, *return_value = RETURN_VALUE_USED(opline) ?
 				EX_VAR(EX(opline)->result.var) : &rv;
 
 			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {

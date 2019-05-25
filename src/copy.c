@@ -215,7 +215,11 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
 
-	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE;	
+	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE;
+#if PHP_VERSION_ID >= 70400
+    op_array->fn_flags &= ~ZEND_ACC_IMMUTABLE;
+#endif
+
 	op_array->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
 
 	if (flags & ZEND_ACC_PPP_MASK) {
@@ -234,14 +238,16 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 				op_array->fn_flags |= ZEND_ACC_PRIVATE;
 			break;
 		}
-	}
+	} else {
+        op_array->fn_flags |= ZEND_ACC_PUBLIC;
+    }
 
 	if (flags & ZEND_ACC_STATIC) {
 		op_array->fn_flags |= ZEND_ACC_STATIC;
 	}
 	
 	op_array->scope = scope;
-	op_array->prototype = NULL;
+	op_array->prototype = copy;
 #if PHP_VERSION_ID >= 70400
 	ZEND_MAP_PTR_INIT(op_array->run_time_cache, 
 		zend_arena_alloc(&CG(arena), sizeof(void*)));

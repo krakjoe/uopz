@@ -9,7 +9,7 @@ uopz.disable=1
 uopz_set_return();
 ?>
 --EXPECTF--
-Fatal error: Uncaught RuntimeException: uopz is disabled by configuration (uopz.disable) in %s:2
+Fatal error: Uncaught %s: uopz is disabled by configuration (uopz.disable) in %s:2
 Stack trace:
 #0 %s(2): uopz_set_return()
 #1 {main}

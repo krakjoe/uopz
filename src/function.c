@@ -157,8 +157,22 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 			return;
 		}
 
+#if PHP_VERSION_ID >= 70400
+        if (clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
+			uopz_exception(
+				"attempt to set flags of immutable class entry %s, not allowed",
+				ZSTR_VAL(clazz->name));
+			return;
+        }
+#endif
+
 		current = clazz->ce_flags;
 		clazz->ce_flags = flags;
+#if PHP_VERSION_ID >= 70400
+        if (current & ZEND_ACC_LINKED) {
+            clazz->ce_flags |= ZEND_ACC_LINKED;
+        }
+#endif
 		RETURN_LONG(current);
 	}
 
@@ -181,6 +195,13 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 
 	current = function->common.fn_flags;
 	if (flags) {
+#if PHP_VERSION_ID >= 70400
+        if (function->common.fn_flags & ZEND_ACC_IMMUTABLE) {
+            uopz_exception(
+				"attempt to set flags of immutable function entry %s, not allowed",
+				ZSTR_VAL(name));
+        }
+#endif
 		function->common.fn_flags = flags;
 	}
 	RETURN_LONG(current);
