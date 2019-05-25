@@ -203,12 +203,12 @@ static void uopz_callers_shutdown(void) { /* {{{ */
 	uopz_caller_switch(&uopz_call_user_func_array_ptr->handler, &zend_call_user_func_array_ptr->handler);
 } /* }}} */
 
-#define UOPZ_CALL_HOOKS() \
+#define UOPZ_CALL_HOOKS(variadic) \
 	{ \
 		uopz_hook_t *uhook = uopz_find_hook(fcc.function_handler); \
 		\
 		if (uhook && !uhook->busy) { \
-			uopz_execute_hook(uhook, execute_data); \
+			uopz_execute_hook(uhook, execute_data, 1, variadic); \
 		} \
 	} \
 	\
@@ -243,7 +243,7 @@ PHP_FUNCTION(uopz_call_user_func) {
 
 	fci.retval = &retval;
 
-	UOPZ_CALL_HOOKS();
+	UOPZ_CALL_HOOKS(0);
 
 	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
 		if (Z_ISREF(retval)) {
@@ -267,7 +267,7 @@ PHP_FUNCTION(uopz_call_user_func_array) {
 	zend_fcall_info_args(&fci, params);
 	fci.retval = &retval;
 
-	UOPZ_CALL_HOOKS();
+	UOPZ_CALL_HOOKS(1);
 
 	if (zend_call_function(&fci, &fcc) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
 		if (Z_ISREF(retval)) {

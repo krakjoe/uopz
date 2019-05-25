@@ -31,7 +31,7 @@ zend_bool uopz_unset_hook(zend_class_entry *clazz, zend_string *function);
 void uopz_get_hook(zend_class_entry *clazz, zend_string *function, zval *return_value);
 
 uopz_hook_t* uopz_find_hook(zend_function *function);
-void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data);
+void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data, zend_bool skip, zend_bool variadic);
 
 void uopz_hook_free(zval *zv);
 #endif	/* UOPZ_HOOK_H */

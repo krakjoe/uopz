@@ -152,7 +152,7 @@ uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
 	return uhook;
 } /* }}} */
 
-void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /* {{{ */
+void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data, zend_bool skip, zend_bool variadic) { /* {{{ */
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
 	char *error = NULL;
@@ -167,8 +167,21 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 
 	zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error);
 
-	fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
-	fci.params = ZEND_CALL_ARG(execute_data, 1);
+	if (!skip) {
+        fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
+	    fci.params = ZEND_CALL_ARG(execute_data, 1);
+    } else {
+        if (variadic) {
+            zend_fcall_info_args_ex(
+                &fci,
+                fcc.function_handler,
+                ZEND_CALL_ARG(execute_data, 2));
+        } else {
+            fci.param_count = ZEND_CALL_NUM_ARGS(execute_data) - 1;
+	        fci.params = ZEND_CALL_ARG(execute_data, 2);
+        }
+    }
+
 	fci.retval= &rv;
 	
 	if (zend_call_function(&fci, &fcc) == SUCCESS) {
@@ -176,6 +189,10 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data) { /*
 			zval_ptr_dtor(&rv);
 		}
 	}
+
+    if (variadic) {
+        zend_fcall_info_args_clear(&fci, 1);
+    }
 
 	zval_ptr_dtor(&closure);
 

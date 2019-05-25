@@ -418,7 +418,7 @@ static zend_always_inline void uopz_run_hook(zend_function *function, zend_execu
 	uopz_hook_t *uhook = uopz_find_hook(function);
 
 	if (uhook && !uhook->busy) {
-		uopz_execute_hook(uhook, execute_data);
+		uopz_execute_hook(uhook, execute_data, 0, 0);
 	}
 } /* }}} */
 
