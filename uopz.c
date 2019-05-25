@@ -511,6 +511,40 @@ static PHP_FUNCTION(uopz_undefine)
 	}
 } /* }}} */
 
+/* {{{ proto bool uopz_implement(string class, string interface) */
+static PHP_FUNCTION(uopz_implement)
+{
+	zend_class_entry *clazz = NULL;
+	zend_class_entry *interface = NULL;
+
+	uopz_disabled_guard();
+
+	if (uopz_parse_parameters("CC", &clazz, &interface) != SUCCESS) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, expected (class, interface)");
+		return;
+	}
+
+	RETURN_BOOL(uopz_implement(clazz, interface));
+} /* }}} */
+
+/* {{{ proto bool uopz_extend(string class, string parent) */
+static PHP_FUNCTION(uopz_extend)
+{
+	zend_class_entry *clazz = NULL;
+	zend_class_entry *parent = NULL;
+
+	uopz_disabled_guard();
+
+	if (uopz_parse_parameters("CC", &clazz, &parent) != SUCCESS) {
+		uopz_refuse_parameters(
+			"unexpected parameter combination, expected (class, parent)");
+		return;
+	}
+
+	RETURN_BOOL(uopz_extend(clazz, parent));
+} /* }}} */
+
 /* {{{ proto int uopz_flags(string function [, int flags])
        proto int uopz_flags(string class, string function [, int flags]) */
 static PHP_FUNCTION(uopz_flags)
@@ -638,6 +672,8 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_unset_hook)
 	UOPZ_FE(uopz_add_function)
 	UOPZ_FE(uopz_del_function)
+	UOPZ_FE(uopz_extend)
+	UOPZ_FE(uopz_implement)
 	UOPZ_FE(uopz_flags)
 	UOPZ_FE(uopz_redefine)
 	UOPZ_FE(uopz_undefine)

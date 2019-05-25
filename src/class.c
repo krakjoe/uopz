@@ -97,6 +97,132 @@ int uopz_find_mock(zend_string *clazz, zend_object **object, zend_class_entry **
 	return SUCCESS;
 } /* }}} */
 
+/* {{{ */
+zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
+	zend_bool is_final, is_trait;
+
+	if (instanceof_function(clazz, parent)) {
+		uopz_exception(
+			"the class provided (%s) already extends %s",
+			ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name));
+		return 0;
+	}
+
+	if ((clazz->ce_flags & ZEND_ACC_TRAIT) &&
+		!(parent->ce_flags & ZEND_ACC_TRAIT)) {
+		uopz_exception(
+		    "the trait provided (%s) cannot extend %s, because %s is not a trait",
+		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
+		return 0;
+	}
+
+	if ((clazz->ce_flags & ZEND_ACC_INTERFACE) &&
+		!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
+		uopz_exception(
+		    "the interface provided (%s) cannot extend %s, because %s is not an interface",
+		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
+		return 0;
+	}
+
+#if PHP_VERSION_ID >= 70400
+	if ((clazz->ce_flags & ZEND_ACC_IMMUTABLE)) {
+		uopz_exception(
+		    "cannot change the class provided (%s), because it is immutable",
+		     ZSTR_VAL(clazz->name));
+		return 0;
+	}
+#endif
+
+	is_final = clazz->ce_flags & ZEND_ACC_FINAL;
+	is_trait = (clazz->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT;
+
+#if PHP_VERSION_ID >= 70400
+    if (is_trait && (parent->ce_flags & ZEND_ACC_IMMUTABLE)) {
+		uopz_exception(
+		    "the parent trait provided (%s) cannot be extended by %s, because it is immutable",
+		     ZSTR_VAL(parent->name), ZSTR_VAL(clazz->name));
+		return 0;
+    }
+#endif
+
+	clazz->ce_flags &= ~ZEND_ACC_FINAL;
+
+	if (clazz->parent) {
+		zend_function *method;
+		zend_string   *name;
+		dtor_func_t    dtor = clazz->function_table.pDestructor;
+
+		clazz->function_table.pDestructor = NULL;
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&clazz->function_table, name, method) {
+			if (method->common.fn_flags & ZEND_ACC_ABSTRACT) {
+				continue;
+			}
+
+			if (zend_hash_exists(&parent->function_table, name)) {
+				zend_hash_del(&clazz->function_table, name);
+			}
+		} ZEND_HASH_FOREACH_END();
+
+		clazz->function_table.pDestructor = dtor;
+        clazz->parent = NULL;
+	}
+
+#if PHP_VERSION_ID >= 70400
+    if (is_trait) {
+        clazz->ce_flags &= ~ZEND_ACC_TRAIT;
+        parent->ce_flags &= ~ZEND_ACC_TRAIT;
+    }
+    zend_do_link_class(clazz, parent);
+    if (is_trait) {
+        clazz->ce_flags |= ZEND_ACC_TRAIT;
+        parent->ce_flags |= ZEND_ACC_TRAIT;
+    }
+#else
+	if ((parent->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT) {
+		zend_do_implement_trait(clazz, parent);
+		zend_do_bind_traits(clazz);
+	} else zend_do_inheritance(clazz, parent);
+#endif
+
+	if (is_final)
+		clazz->ce_flags |= ZEND_ACC_FINAL;
+
+	return is_trait ? 1 : instanceof_function(clazz, parent);
+} /* }}} */
+
+/* {{{ */
+zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
+	if (!(interface->ce_flags & ZEND_ACC_INTERFACE)) {
+		uopz_exception(
+			"the class provided (%s) is not an interface", 
+			ZSTR_VAL(interface->name));
+		return 0;
+	}
+
+	if (instanceof_function(clazz, interface)) {
+		uopz_exception(
+			"the class provided (%s) already has the interface %s",
+			ZSTR_VAL(clazz->name),
+			ZSTR_VAL(interface->name));
+		return 0;
+	}
+
+#if PHP_VERSION_ID >= 70400
+    if (clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
+		uopz_exception(
+			"the class provided (%s) cannot implement %s, it is immutable",
+			ZSTR_VAL(clazz->name),
+			ZSTR_VAL(interface->name));
+		return 0; 
+    }
+#endif
+
+	zend_do_implement_interface(clazz, interface);
+
+	return instanceof_function(clazz, interface);
+} /* }}} */
+
 void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
 	zend_class_entry *scope = uopz_get_scope(0);
 	zend_class_entry *ce = Z_OBJCE_P(object);
