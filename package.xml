@@ -31,7 +31,7 @@ It supports the following activities:
  </lead>
  <date>2019-05-27</date>
  <version>
-  <release>6.1.0</release>
+  <release>6.1.1dev</release>
   <api>6.0.0</api>
  </version>
  <stability>
@@ -40,9 +40,7 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #109 uopz_set_hook closure receive extra arguments when function call
-  through call_user_func and call_user_func_array
-- 7.4 support
+-
  </notes>
  <contents>
   <dir name="/">
@@ -141,6 +139,23 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2019-05-27</date>
+   <version>
+    <release>6.1.0</release>
+    <api>6.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+  - Fix #109 uopz_set_hook closure receive extra arguments when function call
+    through call_user_func and call_user_func_array
+  - 7.4 support
+   </notes>
+  </release>
   <release>
    <date>2019-02-06</date>
    <version>
