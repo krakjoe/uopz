@@ -24,12 +24,6 @@
 #include "php_ini.h"
 #include "ext/standard/info.h"
 
-#ifndef HAVE_SPL
-/* {{{ */
-zend_class_entry *spl_ce_RuntimeException;
-zend_class_entry *spl_ce_InvalidArgumentException; /* }}} */
-#endif
-
 #include "uopz.h"
 
 #include "src/util.h"
