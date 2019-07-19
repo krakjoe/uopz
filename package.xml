@@ -29,9 +29,9 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-02-06</date>
+ <date>2019-05-27</date>
  <version>
-  <release>6.0.2dev</release>
+  <release>6.1.1dev</release>
   <api>6.0.0</api>
  </version>
  <stability>
@@ -78,8 +78,6 @@ It supports the following activities:
      <file name="011.phpt" role="test" />
      <file name="012.phpt" role="test" />
      <file name="013.phpt" role="test" />
-     <file name="014.phpt" role="test" />
-     <file name="015.phpt" role="test" />
      <file name="016.phpt" role="test" />
      <file name="017.phpt" role="test" />
      <file name="018.phpt" role="test" />
@@ -117,6 +115,7 @@ It supports the following activities:
       <file name="gh102.phpt" role="test" />
       <file name="gh106.phpt" role="test" />
       <file name="gh106a.phpt" role="test" />
+      <file name="gh109.phpt" role="test" />
      </dir>
     </dir>
     <file name="uopz.h" role="src" />
@@ -140,6 +139,23 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2019-05-27</date>
+   <version>
+    <release>6.1.0</release>
+    <api>6.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+  - Fix #109 uopz_set_hook closure receive extra arguments when function call
+    through call_user_func and call_user_func_array
+  - 7.4 support
+   </notes>
+  </release>
   <release>
    <date>2019-02-06</date>
    <version>

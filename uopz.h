@@ -22,7 +22,7 @@
 extern zend_module_entry uopz_module_entry;
 #define phpext_uopz_ptr &uopz_module_entry
 
-#define PHP_UOPZ_VERSION "6.1.0-dev"
+#define PHP_UOPZ_VERSION "6.1.1-dev"
 #define PHP_UOPZ_EXTNAME "uopz"
 
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
@@ -44,12 +44,7 @@ ZEND_END_MODULE_GLOBALS(uopz)
 #define UOPZ(v) (uopz_globals.v)
 #endif
 
-#ifdef HAVE_SPL
-#	include "ext/spl/spl_exceptions.h"
-#else
-	extern zend_class_entry* spl_ce_RuntimeException;
-#endif
-
+#include "ext/spl/spl_exceptions.h"
 #include "Zend/zend_inheritance.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_closures.h"
