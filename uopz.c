@@ -24,6 +24,8 @@
 #include "php_ini.h"
 #include "ext/standard/info.h"
 
+#include "SAPI.h"
+
 #ifndef HAVE_SPL
 /* {{{ */
 zend_class_entry *spl_ce_RuntimeException;
@@ -157,6 +159,10 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_string_release(spl);
 
 	uopz_request_init();
+    
+    if (strcmp(sapi_module.name, "cli") == SUCCESS) {
+		uopz_handlers_update();
+    }
 
 	return SUCCESS;
 } /* }}} */
