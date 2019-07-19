@@ -153,10 +153,8 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_string_release(spl);
 
 	uopz_request_init();
-    
-    if (strcmp(sapi_module.name, "cli") == SUCCESS) {
-		uopz_handlers_update();
-    }
+
+	uopz_handlers_update();
 
 	return SUCCESS;
 } /* }}} */
