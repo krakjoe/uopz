@@ -4,6 +4,7 @@ uopz_get_exit_status
 <?php include("skipif.inc") ?>
 --INI--
 uopz.disable=0
+uopz.exit=0
 opcache.enable_cli=0
 xdebug.enable=0
 --FILE--
