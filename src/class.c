@@ -173,7 +173,7 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
         clazz->ce_flags &= ~ZEND_ACC_TRAIT;
         parent->ce_flags &= ~ZEND_ACC_TRAIT;
     }
-    zend_do_link_class(clazz, parent);
+    zend_do_inheritance(clazz, parent);
     if (is_trait) {
         clazz->ce_flags |= ZEND_ACC_TRAIT;
         parent->ce_flags |= ZEND_ACC_TRAIT;
