@@ -29,9 +29,9 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-05-27</date>
+ <date>2019-09-18</date>
  <version>
-  <release>6.1.1dev</release>
+  <release>6.1.1</release>
   <api>6.0.0</api>
  </version>
  <stability>
@@ -40,7 +40,8 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
--
+- Fix compatibility with 7.4.0RC1
+- Fix gh#110 uopz_set_mock function does not work if xdebug is loaded
  </notes>
  <contents>
   <dir name="/">
