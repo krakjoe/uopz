@@ -163,20 +163,6 @@ void uopz_handlers_init(void) {
 	}
 }
 
-void uopz_handlers_update(void) {
-	uopz_vm_handler_t *handler = uopz_vm_handlers;
-
-	while (handler) {
-		if (!handler->opcode) {
-			break;
-		}
-		if (zend_get_user_opcode_handler(handler->opcode) != handler->uopz) {
-			UOPZ_HANDLER_OVERLOAD(handler);
-		}
-		handler++;
-	}
-}
-
 void uopz_handlers_shutdown(void) {
 	uopz_vm_handler_t *handler = uopz_vm_handlers;
 	

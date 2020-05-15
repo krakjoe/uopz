@@ -20,7 +20,6 @@
 #define UOPZ_HANDLERS_H
 
 void uopz_handlers_init(void);
-void uopz_handlers_update(void);
 void uopz_handlers_shutdown(void);
 
 #endif	/* UOPZ_HANDLERS_H */

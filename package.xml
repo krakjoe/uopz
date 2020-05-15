@@ -134,6 +134,11 @@ It supports the following activities:
    <pearinstaller>
     <min>1.10</min>
    </pearinstaller>
+   <extension>
+    <name>xdebug</name>
+    <max>2.9.3</max>
+    <conflicts />
+   </extension>
   </required>
  </dependencies>
  <providesextension>uopz</providesextension>

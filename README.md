@@ -23,6 +23,8 @@ It supports the following activities:
 Requirements and Installation
 =============================
 
+If you use XDebug you need to use version 2.9.4 or higher.
+
 See [INSTALL.md](INSTALL.md)
 
 API
