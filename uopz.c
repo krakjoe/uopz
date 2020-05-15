@@ -24,8 +24,6 @@
 #include "php_ini.h"
 #include "ext/standard/info.h"
 
-#include "SAPI.h"
-
 #include "uopz.h"
 
 #include "src/util.h"
@@ -153,8 +151,6 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_string_release(spl);
 
 	uopz_request_init();
-
-	uopz_handlers_update();
 
 	return SUCCESS;
 } /* }}} */
