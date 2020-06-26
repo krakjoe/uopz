@@ -1,0 +1,51 @@
+# general configuration
+version: '{branch}.{build}'
+
+# environment configuration
+image: Visual Studio 2017
+clone_folder: c:\projects\uopz
+environment:
+  BIN_SDK_VER: 2.2.0
+  matrix:
+    - PHP_VER: 7.2
+      TS: 0
+      VC: vc15
+      ARCH: x64
+      OPCACHE: 0
+    - PHP_VER: 7.2
+      TS: 1
+      VC: vc15
+      ARCH: x64
+      OPCACHE: 0
+    - PHP_VER: 7.3
+      TS: 0
+      VC: vc15
+      ARCH: x64
+      OPCACHE: 0
+    - PHP_VER: 7.3
+      TS: 1
+      VC: vc15
+      ARCH: x64
+      OPCACHE: 0
+    - PHP_VER: 7.4
+      TS: 0
+      VC: vc15
+      ARCH: x64
+      OPCACHE: 0
+    - PHP_VER: 7.4
+      TS: 1
+      VC: vc15
+      ARCH: x64
+      OPCACHE: 0
+cache:
+  - c:\build-cache -> appveyor.yml, .appveyor\install.ps1
+install:
+  - ps: .appveyor\install.ps1
+
+# build configuration
+build_script:
+  - ps: .appveyor\build.ps1
+
+# tests configuration
+test_script:
+  - ps: .appveyor\test.ps1
