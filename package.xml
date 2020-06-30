@@ -29,9 +29,9 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-09-18</date>
+ <date>2020-06-30</date>
  <version>
-  <release>6.1.2dev</release>
+  <release>6.1.2</release>
   <api>6.0.0</api>
  </version>
  <stability>
@@ -40,7 +40,7 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
--
+- make UOPZ compatible with Xdebug again (2.9.4+ required)
  </notes>
  <contents>
   <dir name="/">
