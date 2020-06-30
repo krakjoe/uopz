@@ -1,7 +1,7 @@
 --TEST--
 call uopz_get_property in a class scope
 --SKIPIF--
-<?php include("skipif.inc") ?>
+<?php include("../skipif.inc") ?>
 --INI--
 uopz.disable=0
 --FILE--

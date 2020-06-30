@@ -1,7 +1,7 @@
 --TEST--
 uopz_undefine with namespaced constants does not delete constant
 --SKIPIF--
-<?php include("skipif.inc") ?>
+<?php include("../skipif.inc") ?>
 --INI--
 uopz.disable=0
 --FILE--

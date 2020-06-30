@@ -1,7 +1,7 @@
 --TEST--
 uopz_set_static with empty array
 --SKIPIF--
-<?php include("skipif.inc") ?>
+<?php include("../skipif.inc") ?>
 --INI--
 uopz.disable=0
 --FILE--

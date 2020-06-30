@@ -2,7 +2,7 @@
 opcache constant substitution disable
 --SKIPIF--
 <?php
-	include("skipif.inc");
+	include("../skipif.inc");
 	uopz_allow_exit(true);
 	$opcache = ini_get("opcache.enable_cli");
 	if ($opcache === false || $opcache === "0") die("skip opcache required");

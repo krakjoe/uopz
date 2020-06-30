@@ -1,7 +1,7 @@
 --TEST--
 hook closure call inconsistency
 --SKIPIF--
-<?php include("skipif.inc"); ?>
+<?php include("../skipif.inc") ?>
 --FILE--
 <?php
 
