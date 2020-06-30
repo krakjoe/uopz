@@ -1,7 +1,9 @@
 --TEST--
 get hook not case insensitive
 --SKIPIF--
-<?php include("../skipif.inc") ?>
+<?php
+include(__DIR__ . '/../skipif.inc');
+?>
 --INI--
 uopz.disable=0
 --FILE--

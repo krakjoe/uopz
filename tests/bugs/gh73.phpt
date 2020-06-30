@@ -1,7 +1,9 @@
 --TEST--
 bugs in cuf(a)
 --SKIPIF--
-<?php include("../skipif.inc") ?>
+<?php
+include(__DIR__ . '/../skipif.inc');
+?>
 --FILE--
 <?php
 declare(strict_types=1);

@@ -2,6 +2,10 @@
 github #53
 --DESCRIPTION--
 uopz_redefine() refuses to redefine a constant as array
+--SKIPIF--
+<?php
+include(__DIR__ . '/../skipif.inc');
+?>
 --INI--
 uopz.disable=0
 --FILE--

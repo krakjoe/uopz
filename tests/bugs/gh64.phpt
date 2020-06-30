@@ -1,7 +1,9 @@
 --TEST--
 Segfault after uopz_set_static
 --SKIPIF--
-<?php include("../skipif.inc") ?>
+<?php
+include(__DIR__ . '/../skipif.inc');
+?>
 --INI--
 uopz.disable=0
 --FILE--

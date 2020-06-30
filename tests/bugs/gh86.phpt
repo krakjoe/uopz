@@ -1,7 +1,9 @@
 --TEST--
 set return on interface method
 --SKIPIF--
-<?php include("../skipif.inc") ?>
+<?php
+include(__DIR__ . '/../skipif.inc');
+?>
 --INI--
 uopz.disable=0
 --FILE--
@@ -30,6 +32,7 @@ var_dump(uopz_set_return(EventEmitter::class, 'emitEvent', $hook, true));
 
 $bar = new Bar;
 $bar->emitEvent(1);
+?>
 --EXPECTF--
 bool(true)
 int(%d)

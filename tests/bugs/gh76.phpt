@@ -1,7 +1,9 @@
 --TEST--
 uopz_extend affects only explicit calls via parent:: but not inherited methods
 --SKIPIF--
-<?php include("../skipif.inc") ?>
+<?php
+include(__DIR__ . '/../skipif.inc');
+?>
 --INI--
 uopz.disable=0
 --FILE--
