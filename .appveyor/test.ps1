@@ -18,7 +18,7 @@ $dname = (Get-Item $php).Directory.FullName
 
 $opts = '-n'
 if ($env:OPCACHE -ne '0') {
-    $opts += " -d zend_extension=$dname\ext\php_opcache.dll -d opcache.enabled=1 -d opcache.enable_cli=1"
+    $opts += " -d zend_extension=$dname\ext\php_opcache.dll -d opcache.enabled=1 -d opcache.enable_cli=1 -d opcache.optimization_level=0"
 }
 $opts += " $uopz_dll_opt"
 $opts += ' -duopz.exit=1'
