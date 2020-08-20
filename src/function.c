@@ -215,6 +215,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 	zend_function *entry;
 	zend_string *k = NULL;
 	zval *v = NULL;
+	HashTable *static_variables;
 
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
@@ -246,7 +247,17 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 		return 0;
 	}
 
-	if (!entry->op_array.static_variables) {
+#if PHP_VERSION_ID >= 70400
+	static_variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	if (!static_variables) {
+		ZEND_MAP_PTR_INIT(entry->op_array.static_variables_ptr, &entry->op_array.static_variables);
+		static_variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	}
+#else
+	static_variables = entry->op_array.static_variables;
+#endif
+
+	if (!static_variables) {
 		if (clazz) {
 			uopz_exception(
 				"failed to set statics in method %s::%s, no statics declared",
@@ -260,7 +271,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 		return 0;
 	}
 
-	ZEND_HASH_FOREACH_STR_KEY_VAL(entry->op_array.static_variables, k, v) {
+	ZEND_HASH_FOREACH_STR_KEY_VAL(static_variables, k, v) {
 		zval *y;
 
 		if (Z_REFCOUNTED_P(v)) {
@@ -281,6 +292,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 
 zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
 	zend_function *entry;
+	HashTable *static_variables;
 
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
@@ -312,7 +324,17 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 		return 0;
 	}
 
-	if (!entry->op_array.static_variables) {
+#if PHP_VERSION_ID >= 70400
+	static_variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	if (!static_variables) {
+		ZEND_MAP_PTR_INIT(entry->op_array.static_variables_ptr, &entry->op_array.static_variables);
+		static_variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	}
+#else
+	static_variables = entry->op_array.static_variables;
+#endif
+
+	if (!static_variables) {
 		if (clazz) {
 			uopz_exception(
 				"failed to set statics in method %s::%s, no statics declared",
@@ -326,11 +348,11 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 		return 0;
 	}
 
-	ZVAL_ARR(return_value, entry->op_array.static_variables);
+	ZVAL_ARR(return_value, static_variables);
 #if PHP_VERSION_ID >= 70300
-	GC_ADDREF(entry->op_array.static_variables);
+	GC_ADDREF(static_variables);
 #else
-	GC_REFCOUNT(entry->op_array.static_variables)++;
+	GC_REFCOUNT(static_variables)++;
 #endif
 	return 1;
 } /* }}} */
