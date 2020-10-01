@@ -169,7 +169,7 @@ static inline int uopz_closure_equals(zval *closure, zend_function *function) { 
 int uopz_clean_function(zval *zv) { /* {{{ */
 	zend_function *fp = Z_PTR_P(zv);
 
-	if (fp->type == ZEND_USER_FUNCTION && *((zend_op_array*)fp)->refcount > 1) {
+	if (fp->type == ZEND_USER_FUNCTION && (((zend_op_array*)fp)->refcount && *((zend_op_array*)fp)->refcount > 1)) {
 
 		return ZEND_HASH_APPLY_REMOVE;
 	}
