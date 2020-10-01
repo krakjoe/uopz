@@ -143,8 +143,14 @@ UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_INIT_STATIC_METHOD_CALL, init_static_method_call)
 UOPZ_HANDLERS_DECL_END()
 
+#if PHP_VERSION_ID >= 80000
+static zend_always_inline zval* uopz_get_zval(const zend_op *opline, int op_type, const znode_op *node, const zend_execute_data *execute_data) {
+#else
 static zend_always_inline zval* uopz_get_zval(const zend_op *opline, int op_type, const znode_op *node, const zend_execute_data *execute_data, zend_free_op *should_free, int type) {
-#if PHP_VERSION_ID >= 70300
+#endif
+#if PHP_VERSION_ID >= 80000
+	return zend_get_zval_ptr(opline, op_type, node, execute_data);
+#elif PHP_VERSION_ID >= 70300
 	return zend_get_zval_ptr(opline, op_type, node, execute_data, should_free, type);
 #else
 	return zend_get_zval_ptr(op_type, node, execute_data, should_free, type);
@@ -234,7 +240,9 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_USE_OPLINE;
 	zval *estatus;
+#if PHP_VERSION_ID < 80000
 	zend_free_op free_op1;
+#endif
 
 	if (UOPZ(exit)) {
 		UOPZ_VM_DISPATCH();
@@ -245,8 +253,12 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 				opline,
 				opline->op1_type,
 				&opline->op1,
-				execute_data,
-				&free_op1, BP_VAR_R);
+				execute_data
+#if PHP_VERSION_ID < 80000
+				, &free_op1, BP_VAR_R);
+#else
+				);
+#endif
 
 		do {
 			if (Z_TYPE_P(estatus) == IS_LONG) {
@@ -263,9 +275,11 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			}
 		} while (0);
 
+#if PHP_VERSION_ID < 80000
 		if (free_op1) {
 			zval_ptr_dtor_nogc(free_op1);
 		}
+#endif
 
 		ZVAL_COPY(&UOPZ(estatus), estatus);
 	}

@@ -90,8 +90,13 @@ void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function
 				case 7: clazz->__call = function; break;
 				case 8: clazz->__callstatic = function; break;
 				case 9: clazz->__tostring = function; break;
+#if PHP_VERSION_ID >= 80000
+				case 10: clazz->__serialize = function; break;
+				case 11: clazz->__unserialize = function; break;
+#else
 				case 10: clazz->serialize_func = function; break;
 				case 11: clazz->unserialize_func = function; break;
+#endif
 				case 12: clazz->__debugInfo = function; break;
 			}
 			return;
@@ -148,7 +153,11 @@ zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /
 } /* }}} */
 
 static inline int uopz_closure_equals(zval *closure, zend_function *function) { /* {{{ */
+#if PHP_VERSION_ID >= 80000
+	const zend_function *cmp = zend_get_closure_method_def(Z_OBJ_P(closure));
+#else
 	const zend_function *cmp = zend_get_closure_method_def(closure);
+#endif
 
 	if (cmp->common.prototype == function) {
 		return 1;
@@ -160,7 +169,8 @@ static inline int uopz_closure_equals(zval *closure, zend_function *function) { 
 int uopz_clean_function(zval *zv) { /* {{{ */
 	zend_function *fp = Z_PTR_P(zv);
 
-	if (fp->type == ZEND_USER_FUNCTION) {
+	if (fp->type == ZEND_USER_FUNCTION && *((zend_op_array*)fp)->refcount > 1) {
+
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 

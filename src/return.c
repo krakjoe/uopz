@@ -172,7 +172,11 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
 
+#if PHP_VERSION_ID >= 80000
+	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(Z_OBJ(ureturn->value)), 
+#else
 	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(&ureturn->value), 
+#endif
 		ureturn->clazz, ureturn->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
 	zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error);

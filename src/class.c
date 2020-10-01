@@ -220,6 +220,10 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 
 	zend_do_implement_interface(clazz, interface);
 
+#if PHP_VERSION_ID >= 80000
+	clazz->ce_flags |= ZEND_ACC_RESOLVED_INTERFACES;
+#endif
+
 	return instanceof_function(clazz, interface);
 } /* }}} */
 
@@ -246,8 +250,13 @@ void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
 		uopz_set_scope(Z_OBJCE_P(object));
 	}
 
+#if PHP_VERSION_ID >= 80000
+	Z_OBJ_HT_P(object)
+		->write_property(Z_OBJ_P(object), Z_STR_P(member), value, NULL);
+#else
 	Z_OBJ_HT_P(object)
 		->write_property(object, member, value, NULL);
+#endif
 
 	uopz_set_scope(scope);
 } /* }}} */
@@ -276,8 +285,13 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 		uopz_set_scope(Z_OBJCE_P(object));
 	}
 
+#if PHP_VERSION_ID >= 80000
+	prop = Z_OBJ_HT_P(object)->read_property(
+		Z_OBJ_P(object), Z_STR_P(member), BP_VAR_R, NULL, &rv);
+#else
 	prop = Z_OBJ_HT_P(object)->read_property(
 		object, member, BP_VAR_R, NULL, &rv);
+#endif
 
 	uopz_set_scope(scope);
 

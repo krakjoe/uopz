@@ -162,7 +162,11 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data, zend
 
 	uhook->busy = 1;
 
+#if PHP_VERSION_ID >= 80000
+	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(Z_OBJ(uhook->closure)), 
+#else
 	zend_create_closure(&closure, (zend_function*) zend_get_closure_method_def(&uhook->closure), 
+#endif
 		uhook->clazz, uhook->clazz, Z_OBJ(EX(This)) ? &EX(This) : NULL);
 
 	zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error);

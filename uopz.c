@@ -651,7 +651,19 @@ static PHP_FUNCTION(uopz_allow_exit) {
 
 /* {{{ uopz_functions[]
  */
-#define UOPZ_FE(f) PHP_FE(f, NULL)
+#if PHP_VERSION_ID >= 80000
+ZEND_BEGIN_ARG_INFO(uopz_ignore_arginfo, 1)
+	ZEND_ARG_VARIADIC_INFO(0, arguments)
+ZEND_END_ARG_INFO()
+# define UOPZ_FE(f) PHP_FE(f, uopz_ignore_arginfo)
+#else
+# define UOPZ_FE(f) PHP_FE(f, NULL)
+#endif
+
+ZEND_BEGIN_ARG_INFO(uopz_no_args_arginfo, 0)
+ZEND_END_ARG_INFO()
+# define UOPZ_FE_NOARGS(f) PHP_FE(f, uopz_no_args_arginfo)
+
 static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_set_return)
 	UOPZ_FE(uopz_get_return)
@@ -673,7 +685,7 @@ static const zend_function_entry uopz_functions[] = {
 	UOPZ_FE(uopz_undefine)
 	UOPZ_FE(uopz_set_property)
 	UOPZ_FE(uopz_get_property)
-	UOPZ_FE(uopz_get_exit_status)
+	UOPZ_FE_NOARGS(uopz_get_exit_status)
 	UOPZ_FE(uopz_allow_exit)
 
 	UOPZ_FE(uopz_call_user_func)

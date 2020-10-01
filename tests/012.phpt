@@ -82,7 +82,7 @@ string(%d) "string"
 string(%d) "clone"
 bool(true)
 bool(true)
-string(50) "Call to private method Foo::priv() from context ''"
+string(%d) "Call to private method Foo::priv() from %s"
 string(%d) "will not replace existing method %s::%s, use uopz_set_return instead"
 string(%d) "will not replace existing function %s, use uopz_set_return instead"
 string(%d) "__destruct"

@@ -60,11 +60,15 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 
 	zend_hash_update(functions, key, closure);
 	zval_copy_ctor(closure);
-
+#if PHP_VERSION_ID >= 80000
+	function = uopz_copy_closure(clazz, 
+			(zend_function*) zend_get_closure_method_def(Z_OBJ_P(closure)),
+			flags);
+#else
 	function = uopz_copy_closure(clazz, 
 			(zend_function*) zend_get_closure_method_def(closure),
 			flags);
-
+#endif
 	zend_hash_update_ptr(table, key, (void*) function);
 
 	if (clazz) {

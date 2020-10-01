@@ -15,7 +15,7 @@ const UOPZ_DEFINED = "DEFINED";
 
 var_dump(uopz_undefine("UOPZ_DEFINED"));
 
-var_dump(@constant("UOPZ_DEFINED"));
+var_dump(defined("UOPZ_DEFINED"));
 
 var_dump(FOO::BAR);
 
@@ -39,7 +39,7 @@ try {
 ?>
 --EXPECT--
 bool(true)
-NULL
+bool(false)
 int(1)
 int(1)
 bool(false)
