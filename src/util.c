@@ -179,7 +179,12 @@ int uopz_clean_function(zval *zv) { /* {{{ */
 
 int uopz_clean_class(zval *zv) { /* {{{ */
 	zend_class_entry *ce = Z_PTR_P(zv);
-	
+
+#if PHP_VERSION_ID >= 70400
+	if (ce->ce_flags & ZEND_ACC_IMMUTABLE) {
+		return ZEND_HASH_APPLY_KEEP;
+	}
+#endif
 	zend_hash_apply(
 		&ce->function_table, uopz_clean_function);
 	
