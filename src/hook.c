@@ -125,6 +125,10 @@ uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
 	uopz_hook_t *uhook;
 	HashTable *hooks;
 
+	if (!function) {
+		return NULL;
+	}
+
 	if (!function->common.function_name) {
 		return NULL;
 	}
