@@ -4,6 +4,8 @@ hook closure call inconsistency
 <?php
 include(__DIR__ . '/../skipif.inc');
 ?>
+--INI--
+uopz.disable=0
 --FILE--
 <?php
 
