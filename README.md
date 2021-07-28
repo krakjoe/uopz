@@ -2,7 +2,7 @@ UOPZ
 ====
 *User Operations for Zend*
 
-[![Build Status](https://travis-ci.com/krakjoe/uopz.svg?branch=master)](https://travis-ci.org/krakjoe/uopz)
+[![Build Status](https://travis-ci.com/krakjoe/uopz.svg?branch=master)](https://travis-ci.com/github/krakjoe/uopz)
 [![Coverage Status](https://coveralls.io/repos/github/krakjoe/uopz/badge.svg?branch=master)](https://coveralls.io/github/krakjoe/uopz?branch=master)
 
 The ```uopz``` extension is focused on providing utilities to aid with unit testing PHP code.
@@ -313,7 +313,7 @@ function uopz_allow_exit(bool allow) : void;
 Supported Versions
 ==================
 
-The currently supported version of uopz is 6.0 which requires PHP7.1+
+The currently supported version of uopz is 7 which requires PHP8.0+
 
 Testing
 =======
