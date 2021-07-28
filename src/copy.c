@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | uopz                                                                 |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2016-2020                                  |
+  | Copyright (c) Joe Watkins 2016-2021                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -25,6 +25,10 @@
 #include "copy.h"
 
 #include <Zend/zend_vm.h>
+
+#ifndef GC_ADDREF
+#define GC_ADDREF(g) ++GC_REFCOUNT(g)
+#endif
 
 /* {{{ */
 static inline HashTable* uopz_copy_statics(HashTable *old) {
