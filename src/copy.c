@@ -160,15 +160,15 @@ static zend_always_inline void uopz_copy_type(zend_type *type) { /* {{{ */
     }
 
     if (ZEND_TYPE_HAS_LIST(*type)) {
-        zend_type_list *list = ZEND_TYPE_LIST(*type);
+    	zend_type_list *list = ZEND_TYPE_LIST(*type);
 		zend_type_list *copy = 
-			zend_arena_alloc(&CG(arena), ZEND_TYPE_LIST_SIZE(list->num_types));
+			emalloc(ZEND_TYPE_LIST_SIZE(list->num_types));
 
 		memcpy(copy, list, ZEND_TYPE_LIST_SIZE(list->num_types));
 		
-        if (ZEND_TYPE_USES_ARENA(*type)) {
-            ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
-        }
+		if (ZEND_TYPE_USES_ARENA(*type)) {
+			ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
+		}
  
         ZEND_TYPE_SET_PTR(*type, copy);
     }
