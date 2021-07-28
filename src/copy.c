@@ -164,6 +164,28 @@ static inline zend_op* uopz_copy_opcodes(zend_op_array *op_array, zval *literals
 	return copy;
 } /* }}} */
 
+static zend_always_inline void uopz_copy_type(zend_type *type) { /* {{{ */
+    zend_type *single;
+
+    if (!ZEND_TYPE_IS_SET(*type)) {
+        return;
+    }
+
+    if (ZEND_TYPE_HAS_LIST(*type)) {
+        zend_type_list *list = ZEND_TYPE_LIST(*type);
+		zend_type_list *copy = 
+			zend_arena_alloc(&CG(arena), ZEND_TYPE_LIST_SIZE(list->num_types));
+
+		memcpy(copy, list, ZEND_TYPE_LIST_SIZE(list->num_types));
+		
+        if (ZEND_TYPE_USES_ARENA(*type)) {
+            ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
+        }
+ 
+        ZEND_TYPE_SET_PTR(*type, copy);
+    }
+} /* }}} */
+
 /* {{{ */
 static inline zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg_info *old, uint32_t end) {
 	zend_arg_info *info;
@@ -185,20 +207,9 @@ static inline zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg
 	while (it < end) {
 		if (info[it].name)
 			info[it].name = zend_string_copy(old[it].name);
-#if PHP_VERSION_ID >= 80000
-		if (ZEND_TYPE_IS_SET(old[it].type) && ZEND_TYPE_HAS_CLASS(old[it].type)) {
-			info[it].type = (zend_type) ZEND_TYPE_INIT_CLASS(
-				zend_string_copy(
-					ZEND_TYPE_NAME(info[it].type)), 
-				ZEND_TYPE_ALLOW_NULL(info[it].type), 0);
-		}		
-#elif PHP_VERSION_ID >= 70200
-		if (ZEND_TYPE_IS_SET(old[it].type) && ZEND_TYPE_IS_CLASS(old[it].type)) {
-			info[it].type = ZEND_TYPE_ENCODE_CLASS(
-				zend_string_copy(
-					ZEND_TYPE_NAME(info[it].type)), 
-				ZEND_TYPE_ALLOW_NULL(info[it].type));
-		}
+		
+#if PHP_VERSION_ID >= 70200
+		uopz_copy_type(&info[it].type);
 #else
 		if (info[it].class_name)
 			info[it].class_name = zend_string_copy(old[it].class_name);
