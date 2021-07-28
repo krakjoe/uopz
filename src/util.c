@@ -252,7 +252,7 @@ PHP_FUNCTION(uopz_call_user_func) {
 
 	ZEND_PARSE_PARAMETERS_START(1, -1)
 		Z_PARAM_FUNC(fci, fcc)
-		Z_PARAM_VARIADIC('*', fci.params, fci.param_count)
+		Z_PARAM_VARIADIC_WITH_NAMED(fci.params, fci.param_count, fci.named_params)
 	ZEND_PARSE_PARAMETERS_END();
 
 	fci.retval = &retval;
@@ -269,16 +269,17 @@ PHP_FUNCTION(uopz_call_user_func) {
 
 /* {{{ proto mixed uopz_call_user_func_array(callable function, array args) */
 PHP_FUNCTION(uopz_call_user_func_array) {
-	zval *params, retval;
+	HashTable *params;
+	zval retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
 
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_FUNC(fci, fcc)
-		Z_PARAM_ARRAY(params)
+		Z_PARAM_ARRAY_HT(params)
 	ZEND_PARSE_PARAMETERS_END();
 
-	zend_fcall_info_args(&fci, params);
+	fci.named_params = params;
 	fci.retval = &retval;
 
 	UOPZ_CALL_HOOKS(1);
@@ -289,8 +290,6 @@ PHP_FUNCTION(uopz_call_user_func_array) {
 		}
 		ZVAL_COPY_VALUE(return_value, &retval);
 	}
-
-	zend_fcall_info_args_clear(&fci, 1);
 } /* }}} */
 
 void uopz_request_init(void) { /* {{{ */
