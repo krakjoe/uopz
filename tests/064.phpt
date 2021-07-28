@@ -2,6 +2,8 @@
 uopz_extend final class
 --EXTENSIONS--
 uopz
+--INI--
+opcache.enable_cli=0
 --FILE--
 <?php
 class Foo {}

@@ -1,5 +1,7 @@
 --TEST--
 uopz_extend trait
+--INI--
+opcache.enable_cli=0
 --EXTENSIONS--
 uopz
 --FILE--
