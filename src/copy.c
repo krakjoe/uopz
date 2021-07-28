@@ -28,10 +28,6 @@
 
 /* {{{ */
 static inline HashTable* uopz_copy_statics(HashTable *old) {
-	if (GC_FLAGS(old) & IS_ARRAY_IMMUTABLE) {
-		return old;
-	}
-
 	return zend_array_dup(old);
 } /* }}} */
 
@@ -303,7 +299,12 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	}
 
 	if (op_array->static_variables) {
-		op_array->static_variables = uopz_copy_statics(op_array->static_variables);
+		op_array->static_variables =
+			uopz_copy_statics(op_array->static_variables);
+
+		ZEND_MAP_PTR_INIT(
+			op_array->static_variables_ptr,
+			&op_array->static_variables);
 	}
 
 	if (op_array->filename) {
