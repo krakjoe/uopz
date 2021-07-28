@@ -1,8 +1,9 @@
 --TEST--
 uopz_flags
+--EXTENSIONS--
+uopz
 --SKIPIF--
 <?php
-include("skipif.inc");
 uopz_allow_exit(true);
 if (version_compare(PHP_VERSION, '7.4', '>=')
 	&& function_exists('opcache_get_status')

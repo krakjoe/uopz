@@ -1,9 +1,7 @@
 --TEST--
 prototype mixup setting return
---SKIPIF--
-<?php
-include(__DIR__ . '/../skipif.inc');
-?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=0
 --FILE--

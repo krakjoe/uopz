@@ -1,8 +1,9 @@
 --TEST--
 opcache constant substitution disable
+--EXTENSIONS--
+uopz
 --SKIPIF--
 <?php
-	include(__DIR__ . '/../skipif.inc');
 	uopz_allow_exit(true);
 	$opcache = ini_get("opcache.enable_cli");
 	if ($opcache === false || $opcache === "0") die("skip opcache required");

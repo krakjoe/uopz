@@ -1,7 +1,7 @@
 --TEST--
 fetch class string ref no mock
---SKIPIF--
-<?php include("skipif.inc"); ?>
+--EXTENSIONS--
+uopz
 --FILE--
 <?php
 class Foo {

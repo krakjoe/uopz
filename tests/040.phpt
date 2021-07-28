@@ -1,7 +1,7 @@
 --TEST--
 fetch class undef class no mock
---SKIPIF--
-<?php include("skipif.inc"); ?>
+--EXTENSIONS--
+uopz
 --INI--
 error_reporting=32759
 uopz.disable=0

@@ -1,9 +1,7 @@
 --TEST--
 bugs in cuf(a)
---SKIPIF--
-<?php
-include(__DIR__ . '/../skipif.inc');
-?>
+--EXTENSIONS--
+uopz
 --FILE--
 <?php
 declare(strict_types=1);

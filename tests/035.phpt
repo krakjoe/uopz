@@ -1,7 +1,7 @@
 --TEST--
 fetch class constant non existent class
---SKIPIF--
-<?php include("skipif.inc"); ?>
+--EXTENSIONS--
+uopz
 --FILE--
 <?php
 var_dump(Test::none);

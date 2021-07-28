@@ -1,7 +1,7 @@
 --TEST--
 uopz_set_property/uopz_get_property
---SKIPIF--
-<?php include("skipif.inc") ?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=0
 --FILE--

@@ -1,7 +1,7 @@
 --TEST--
 init method call non object object
---SKIPIF--
-<?php include("skipif.inc") ?>
+--EXTENSIONS--
+uopz
 --FILE--
 <?php
 $foo = "string";

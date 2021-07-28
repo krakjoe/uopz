@@ -1,7 +1,7 @@
 --TEST--
 init ns fcall
---SKIPIF--
-<?php include("skipif.inc"); ?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=0
 opcache.enable_cli=0

@@ -1,9 +1,7 @@
 --TEST--
 github #68: uopz_set_mock should not hang when mock with no-arg constructor is called with args
---SKIPIF--
-<?php
-include(__DIR__ . '/../skipif.inc');
-?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=0
 --FILE--

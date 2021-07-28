@@ -2,10 +2,8 @@
 github #43
 --DESCRIPTION--
 Setting hook on __invoke method doesn't work on call_user_func
---SKIPIF--
-<?php
-include(__DIR__ . '/../skipif.inc');
-?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=0
 --FILE--

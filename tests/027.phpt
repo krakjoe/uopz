@@ -1,7 +1,7 @@
 --TEST--
 init method call non string method
---SKIPIF--
-<?php include("skipif.inc") ?>
+--EXTENSIONS--
+uopz
 --FILE--
 <?php
 class Foo {

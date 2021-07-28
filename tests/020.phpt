@@ -1,7 +1,7 @@
 --TEST--
 uopz_get_exit_status
---SKIPIF--
-<?php include("skipif.inc") ?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=0
 uopz.exit=0

@@ -1,7 +1,7 @@
 --TEST--
 uopz.disabled
---SKIPIF--
-<?php include("skipif.inc") ?>
+--EXTENSIONS--
+uopz
 --INI--
 uopz.disable=1
 --FILE--

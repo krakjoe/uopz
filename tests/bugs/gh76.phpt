@@ -1,8 +1,9 @@
 --TEST--
 uopz_extend affects only explicit calls via parent:: but not inherited methods
+--EXTENSIONS--
+uopz
 --SKIPIF--
 <?php
-include(__DIR__ . '/../skipif.inc');
 uopz_allow_exit(true);
 if (version_compare(PHP_VERSION, '7.4', '>=')
 	&& function_exists('opcache_get_status')
