@@ -60,15 +60,9 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 
 	zend_hash_update(functions, key, closure);
 	zval_copy_ctor(closure);
-#if PHP_VERSION_ID >= 80000
 	function = uopz_copy_closure(clazz, 
-			(zend_function*) zend_get_closure_method_def(Z_OBJ_P(closure)),
-			flags);
-#else
-	function = uopz_copy_closure(clazz, 
-			(zend_function*) zend_get_closure_method_def(closure),
-			flags);
-#endif
+				(zend_function*) zend_get_closure_method_def(Z_OBJ_P(closure)),
+				flags);
 	zend_hash_update_ptr(table, key, (void*) function);
 
 	if (clazz) {
@@ -161,22 +155,18 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 			return;
 		}
 
-#if PHP_VERSION_ID >= 70400
-        if (clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
+		if (clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
 			uopz_exception(
 				"attempt to set flags of immutable class entry %s, not allowed",
 				ZSTR_VAL(clazz->name));
 			return;
         }
-#endif
 
 		current = clazz->ce_flags;
 		clazz->ce_flags = flags;
-#if PHP_VERSION_ID >= 70400
-        if (current & ZEND_ACC_LINKED) {
+		if (current & ZEND_ACC_LINKED) {
             clazz->ce_flags |= ZEND_ACC_LINKED;
         }
-#endif
 		RETURN_LONG(current);
 	}
 
@@ -199,13 +189,11 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 
 	current = function->common.fn_flags;
 	if (flags) {
-#if PHP_VERSION_ID >= 70400
-        if (function->common.fn_flags & ZEND_ACC_IMMUTABLE) {
+		if (function->common.fn_flags & ZEND_ACC_IMMUTABLE) {
             uopz_exception(
 				"attempt to set flags of immutable function entry %s, not allowed",
 				ZSTR_VAL(name));
         }
-#endif
 		function->common.fn_flags = flags;
 	}
 	RETURN_LONG(current);
@@ -219,7 +207,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 	zend_function *entry;
 	zend_string *k = NULL;
 	zval *v = NULL;
-
+	
 	if (clazz) {
 		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
 			uopz_exception(
@@ -249,7 +237,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 
 		return 0;
 	}
-
+	
 	if (!entry->op_array.static_variables) {
 		if (clazz) {
 			uopz_exception(
@@ -263,8 +251,18 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 
 		return 0;
 	}
+	
+	HashTable *variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
 
-	ZEND_HASH_FOREACH_STR_KEY_VAL(entry->op_array.static_variables, k, v) {
+	if (!variables) {
+		ZEND_MAP_PTR_INIT(
+			entry->op_array.static_variables_ptr, 
+			&entry->op_array.static_variables);
+		
+		variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	}
+
+	ZEND_HASH_FOREACH_STR_KEY_VAL(variables, k, v) {
 		zval *y;
 
 		if (Z_REFCOUNTED_P(v)) {
@@ -330,12 +328,20 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 		return 0;
 	}
 
-	ZVAL_ARR(return_value, entry->op_array.static_variables);
-#if PHP_VERSION_ID >= 70300
-	GC_ADDREF(entry->op_array.static_variables);
-#else
-	GC_REFCOUNT(entry->op_array.static_variables)++;
-#endif
+	HashTable *variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	
+	if (!variables) {
+		ZEND_MAP_PTR_INIT(
+			entry->op_array.static_variables_ptr, 
+			&entry->op_array.static_variables);
+		
+		variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+	}
+
+	ZVAL_ARR(return_value, variables);
+	if (!(GC_FLAGS(variables) & IS_ARRAY_IMMUTABLE)) {
+		GC_ADDREF(variables);
+	}
 	return 1;
 } /* }}} */
 

@@ -27,13 +27,8 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#if PHP_VERSION_ID >= 70100
-#	define uopz_get_scope(e) ((e) ? zend_get_executed_scope() : EG(fake_scope))
-#	define uopz_set_scope(s) EG(fake_scope) = (s)
-#else
-#	define uopz_get_scope(e) EG(scope)
-#	define uopz_set_scope(s) EG(scope) = (s)
-#endif
+#define uopz_get_scope(e) ((e) ? zend_get_executed_scope() : EG(fake_scope))
+#define uopz_set_scope(s) EG(fake_scope) = (s)
 
 void uopz_set_mock(zend_string *clazz, zval *mock) { /* {{{ */
 	zend_string *key = zend_string_tolower(clazz);
@@ -124,26 +119,22 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
 		return 0;
 	}
 
-#if PHP_VERSION_ID >= 70400
 	if ((clazz->ce_flags & ZEND_ACC_IMMUTABLE)) {
 		uopz_exception(
 		    "cannot change the class provided (%s), because it is immutable",
 		     ZSTR_VAL(clazz->name));
 		return 0;
 	}
-#endif
 
 	is_final = clazz->ce_flags & ZEND_ACC_FINAL;
 	is_trait = (clazz->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT;
 
-#if PHP_VERSION_ID >= 70400
     if (is_trait && (parent->ce_flags & ZEND_ACC_IMMUTABLE)) {
 		uopz_exception(
 		    "the parent trait provided (%s) cannot be extended by %s, because it is immutable",
 		     ZSTR_VAL(parent->name), ZSTR_VAL(clazz->name));
 		return 0;
     }
-#endif
 
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
 
@@ -168,8 +159,7 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
         clazz->parent = NULL;
 	}
 
-#if PHP_VERSION_ID >= 70400
-    if (is_trait) {
+	if (is_trait) {
         clazz->ce_flags &= ~ZEND_ACC_TRAIT;
         parent->ce_flags &= ~ZEND_ACC_TRAIT;
     }
@@ -178,12 +168,6 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
         clazz->ce_flags |= ZEND_ACC_TRAIT;
         parent->ce_flags |= ZEND_ACC_TRAIT;
     }
-#else
-	if ((parent->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT) {
-		zend_do_implement_trait(clazz, parent);
-		zend_do_bind_traits(clazz);
-	} else zend_do_inheritance(clazz, parent);
-#endif
 
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
@@ -208,21 +192,17 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 		return 0;
 	}
 
-#if PHP_VERSION_ID >= 70400
-    if (clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
+	if (clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
 		uopz_exception(
 			"the class provided (%s) cannot implement %s, it is immutable",
 			ZSTR_VAL(clazz->name),
 			ZSTR_VAL(interface->name));
 		return 0; 
     }
-#endif
 
 	zend_do_implement_interface(clazz, interface);
 
-#if PHP_VERSION_ID >= 80000
 	clazz->ce_flags |= ZEND_ACC_RESOLVED_INTERFACES;
-#endif
 
 	return instanceof_function(clazz, interface);
 } /* }}} */
@@ -250,13 +230,8 @@ void uopz_set_property(zval *object, zval *member, zval *value) { /* {{{ */
 		uopz_set_scope(Z_OBJCE_P(object));
 	}
 
-#if PHP_VERSION_ID >= 80000
 	Z_OBJ_HT_P(object)
 		->write_property(Z_OBJ_P(object), Z_STR_P(member), value, NULL);
-#else
-	Z_OBJ_HT_P(object)
-		->write_property(object, member, value, NULL);
-#endif
 
 	uopz_set_scope(scope);
 } /* }}} */

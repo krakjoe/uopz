@@ -56,12 +56,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 			zend_constant create;
 
 			ZVAL_COPY(&create.value, variable);
-#if PHP_VERSION_ID < 70300
-			create.flags = CONST_CS;
-			create.module_number = PHP_USER_CONSTANT;
-#else
 			ZEND_CONSTANT_SET_FLAGS(&create, CONST_CS, PHP_USER_CONSTANT);
-#endif
 			create.name = zend_string_copy(key);
 
 			zend_register_constant(&create);
@@ -76,11 +71,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 	}
 
 	if (!clazz) {
-#if PHP_VERSION_ID < 70300
-		if (zconstant->module_number == PHP_USER_CONSTANT) {
-#else
 		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) == PHP_USER_CONSTANT) {
-#endif
 			zval_dtor(&zconstant->value);
 			ZVAL_COPY(&zconstant->value, variable);
 		} else {
@@ -138,11 +129,7 @@ zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name) {
 
 _uopz_constant_undefine:
 	if (!clazz) {
-#if PHP_VERSION_ID < 70300
-		if (zconstant->module_number != PHP_USER_CONSTANT) {
-#else
 		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) != PHP_USER_CONSTANT) {
-#endif
 
 			uopz_exception(
 				"failed to undefine the internal constant %s, not allowed", ZSTR_VAL(name));

@@ -36,8 +36,7 @@ static inline HashTable* uopz_copy_statics(HashTable *old) {
 		return old;
 	}
 
-	GC_ADDREF(old);
-	return old;
+	return zend_array_dup(old);
 } /* }}} */
 
 /* {{{ */
@@ -108,7 +107,7 @@ static inline zend_op* uopz_copy_opcodes(zend_op_array *op_array, zval *literals
 				opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
 			if (opline->op2_type == IS_CONST) 
 				opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
-#elif PHP_VERSION_ID >= 70300
+#else
 			if (opline->op1_type == IS_CONST) {
 				opline->op1.constant =
 					(char*)(op_array->literals +
@@ -136,9 +135,6 @@ static inline zend_op* uopz_copy_opcodes(zend_op_array *op_array, zval *literals
 					case ZEND_JMP:
 					case ZEND_FAST_CALL:
 					case ZEND_DECLARE_ANON_CLASS:
-#if PHP_VERSION_ID < 70400
-					case ZEND_DECLARE_ANON_INHERITED_CLASS:
-#endif
 						 opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
 					break;
 
@@ -184,6 +180,16 @@ static zend_always_inline void uopz_copy_type(zend_type *type) { /* {{{ */
  
         ZEND_TYPE_SET_PTR(*type, copy);
     }
+
+    ZEND_TYPE_FOREACH(*type, single) {
+        if (ZEND_TYPE_HAS_NAME(*single)) {
+            zend_string *name = ZEND_TYPE_NAME(*single);
+
+            ZEND_TYPE_SET_PTR(
+                *single,
+                zend_new_interned_string(name));
+        }
+    } ZEND_TYPE_FOREACH_END();
 } /* }}} */
 
 /* {{{ */
@@ -208,12 +214,7 @@ static inline zend_arg_info* uopz_copy_arginfo(zend_op_array *op_array, zend_arg
 		if (info[it].name)
 			info[it].name = zend_string_copy(old[it].name);
 		
-#if PHP_VERSION_ID >= 70200
 		uopz_copy_type(&info[it].type);
-#else
-		if (info[it].class_name)
-			info[it].class_name = zend_string_copy(old[it].class_name);
-#endif
 		it++;
 	}
 	
@@ -245,9 +246,7 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	(*op_array->refcount) = 1;
 
 	op_array->fn_flags &= ~ ZEND_ACC_CLOSURE;
-#if PHP_VERSION_ID >= 70400
     op_array->fn_flags &= ~ZEND_ACC_IMMUTABLE;
-#endif
 
 	op_array->fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
 
@@ -277,15 +276,10 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 	
 	op_array->scope = scope;
 	op_array->prototype = copy;
-#if PHP_VERSION_ID >= 70400
 	ZEND_MAP_PTR_INIT(op_array->run_time_cache, 
 		zend_arena_alloc(&CG(arena), sizeof(void*)));
 	ZEND_MAP_PTR_SET(op_array->run_time_cache, NULL);
-#else
-	op_array->run_time_cache = zend_arena_alloc(&CG(arena), op_array->cache_size);
-
-	memset(op_array->run_time_cache, 0, op_array->cache_size);
-#endif
+	
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_copy(op_array->doc_comment);
 	}
