@@ -179,7 +179,7 @@ static zend_always_inline void uopz_copy_type(zend_type *type) { /* {{{ */
 
             ZEND_TYPE_SET_PTR(
                 *single,
-                zend_string_dup(name, 1));
+                zend_string_dup(name, 0));
         }
     } ZEND_TYPE_FOREACH_END();
 } /* }}} */
