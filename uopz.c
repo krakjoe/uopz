@@ -651,14 +651,10 @@ static PHP_FUNCTION(uopz_allow_exit) {
 
 /* {{{ uopz_functions[]
  */
-#if PHP_VERSION_ID >= 80000
 ZEND_BEGIN_ARG_INFO(uopz_ignore_arginfo, 1)
 	ZEND_ARG_VARIADIC_INFO(0, arguments)
 ZEND_END_ARG_INFO()
 # define UOPZ_FE(f) PHP_FE(f, uopz_ignore_arginfo)
-#else
-# define UOPZ_FE(f) PHP_FE(f, NULL)
-#endif
 
 ZEND_BEGIN_ARG_INFO(uopz_no_args_arginfo, 0)
 ZEND_END_ARG_INFO()

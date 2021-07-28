@@ -73,10 +73,6 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 } while(0)
 #define UOPZ_VM_LEAVE()    return ZEND_USER_OPCODE_LEAVE
 
-#ifndef GC_ADDREF
-#define GC_ADDREF(g) ++GC_REFCOUNT(g)
-#endif
-
 #define RETURN_VALUE_USED(opline) ((opline)->result_type != IS_UNUSED)
 
 #define EX_CONSTANT(e) RT_CONSTANT(EX(opline), e)
@@ -482,7 +478,6 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	if (EX(opline)->op2_type == IS_CONST) {
-		zval *function_name = EX_CONSTANT(EX(opline)->op2);
 		if (EX(opline)->op1_type == IS_CONST) {
 			CACHE_PTR(EX(opline)->result.num + sizeof(void*), NULL);
 		} else {

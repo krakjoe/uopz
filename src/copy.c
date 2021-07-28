@@ -26,10 +26,6 @@
 
 #include <Zend/zend_vm.h>
 
-#ifndef GC_ADDREF
-#define GC_ADDREF(g) ++GC_REFCOUNT(g)
-#endif
-
 /* {{{ */
 static inline HashTable* uopz_copy_statics(HashTable *old) {
 	if (GC_FLAGS(old) & IS_ARRAY_IMMUTABLE) {

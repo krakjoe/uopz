@@ -25,21 +25,21 @@ var_dump((bool) (uopz_flags(
 	Foo::class, "method", $flags | ZEND_ACC_PRIVATE) & ZEND_ACC_PRIVATE));
 var_dump((bool) (uopz_flags(Foo::class, "method", PHP_INT_MAX) & ZEND_ACC_PRIVATE));
 
-var_dump((bool) (uopz_flags(Foo::class, null) & ZEND_ACC_FINAL));
+var_dump((bool) (uopz_flags(Foo::class, '') & ZEND_ACC_FINAL));
 
 try {
-	uopz_flags(Foo::class, null, ZEND_ACC_PRIVATE);
+	uopz_flags(Foo::class, '', ZEND_ACC_PRIVATE);
 } catch (Exception $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	uopz_flags(Foo::class, null, ZEND_ACC_STATIC);
+	uopz_flags(Foo::class, '', ZEND_ACC_STATIC);
 } catch (Exception $ex) {
 	var_dump($ex->getMessage());
 }
 
-uopz_flags(Foo::class, null, ZEND_ACC_FINAL);
+uopz_flags(Foo::class, '', ZEND_ACC_FINAL);
 
 $reflector = new ReflectionClass(Foo::class);
 
