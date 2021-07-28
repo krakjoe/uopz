@@ -24,17 +24,68 @@
 
 #include "util.h"
 #include "function.h"
-#include "copy.h"
 
 #include <Zend/zend_closures.h>
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
+
+static zend_function* uopz_copy_function(zend_class_entry *scope, zend_object *closure, zend_long flags) { /* {{{ */
+	zend_function  *copy = (zend_function*)
+		zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
+
+	memcpy(copy, zend_get_closure_method_def(closure), sizeof(zend_op_array));
+
+	copy->op_array.fn_flags |= ZEND_ACC_IMMUTABLE;
+	copy->op_array.fn_flags &= ~ZEND_ACC_CLOSURE;
+
+	copy->op_array.function_name =
+		zend_string_copy(copy->op_array.function_name);
+
+	copy->op_array.scope = scope;
+
+	if (flags & ZEND_ACC_PPP_MASK) {
+		copy->op_array.fn_flags &= ~ZEND_ACC_PPP_MASK;
+
+		switch (flags & ZEND_ACC_PPP_MASK) {
+			case ZEND_ACC_PUBLIC:
+				copy->op_array.fn_flags |= ZEND_ACC_PUBLIC;
+			break;
+
+			case ZEND_ACC_PROTECTED:
+				copy->op_array.fn_flags |= ZEND_ACC_PROTECTED;
+			break;
+
+			case ZEND_ACC_PRIVATE:
+				copy->op_array.fn_flags |= ZEND_ACC_PRIVATE;
+			break;
+		}
+	} else {
+        copy->op_array.fn_flags |= ZEND_ACC_PUBLIC;
+    }
+
+	if (flags & ZEND_ACC_STATIC) {
+		copy->op_array.fn_flags |= ZEND_ACC_STATIC;
+	}
+
+	if (copy->op_array.static_variables) {
+		copy->op_array.static_variables = zend_array_dup(copy->op_array.static_variables);
+
+		ZEND_MAP_PTR_INIT(
+			copy->op_array.static_variables_ptr, &copy->op_array.static_variables);
+	}
+
+	copy->op_array.refcount = NULL;
+
+	return copy;
+} /* }}} */
 
 zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool all) { /* {{{ */
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_string *key = zend_string_tolower(name);
 	zend_function *function = NULL;
 	HashTable *functions = NULL;
+
+	key = zend_new_interned_string(key);
 
 	if (zend_hash_exists(table, key)) {
 		if (clazz) {
@@ -60,9 +111,8 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 
 	zend_hash_update(functions, key, closure);
 	zval_copy_ctor(closure);
-	function = uopz_copy_closure(clazz, 
-				(zend_function*) zend_get_closure_method_def(Z_OBJ_P(closure)),
-				flags);
+
+	function = uopz_copy_function(clazz, Z_OBJ_P(closure), flags);
 	zend_hash_update_ptr(table, key, (void*) function);
 
 	if (clazz) {

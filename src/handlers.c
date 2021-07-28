@@ -307,7 +307,7 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	} else if (opline->op1_type == IS_UNUSED) {
 		ce = zend_fetch_class(
 			NULL, opline->op1.num);
-		uopz_find_mock(ce->name, &obj, &ce);	
+		uopz_find_mock(ce->name, &obj, &ce);
 	} else {
 		ce = Z_CE_P(
 			EX_VAR(opline->op1.var));

@@ -7,7 +7,7 @@ if (PHP_UOPZ != "no") {
 	EXTENSION("uopz", "uopz.c");
 	ADD_SOURCES(
     	configure_module_dirname + "/src",
-		"util.c copy.c return.c hook.c constant.c function.c class.c handlers.c executors.c", 
+		"util.c return.c hook.c constant.c function.c class.c handlers.c executors.c", 
 		"uopz"
     );
 	ADD_FLAG("CFLAGS_UOPZ", "/I" + configure_module_dirname + "");
