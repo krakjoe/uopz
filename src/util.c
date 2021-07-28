@@ -218,7 +218,11 @@ static void uopz_callers_shutdown(void) { /* {{{ */
 	uopz_caller_switch(&uopz_call_user_func_array_ptr->handler, &zend_call_user_func_array_ptr->handler);
 } /* }}} */
 
-#define UOPZ_CALL_HOOKS(variadic) \
+#define UOPZ_CALL_HOOKS(variadic) do { \
+	if (!fcc.function_handler) { \
+		break; \
+	} \
+	\
 	{ \
 		uopz_hook_t *uhook = uopz_find_hook(fcc.function_handler); \
 		\
@@ -243,8 +247,8 @@ static void uopz_callers_shutdown(void) { /* {{{ */
 			ZVAL_COPY(return_value, &ureturn->value); \
 			return; \
 		} \
-	} while (0)
-
+	} while (0); \
+} while (0)
 /* {{{ proto mixed uopz_call_user_func(callable function, ... args) */
 PHP_FUNCTION(uopz_call_user_func) {
 	zval retval;
