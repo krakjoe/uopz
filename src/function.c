@@ -329,7 +329,7 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 	}
 
 	HashTable *variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
-	
+
 	if (!variables) {
 		ZEND_MAP_PTR_INIT(
 			entry->op_array.static_variables_ptr, 
@@ -338,10 +338,7 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 		variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
 	}
 
-	ZVAL_ARR(return_value, variables);
-	if (!(GC_FLAGS(variables) & IS_ARRAY_IMMUTABLE)) {
-		GC_ADDREF(variables);
-	}
+	ZVAL_ARR(return_value, zend_array_dup(variables));
 	return 1;
 } /* }}} */
 
