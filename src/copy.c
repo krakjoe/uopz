@@ -28,7 +28,12 @@
 
 /* {{{ */
 static inline HashTable* uopz_copy_statics(HashTable *old) {
-	return zend_array_dup(old);
+	if (GC_FLAGS(old) & IS_ARRAY_IMMUTABLE) {
+		return old;
+	}
+
+	GC_ADDREF(old);
+	return old;
 } /* }}} */
 
 /* {{{ */
@@ -294,6 +299,10 @@ zend_function* uopz_copy_closure(zend_class_entry *scope, zend_function *functio
 
 	if (op_array->static_variables) {
 		op_array->static_variables = uopz_copy_statics(op_array->static_variables);
+	}
+
+	if (op_array->filename) {
+		op_array->filename = zend_string_copy(op_array->filename);
 	}
 
 	return copy;
