@@ -62,8 +62,8 @@ static const uopz_magic_t umagic[] = {
 	UOPZ_MAGIC(ZEND_CALL_FUNC_NAME, 7),
 	UOPZ_MAGIC(ZEND_CALLSTATIC_FUNC_NAME, 8),
 	UOPZ_MAGIC(ZEND_TOSTRING_FUNC_NAME, 9),
-	UOPZ_MAGIC("serialize", 10),
-	UOPZ_MAGIC("unserialize", 11),
+	UOPZ_MAGIC("__serialize", 10),
+	UOPZ_MAGIC("__unserialize", 11),
 	UOPZ_MAGIC(ZEND_DEBUGINFO_FUNC_NAME, 12),
 	UOPZ_MAGIC_END
 };
@@ -86,13 +86,8 @@ void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function
 				case 7: clazz->__call = function; break;
 				case 8: clazz->__callstatic = function; break;
 				case 9: clazz->__tostring = function; break;
-#if PHP_VERSION_ID >= 80000
 				case 10: clazz->__serialize = function; break;
 				case 11: clazz->__unserialize = function; break;
-#else
-				case 10: clazz->serialize_func = function; break;
-				case 11: clazz->unserialize_func = function; break;
-#endif
 				case 12: clazz->__debugInfo = function; break;
 			}
 			return;

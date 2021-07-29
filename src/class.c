@@ -260,13 +260,8 @@ void uopz_get_property(zval *object, zval *member, zval *value) { /* {{{ */
 		uopz_set_scope(Z_OBJCE_P(object));
 	}
 
-#if PHP_VERSION_ID >= 80000
 	prop = Z_OBJ_HT_P(object)->read_property(
 		Z_OBJ_P(object), Z_STR_P(member), BP_VAR_R, NULL, &rv);
-#else
-	prop = Z_OBJ_HT_P(object)->read_property(
-		object, member, BP_VAR_R, NULL, &rv);
-#endif
 
 	uopz_set_scope(scope);
 
