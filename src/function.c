@@ -60,7 +60,9 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *n
 			copy->op_array.static_variables_ptr, &copy->op_array.static_variables);
 	}
 
-	copy->op_array.refcount = NULL;
+	if (copy->op_array.refcount) {
+		(*copy->op_array.refcount)++;
+	}
 	copy->op_array.fn_flags |= ZEND_ACC_UOPZ;
 
 	return copy;
