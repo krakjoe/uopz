@@ -248,7 +248,11 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 				ZSTR_VAL(name));
 			return;
 		}
-		function->common.fn_flags = flags;
+
+		/* Only allow changing a whitelist of flags, don't allow modifying internal flags. */
+		uint32_t allowed_flags = ZEND_ACC_PPP_MASK | ZEND_ACC_STATIC | ZEND_ACC_FINAL;
+		function->common.fn_flags =
+			(function->common.fn_flags & ~allowed_flags) | (flags & allowed_flags);
 	}
 	RETURN_LONG(current);
 } /* }}} */
