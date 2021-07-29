@@ -158,8 +158,6 @@ uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
 	return ureturn;
 } /* }}} */
 
-extern PHP_FUNCTION(php_call_user_func);
-
 void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data, zval *return_value) { /* {{{ */
 	zend_fcall_info fci = empty_fcall_info;
 	zend_fcall_info_cache fcc = empty_fcall_info_cache;
