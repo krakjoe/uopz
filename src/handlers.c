@@ -392,6 +392,7 @@ static zend_always_inline int php_uopz_leave_helper(zend_execute_data *execute_d
 	EX(call) = call->prev_execute_data;
 	EX(opline) = EX(opline) + 1;
 
+	zend_vm_stack_free_args(call);
 	zend_vm_stack_free_call_frame(call);
 
 	UOPZ_VM_LEAVE();

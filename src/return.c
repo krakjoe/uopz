@@ -196,6 +196,10 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 	}
 
 	zval_ptr_dtor(&closure);
+	
+	if (uopz_is_cufa(execute_data)) {
+		zend_fcall_info_args_clear(&fci, 1);
+	}
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
 } /* }}} */
