@@ -12,6 +12,10 @@ class Foo {
 	public static function method() {
 		return -1;	
 	}
+
+    public static function newSelf() {
+        var_dump(new self);
+    }
 }
 
 class Bar {
@@ -36,6 +40,11 @@ try {
 } catch (Error $e) {
     echo $e->getMessage(), "\n";
 }
+try {
+    Foo::newSelf();
+} catch (Error $e) {
+    echo $e->getMessage(), "\n";
+}
 
 ?>
 --EXPECTF--
@@ -45,4 +54,5 @@ int(1)
 int(-1)
 object(Foo)#%d (0) {
 }
+Class "DoesntExist" not found
 Class "DoesntExist" not found
