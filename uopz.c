@@ -259,18 +259,16 @@ static PHP_FUNCTION(uopz_get_return)
 /* {{{ proto void uopz_set_mock(string class, mixed mock) */
 static PHP_FUNCTION(uopz_set_mock) 
 {
-	zend_string *clazz = NULL;
-	zval *mock = NULL;
+	zend_string *clazz;
+	zval *mock;
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("Sz", &clazz, &mock) != SUCCESS) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (class, mock), classes not found ?");
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sz", &clazz, &mock) != SUCCESS) {
+		RETURN_THROWS();
 	}
 
-	if (!mock || (Z_TYPE_P(mock) != IS_STRING && Z_TYPE_P(mock) != IS_OBJECT)) {
+	if (Z_TYPE_P(mock) != IS_STRING && Z_TYPE_P(mock) != IS_OBJECT) {
 		uopz_refuse_parameters(
 			"unexpected parameter combination, mock is expected to be a string, or an object");
 		return;
@@ -282,14 +280,12 @@ static PHP_FUNCTION(uopz_set_mock)
 /* {{{ proto void uopz_unset_mock(string mock) */
 static PHP_FUNCTION(uopz_unset_mock) 
 {
-	zend_string *clazz = NULL;
+	zend_string *clazz;
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("S", &clazz) != SUCCESS) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (clazz), class not found ?");
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &clazz) != SUCCESS) {
+		RETURN_THROWS();
 	}
 
 	uopz_unset_mock(clazz);
@@ -298,14 +294,12 @@ static PHP_FUNCTION(uopz_unset_mock)
 /* {{{ proto void uopz_get_mock(string mock) */
 static PHP_FUNCTION(uopz_get_mock) 
 {
-	zend_string *clazz = NULL;
+	zend_string *clazz;
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("S", &clazz) != SUCCESS) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (clazz), class not found ?");
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &clazz) != SUCCESS) {
+		RETURN_THROWS();
 	}
 
 	uopz_get_mock(clazz, return_value);
@@ -516,10 +510,8 @@ static PHP_FUNCTION(uopz_implement)
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("CC", &clazz, &interface) != SUCCESS) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (class, interface)");
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "CC", &clazz, &interface) != SUCCESS) {
+		RETURN_THROWS();
 	}
 
 	RETURN_BOOL(uopz_implement(clazz, interface));
@@ -533,10 +525,8 @@ static PHP_FUNCTION(uopz_extend)
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("CC", &clazz, &parent) != SUCCESS) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (class, parent)");
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "CC", &clazz, &parent) != SUCCESS) {
+		RETURN_THROWS();
 	}
 
 	RETURN_BOOL(uopz_extend(clazz, parent));
@@ -567,16 +557,17 @@ static PHP_FUNCTION(uopz_flags)
 			 void uopz_set_property(string class, string property, mixed value) */
 static PHP_FUNCTION(uopz_set_property) 
 {
-	zval *scope = NULL;
-	zval *prop  = NULL;
-	zval *value = NULL;
+	zval *scope;
+	zend_string *prop;
+	zval *value;
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("zzz", &scope, &prop, &value) != SUCCESS ||
-		!scope || !prop || !value ||
-		(Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) ||
-		Z_TYPE_P(prop) != IS_STRING) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zSz", &scope, &prop, &value) != SUCCESS) {
+		RETURN_THROWS();
+	}
+
+	if (Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) {
 		uopz_refuse_parameters(
 			"unexpected paramter combination, expected "
 			"(class, property, value) or (object, property, value)");
@@ -592,22 +583,23 @@ static PHP_FUNCTION(uopz_set_property)
 			return;
 		}
 
-		uopz_set_static_property(ce, Z_STR_P(prop), value);
+		uopz_set_static_property(ce, prop, value);
 	}
 } /* }}} */
 
 /* {{{ proto mixed uopz_get_property(object instance, string property) 
 	   proto mixed uopz_get_property(string class, string property) */
 static PHP_FUNCTION(uopz_get_property) {
-	zval *scope = NULL;
-	zval *prop  = NULL;
+	zval *scope;
+	zend_string *prop;
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("zz", &scope, &prop) != SUCCESS ||
-		!scope || !prop ||
-		(Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) ||
-		Z_TYPE_P(prop) != IS_STRING) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zS", &scope, &prop) != SUCCESS) {
+		RETURN_THROWS();
+	}
+
+	if (Z_TYPE_P(scope) != IS_OBJECT && Z_TYPE_P(scope) != IS_STRING) {
 		uopz_refuse_parameters(
 			"unexpected paramter combination, expected "
 			"(class, property) or (object, property)");
@@ -623,7 +615,7 @@ static PHP_FUNCTION(uopz_get_property) {
 			return;
 		}
 
-		uopz_get_static_property(ce, Z_STR_P(prop), return_value);
+		uopz_get_static_property(ce, prop, return_value);
 	}
 } /* }}} */
 
@@ -632,6 +624,10 @@ static PHP_FUNCTION(uopz_get_exit_status) {
 
 	uopz_disabled_guard();
 
+	if (zend_parse_parameters_none() != SUCCESS) {
+		RETURN_THROWS();
+	}
+
 	if (Z_TYPE(UOPZ(estatus)) != IS_UNDEF) {
 		ZVAL_COPY(return_value, &UOPZ(estatus));
 	}
@@ -639,14 +635,12 @@ static PHP_FUNCTION(uopz_get_exit_status) {
 
 /* {{{ proto mixed uopz_allow_exit(bool allow) */
 static PHP_FUNCTION(uopz_allow_exit) {
-	zend_bool allow = 0;
+	zend_bool allow;
 
 	uopz_disabled_guard();
 	
-	if (uopz_parse_parameters("b", &allow) != SUCCESS) {
-		uopz_refuse_parameters(
-			"unexpected parameter combination, expected (allow)");
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "b", &allow) != SUCCESS) {
+		RETURN_THROWS();
 	}
 
 	UOPZ(exit) = allow;
