@@ -44,20 +44,7 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *n
 
 	if (flags & ZEND_ACC_PPP_MASK) {
 		copy->op_array.fn_flags &= ~ZEND_ACC_PPP_MASK;
-
-		switch (flags & ZEND_ACC_PPP_MASK) {
-			case ZEND_ACC_PUBLIC:
-				copy->op_array.fn_flags |= ZEND_ACC_PUBLIC;
-			break;
-
-			case ZEND_ACC_PROTECTED:
-				copy->op_array.fn_flags |= ZEND_ACC_PROTECTED;
-			break;
-
-			case ZEND_ACC_PRIVATE:
-				copy->op_array.fn_flags |= ZEND_ACC_PRIVATE;
-			break;
-		}
+		copy->op_array.fn_flags |= flags & ZEND_ACC_PPP_MASK;
 	} else {
         copy->op_array.fn_flags |= ZEND_ACC_PUBLIC;
     }
