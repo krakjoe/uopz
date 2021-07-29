@@ -53,7 +53,7 @@ uopz_set_hook("bar", function() {
     throw new Exception("Ooops");
 });
 try {
-    bar();
+    var_dump(bar());
 } catch (Exception $e) {
     echo $e->getMessage(), "\n";
 }

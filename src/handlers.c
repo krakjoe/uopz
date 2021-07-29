@@ -402,18 +402,20 @@ int uopz_vm_do_call_common(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_execute_data *call = EX(call);
 
 	if (call) {
-		uopz_return_t *ureturn;
+		const zend_op *opline = EX(opline);
 
 		if (!uopz_run_hook(call->func, call)) {
+			if (RETURN_VALUE_USED(opline)) {
+				ZVAL_UNDEF(EX_VAR(opline->result.var));
+			}
 			return php_uopz_leave_helper(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU);
 		}
 
-		ureturn = uopz_find_return(call->func);
+		uopz_return_t *ureturn = uopz_find_return(call->func);
 
 		if (ureturn) {
-			const zend_op *opline = EX(opline);
 			zval rv, *return_value = RETURN_VALUE_USED(opline) ?
-				EX_VAR(EX(opline)->result.var) : &rv;
+				EX_VAR(opline->result.var) : &rv;
 
 			if (UOPZ_RETURN_IS_EXECUTABLE(ureturn)) {
 				if (UOPZ_RETURN_IS_BUSY(ureturn)) {
