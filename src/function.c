@@ -388,12 +388,16 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 	HashTable *variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
 
 	if (!variables) {
-		ZEND_MAP_PTR_INIT(
-			entry->op_array.static_variables_ptr, 
-			&entry->op_array.static_variables);
-		
-		variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+		variables = zend_array_dup(entry->op_array.static_variables);
+		ZEND_MAP_PTR_SET(entry->op_array.static_variables_ptr, variables);
 	}
+
+	zval *val;
+	ZEND_HASH_FOREACH_VAL(variables, val) {
+		if (zval_update_constant_ex(val, entry->common.scope) != SUCCESS) {
+			return false;
+		}
+	} ZEND_HASH_FOREACH_END();
 
 	ZVAL_ARR(return_value, zend_array_dup(variables));
 	return 1;

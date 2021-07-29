@@ -8,14 +8,15 @@ uopz.disable=0
 <?php
 class Foo {
 	public function method() {
-		static $vars = [
-			1,2,3,4,5];
+		static $vars = [1,2,3,4,5];
+		static $bar = FOO;
 
 		$vars[] = 6;
 	}
 
 	public function nostatics() {}
 }
+const FOO = "bar";
 
 function nostatics() {}
 
@@ -64,7 +65,7 @@ try {
 }
 ?>
 --EXPECTF--
-array(1) {
+array(2) {
   ["vars"]=>
   array(5) {
     [0]=>
@@ -78,8 +79,10 @@ array(1) {
     [4]=>
     int(5)
   }
+  ["bar"]=>
+  string(3) "bar"
 }
-array(1) {
+array(2) {
   ["vars"]=>
   array(6) {
     [0]=>
@@ -95,6 +98,8 @@ array(1) {
     [5]=>
     int(6)
   }
+  ["bar"]=>
+  string(3) "bar"
 }
 string(%d) "failed to get statics from method %s::%s, it does not exist"
 string(%d) "failed to get statics from function %s, it does not exist"
