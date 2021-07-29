@@ -379,6 +379,12 @@ static zend_always_inline void uopz_run_hook(zend_function *function, zend_execu
 static zend_always_inline int php_uopz_leave_helper(zend_execute_data *execute_data) {
 	zend_execute_data *call = EX(call);
 
+	if (ZEND_CALL_INFO(call) & ZEND_CALL_RELEASE_THIS) {
+		OBJ_RELEASE(Z_OBJ(call->This));
+	} else if (ZEND_CALL_INFO(call) & ZEND_CALL_CLOSURE) {
+		OBJ_RELEASE(ZEND_CLOSURE_OBJECT(call->func));
+	}
+
 	EX(call) = call->prev_execute_data;
 	EX(opline) = EX(opline) + 1;
 
