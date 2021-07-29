@@ -46,8 +46,8 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *n
 		copy->op_array.fn_flags &= ~ZEND_ACC_PPP_MASK;
 		copy->op_array.fn_flags |= flags & ZEND_ACC_PPP_MASK;
 	} else {
-        copy->op_array.fn_flags |= ZEND_ACC_PUBLIC;
-    }
+		copy->op_array.fn_flags |= ZEND_ACC_PUBLIC;
+	}
 
 	if (flags & ZEND_ACC_STATIC) {
 		copy->op_array.fn_flags |= ZEND_ACC_STATIC;
@@ -201,13 +201,13 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 				"attempt to set flags of immutable class entry %s, not allowed",
 				ZSTR_VAL(clazz->name));
 			return;
-        }
+		}
 
 		current = clazz->ce_flags;
 		clazz->ce_flags = flags;
 		if (current & ZEND_ACC_LINKED) {
-            clazz->ce_flags |= ZEND_ACC_LINKED;
-        }
+			clazz->ce_flags |= ZEND_ACC_LINKED;
+		}
 		RETURN_LONG(current);
 	}
 
@@ -231,11 +231,11 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	current = function->common.fn_flags;
 	if (flags) {
 		if (function->common.fn_flags & ZEND_ACC_IMMUTABLE) {
-            uopz_exception(
+			uopz_exception(
 				"attempt to set flags of immutable function entry %s, not allowed",
 				ZSTR_VAL(name));
 			return;
-        }
+		}
 		function->common.fn_flags = flags;
 	}
 	RETURN_LONG(current);

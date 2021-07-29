@@ -44,12 +44,12 @@ static inline void uopz_table_dtor(zval *zv) { /* {{{ */
 /* {{{ */
 typedef struct _uopz_magic_t {
 	const char *name;
-	size_t      length;
-	int         id;
+	size_t	  	length;
+	int		 	id;
 } uopz_magic_t;
 
 #define UOPZ_MAGIC(name, id) {name, sizeof(name)-1, id}
-#define UOPZ_MAGIC_END	     {NULL, 0, 0L}
+#define UOPZ_MAGIC_END		 {NULL, 0, 0L}
 
 static const uopz_magic_t umagic[] = {
 	UOPZ_MAGIC(ZEND_CONSTRUCTOR_FUNC_NAME, 0),
@@ -320,7 +320,7 @@ void uopz_request_init(void) { /* {{{ */
 void uopz_request_shutdown(void) { /* {{{ */
 	CG(compiler_options) = UOPZ(copts);
 
-	zend_hash_apply(CG(class_table),    uopz_clean_class);
+	zend_hash_apply(CG(class_table),	uopz_clean_class);
 	zend_hash_apply(CG(function_table), uopz_clean_function);
 
 	zend_hash_destroy(&UOPZ(mocks));

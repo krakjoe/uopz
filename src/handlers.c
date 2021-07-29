@@ -62,7 +62,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 #define UOPZ_VM_DISPATCH() return _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS_PASSTHRU)
 #define UOPZ_VM_RETURN()   return ZEND_USER_OPCODE_RETURN
 #define UOPZ_VM_CONTINUE() return ZEND_USER_OPCODE_CONTINUE
-#define UOPZ_VM_NEXT(e, n)    do { \
+#define UOPZ_VM_NEXT(e, n)	do { \
 	if (e) { \
 		UOPZ_OPLINE = EX(opline) + (n); \
 	} else { \
@@ -71,7 +71,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 	\
 	UOPZ_VM_CONTINUE(); \
 } while(0)
-#define UOPZ_VM_LEAVE()    return ZEND_USER_OPCODE_LEAVE
+#define UOPZ_VM_LEAVE()	return ZEND_USER_OPCODE_LEAVE
 
 #define RETURN_VALUE_USED(opline) ((opline)->result_type != IS_UNUSED)
 
@@ -93,7 +93,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 typedef int (*zend_vm_handler_t) (UOPZ_OPCODE_HANDLER_ARGS);
 
 typedef struct _uopz_vm_handler_t {
-	zend_uchar        opcode;
+	zend_uchar		opcode;
 	zend_vm_handler_t *zend;
 	zend_vm_handler_t uopz;
 } uopz_vm_handler_t;
@@ -124,16 +124,16 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 
 UOPZ_HANDLERS_DECL_BEGIN()
-	UOPZ_HANDLER_DECL(ZEND_EXIT,                    exit)
-	UOPZ_HANDLER_DECL(ZEND_NEW,                     new)
-	UOPZ_HANDLER_DECL(ZEND_FETCH_CONSTANT,          fetch_constant)
-	UOPZ_HANDLER_DECL(ZEND_FETCH_CLASS_CONSTANT,    fetch_class_constant)
-	UOPZ_HANDLER_DECL(ZEND_DO_FCALL,                do_fcall)
-	UOPZ_HANDLER_DECL(ZEND_DO_UCALL,                do_ucall)
-	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL,              init_fcall)
-	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL_BY_NAME,      init_fcall_by_name)
+	UOPZ_HANDLER_DECL(ZEND_EXIT,					exit)
+	UOPZ_HANDLER_DECL(ZEND_NEW,					 	new)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_CONSTANT,		  	fetch_constant)
+	UOPZ_HANDLER_DECL(ZEND_FETCH_CLASS_CONSTANT,	fetch_class_constant)
+	UOPZ_HANDLER_DECL(ZEND_DO_FCALL,				do_fcall)
+	UOPZ_HANDLER_DECL(ZEND_DO_UCALL,				do_ucall)
+	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL,			  	init_fcall)
+	UOPZ_HANDLER_DECL(ZEND_INIT_FCALL_BY_NAME,	  	init_fcall_by_name)
 	UOPZ_HANDLER_DECL(ZEND_INIT_NS_FCALL_BY_NAME,   init_ns_fcall_by_name)
-	UOPZ_HANDLER_DECL(ZEND_INIT_METHOD_CALL,        init_method_call)
+	UOPZ_HANDLER_DECL(ZEND_INIT_METHOD_CALL,		init_method_call)
 	UOPZ_HANDLER_DECL(ZEND_INIT_STATIC_METHOD_CALL, init_static_method_call)
 UOPZ_HANDLERS_DECL_END()
 
@@ -326,7 +326,7 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		call = zend_vm_stack_push_call_frame(
 			ZEND_CALL_FUNCTION, (zend_function *) &zend_pass_function,
 			opline->extended_value, NULL
-        );
+		);
 
 		call->prev_execute_data = EX(call);
 		EX(call) = call;
@@ -358,19 +358,19 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 			opline->extended_value, NULL);
 	} else {
 		if (constructor->type == ZEND_USER_FUNCTION && !RUN_TIME_CACHE(&constructor->op_array)) {
-            void **run_time_cache =
-                zend_arena_alloc(&CG(arena), constructor->op_array.cache_size);
-            memset(run_time_cache, 0, constructor->op_array.cache_size);
+			void **run_time_cache =
+				zend_arena_alloc(&CG(arena), constructor->op_array.cache_size);
+			memset(run_time_cache, 0, constructor->op_array.cache_size);
 
-            ZEND_MAP_PTR_SET(constructor->op_array.run_time_cache, run_time_cache);
-        }
+			ZEND_MAP_PTR_SET(constructor->op_array.run_time_cache, run_time_cache);
+		}
 
 		call = zend_vm_stack_push_call_frame(
 			ZEND_CALL_FUNCTION | ZEND_CALL_RELEASE_THIS | ZEND_CALL_HAS_THIS,
 			constructor,
 			opline->extended_value,
 			Z_OBJ_P(result)
-        );
+		);
 
 		Z_ADDREF_P(result);
 	}

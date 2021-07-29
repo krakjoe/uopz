@@ -106,42 +106,42 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
 	if ((clazz->ce_flags & ZEND_ACC_TRAIT) &&
 		!(parent->ce_flags & ZEND_ACC_TRAIT)) {
 		uopz_exception(
-		    "the trait provided (%s) cannot extend %s, because %s is not a trait",
-		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
+			"the trait provided (%s) cannot extend %s, because %s is not a trait",
+			 ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
 		return 0;
 	}
 
 	if ((clazz->ce_flags & ZEND_ACC_INTERFACE) &&
 		!(parent->ce_flags & ZEND_ACC_INTERFACE)) {
 		uopz_exception(
-		    "the interface provided (%s) cannot extend %s, because %s is not an interface",
-		     ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
+			"the interface provided (%s) cannot extend %s, because %s is not an interface",
+			 ZSTR_VAL(clazz->name), ZSTR_VAL(parent->name), ZSTR_VAL(parent->name));
 		return 0;
 	}
 
 	if ((clazz->ce_flags & ZEND_ACC_IMMUTABLE)) {
 		uopz_exception(
-		    "cannot change the class provided (%s), because it is immutable",
-		     ZSTR_VAL(clazz->name));
+			"cannot change the class provided (%s), because it is immutable",
+			 ZSTR_VAL(clazz->name));
 		return 0;
 	}
 
 	is_final = clazz->ce_flags & ZEND_ACC_FINAL;
 	is_trait = (clazz->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT;
 
-    if (is_trait && (parent->ce_flags & ZEND_ACC_IMMUTABLE)) {
+	if (is_trait && (parent->ce_flags & ZEND_ACC_IMMUTABLE)) {
 		uopz_exception(
-		    "the parent trait provided (%s) cannot be extended by %s, because it is immutable",
-		     ZSTR_VAL(parent->name), ZSTR_VAL(clazz->name));
+			"the parent trait provided (%s) cannot be extended by %s, because it is immutable",
+			 ZSTR_VAL(parent->name), ZSTR_VAL(clazz->name));
 		return 0;
-    }
+	}
 
 	clazz->ce_flags &= ~ZEND_ACC_FINAL;
 
 	if (clazz->parent) {
 		zend_function *method;
 		zend_string   *name;
-		dtor_func_t    dtor = clazz->function_table.pDestructor;
+		dtor_func_t	dtor = clazz->function_table.pDestructor;
 
 		clazz->function_table.pDestructor = NULL;
 
@@ -156,18 +156,18 @@ zend_bool uopz_extend(zend_class_entry *clazz, zend_class_entry *parent) {
 		} ZEND_HASH_FOREACH_END();
 
 		clazz->function_table.pDestructor = dtor;
-        clazz->parent = NULL;
+		clazz->parent = NULL;
 	}
 
 	if (is_trait) {
-        clazz->ce_flags &= ~ZEND_ACC_TRAIT;
-        parent->ce_flags &= ~ZEND_ACC_TRAIT;
-    }
-    zend_do_inheritance(clazz, parent);
-    if (is_trait) {
-        clazz->ce_flags |= ZEND_ACC_TRAIT;
-        parent->ce_flags |= ZEND_ACC_TRAIT;
-    }
+		clazz->ce_flags &= ~ZEND_ACC_TRAIT;
+		parent->ce_flags &= ~ZEND_ACC_TRAIT;
+	}
+	zend_do_inheritance(clazz, parent);
+	if (is_trait) {
+		clazz->ce_flags |= ZEND_ACC_TRAIT;
+		parent->ce_flags |= ZEND_ACC_TRAIT;
+	}
 
 	if (is_final)
 		clazz->ce_flags |= ZEND_ACC_FINAL;
@@ -198,7 +198,7 @@ zend_bool uopz_implement(zend_class_entry *clazz, zend_class_entry *interface) {
 			ZSTR_VAL(clazz->name),
 			ZSTR_VAL(interface->name));
 		return 0; 
-    }
+	}
 
 	zend_do_implement_interface(clazz, interface);
 

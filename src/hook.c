@@ -137,8 +137,8 @@ uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
 
 	if (!hooks) {
 		if (function->common.prototype && 
-		    function->common.prototype->common.scope &&
-		    function->common.prototype->common.scope->ce_flags & ZEND_ACC_INTERFACE) {
+			function->common.prototype->common.scope &&
+			function->common.prototype->common.scope->ce_flags & ZEND_ACC_INTERFACE) {
 			return uopz_find_hook(
 				function->common.prototype);
 		}
@@ -172,31 +172,31 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data, zend
 	zend_fcall_info_init(&closure, 0, &fci, &fcc, NULL, &error);
 
 	if (!skip) {
-        fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
-	    fci.params = ZEND_CALL_ARG(execute_data, 1);
-    } else {
-        if (variadic) {
-            zend_fcall_info_args_ex(
-                &fci,
-                fcc.function_handler,
-                ZEND_CALL_ARG(execute_data, 2));
-        } else {
-            fci.param_count = ZEND_CALL_NUM_ARGS(execute_data) - 1;
-	        fci.params = ZEND_CALL_ARG(execute_data, 2);
-        }
-    }
+		fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
+		fci.params = ZEND_CALL_ARG(execute_data, 1);
+	} else {
+		if (variadic) {
+			zend_fcall_info_args_ex(
+				&fci,
+				fcc.function_handler,
+				ZEND_CALL_ARG(execute_data, 2));
+		} else {
+			fci.param_count = ZEND_CALL_NUM_ARGS(execute_data) - 1;
+			fci.params = ZEND_CALL_ARG(execute_data, 2);
+		}
+	}
 
 	fci.retval= &rv;
-	
+
 	if (zend_call_function(&fci, &fcc) == SUCCESS) {
 		if (!Z_ISUNDEF(rv)) {
 			zval_ptr_dtor(&rv);
 		}
 	}
 
-    if (variadic) {
-        zend_fcall_info_args_clear(&fci, 1);
-    }
+	if (variadic) {
+		zend_fcall_info_args_clear(&fci, 1);
+	}
 
 	zval_ptr_dtor(&closure);
 

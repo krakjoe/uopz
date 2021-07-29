@@ -50,7 +50,7 @@ ZEND_DECLARE_MODULE_GLOBALS(uopz)
 
 PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("uopz.disable", "0", PHP_INI_SYSTEM, OnUpdateBool, disable, zend_uopz_globals, uopz_globals)
-	STD_PHP_INI_ENTRY("uopz.exit",    "0", PHP_INI_SYSTEM, OnUpdateBool, exit,    zend_uopz_globals, uopz_globals)
+	STD_PHP_INI_ENTRY("uopz.exit",	"0", PHP_INI_SYSTEM, OnUpdateBool, exit,	zend_uopz_globals, uopz_globals)
 PHP_INI_END()
 
 /* {{{ */
@@ -540,7 +540,7 @@ static PHP_FUNCTION(uopz_extend)
 } /* }}} */
 
 /* {{{ proto int uopz_flags(string function [, int flags])
-       proto int uopz_flags(string class, string function [, int flags]) */
+	   proto int uopz_flags(string class, string function [, int flags]) */
 static PHP_FUNCTION(uopz_flags)
 {
 	zend_string *name = NULL;
