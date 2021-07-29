@@ -288,13 +288,15 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 			if (ce == NULL) {
 				ZVAL_UNDEF(EX_VAR(opline->result.var));
-
 				UOPZ_VM_DISPATCH();
 			}
 		}
 	} else if (opline->op1_type == IS_UNUSED) {
-		ce = zend_fetch_class(
-			NULL, opline->op1.num);
+		ce = zend_fetch_class(NULL, opline->op1.num);
+		if (!ce) {
+			ZVAL_UNDEF(EX_VAR(opline->result.var));
+			UOPZ_VM_DISPATCH();
+		}
 		uopz_find_mock(ce->name, &obj, &ce);
 	} else {
 		ce = Z_CE_P(
