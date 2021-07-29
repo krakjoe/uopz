@@ -33,10 +33,10 @@ zend_bool uopz_set_hook(zend_class_entry *clazz, zend_string *name, zval *closur
 	HashTable *hooks;
 	uopz_hook_t hook;
 	zend_string *key = zend_string_tolower(name);
-	zend_function *function;
 
 	if (clazz) {
-		if (uopz_find_method(clazz, key, &function) != SUCCESS) {
+		zend_function *function = uopz_find_method(clazz, key);
+		if (!function) {
 			uopz_exception(
 				"failed to set hook for %s::%s, the method does not exist",
 				ZSTR_VAL(clazz->name),

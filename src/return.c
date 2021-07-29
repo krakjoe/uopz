@@ -33,10 +33,10 @@ zend_bool uopz_set_return(zend_class_entry *clazz, zend_string *name, zval *valu
 	HashTable *returns;
 	uopz_return_t ret;
 	zend_string *key = zend_string_tolower(name);
-	zend_function *function;
 
 	if (clazz) {
-		if (uopz_find_method(clazz, key, &function) != SUCCESS) {
+		zend_function *function = uopz_find_method(clazz, key);
+		if (!function) {
 			uopz_exception(
 				"failed to set return for %s::%s, the method does not exist",
 				ZSTR_VAL(clazz->name),

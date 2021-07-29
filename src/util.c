@@ -95,25 +95,15 @@ void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function
 	}
 } /* }}} */
 
-int uopz_find_method(zend_class_entry *ce, zend_string *name, zend_function **function) { /* {{{ */
-	return uopz_find_function(&ce->function_table, name, function);
+zend_function *uopz_find_method(zend_class_entry *ce, zend_string *name) { /* {{{ */
+	return uopz_find_function(&ce->function_table, name);
 } /* }}} */
 
-int uopz_find_function(HashTable *table, zend_string *name, zend_function **function) { /* {{{ */
+zend_function *uopz_find_function(HashTable *table, zend_string *name) { /* {{{ */
 	zend_string *key = zend_string_tolower(name);
 	zend_function *ptr = zend_hash_find_ptr(table, key);
-
 	zend_string_release(key);
-
-	if (!ptr) {
-		return FAILURE;
-	}
-
-	if (function) {
-		*function = ptr;
-	}
-
-	return SUCCESS;
+	return ptr;
 } /* }}} */
 
 zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /* {{{ */

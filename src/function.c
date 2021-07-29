@@ -185,7 +185,6 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_boo
 /* {{{ */
 void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zval *return_value) {
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	zend_function *function = NULL;
 	zend_long current = 0;
 
 	if (!name || !ZSTR_LEN(name) || !ZSTR_VAL(name)) {
@@ -222,7 +221,8 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 		RETURN_LONG(current);
 	}
 
-	if (uopz_find_function(table, name, &function) != SUCCESS) {
+	zend_function *function = uopz_find_function(table, name);
+	if (!function) {
 		if (clazz) {
 			uopz_exception(
 				"failed to set or get flags of method %s::%s, it does not exist",
@@ -262,14 +262,16 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 	zval *v = NULL;
 	
 	if (clazz) {
-		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
+		entry = uopz_find_function(&clazz->function_table, function);
+		if (!entry) {
 			uopz_exception(
 				"failed to set statics in method %s::%s, it does not exist",
 				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
 			return 0;
 		}
 	} else {
-		if (uopz_find_function(CG(function_table), function, &entry) != SUCCESS) {
+		entry = uopz_find_function(CG(function_table), function);
+		if (!entry) {
 			uopz_exception(
 				"failed to set statics in function %s, it does not exist",
 				ZSTR_VAL(function));
@@ -338,14 +340,16 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 	zend_function *entry;
 
 	if (clazz) {
-		if (uopz_find_function(&clazz->function_table, function, &entry) != SUCCESS) {
+		entry = uopz_find_function(&clazz->function_table, function);
+		if (!entry) {
 			uopz_exception(
 				"failed to get statics from method %s::%s, it does not exist",
 				ZSTR_VAL(clazz->name), ZSTR_VAL(function));
 			return 0;
 		}
 	} else {
-		if (uopz_find_function(CG(function_table), function, &entry) != SUCCESS) {
+		entry = uopz_find_function(CG(function_table), function);
+		if (!entry) {
 			uopz_exception(
 				"failed to get statics from function %s, it does not exist",
 				ZSTR_VAL(function));
