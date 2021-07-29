@@ -234,6 +234,7 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
             uopz_exception(
 				"attempt to set flags of immutable function entry %s, not allowed",
 				ZSTR_VAL(name));
+			return;
         }
 		function->common.fn_flags = flags;
 	}
