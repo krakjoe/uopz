@@ -70,7 +70,6 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_string *key = zend_string_tolower(name);
 	zend_function *function = NULL;
-	HashTable *functions = NULL;
 
 	key = zend_new_interned_string(key);
 
@@ -239,10 +238,6 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 		function->common.fn_flags = flags;
 	}
 	RETURN_LONG(current);
-} /* }}} */
-
-static inline void uopz_try_addref(zval *z) { /* {{{ */
-	Z_TRY_ADDREF_P(z);
 } /* }}} */
 
 zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics) { /* {{{ */

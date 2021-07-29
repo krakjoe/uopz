@@ -148,20 +148,6 @@ zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /
 	return 0;
 } /* }}} */
 
-static inline int uopz_closure_equals(zval *closure, zend_function *function) { /* {{{ */
-#if PHP_VERSION_ID >= 80000
-	const zend_function *cmp = zend_get_closure_method_def(Z_OBJ_P(closure));
-#else
-	const zend_function *cmp = zend_get_closure_method_def(closure);
-#endif
-
-	if (cmp->common.prototype == function) {
-		return 1;
-	}
-
-	return 0;
-} /* }}} */
-
 int uopz_clean_function(zval *zv) { /* {{{ */
 	zend_function *fp = Z_PTR_P(zv);
 
