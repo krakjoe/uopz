@@ -2,19 +2,9 @@
 uopz_flags
 --EXTENSIONS--
 uopz
---SKIPIF--
-<?php
-uopz_allow_exit(true);
-if (version_compare(PHP_VERSION, '7.4', '>=')
-	&& function_exists('opcache_get_status')
-	&& ($status = opcache_get_status())
-	&& $status['opcache_enabled'])
-{
-	die('skip not for PHP 7.4+ with OPcache');
-}
-?>
 --INI--
 uopz.disable=0
+opcache.enable_cli=0
 --FILE--
 <?php
 class Foo {
