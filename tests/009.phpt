@@ -48,6 +48,16 @@ var_dump(uopz_unset_hook("bar"));
 bar();
 
 var_dump(uopz_unset_hook("none"));
+
+uopz_set_hook("bar", function() {
+    throw new Exception("Ooops");
+});
+try {
+    bar();
+} catch (Exception $e) {
+    echo $e->getMessage(), "\n";
+}
+
 ?>
 --EXPECTF--
 bool(true)
@@ -60,3 +70,4 @@ bool(true)
 string(4) "hook"
 bool(true)
 bool(false)
+Ooops
