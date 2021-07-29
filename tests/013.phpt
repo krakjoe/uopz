@@ -38,6 +38,18 @@ try {
 } catch (Throwable $t) {
 	var_dump($t->getMessage());
 }
+
+try {
+	uopz_del_function(stdClass::class, "none");
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
+
+try {
+	uopz_del_function("none42");
+} catch (Throwable $t) {
+	var_dump($t->getMessage());
+}
 ?>
 --EXPECTF--
 bool(true)
@@ -46,3 +58,5 @@ bool(true)
 string(%d) "Call to undefined method Foo::method()"
 string(%d) "cannot delete method %s::%s, it was not added by uopz"
 string(%d) "cannot delete function %s, it was not added by uopz"
+string(%d) "cannot delete method %s::%s, it does not exist"
+string(%d) "cannot delete function %s, it does not exist"

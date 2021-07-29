@@ -128,6 +128,9 @@ static PHP_RINIT_FUNCTION(uopz)
 
 		/* disable DCE (want code after exit) */
 		level &= ~(1<<13);
+		
+		/* don't inline functions */
+		level &= ~(1<<15);
 
 		value = strpprintf(0, "0x%08X", (unsigned int) level);
 
