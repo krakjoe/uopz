@@ -2,6 +2,8 @@
 type lists
 --EXTENSIONS--
 uopz
+--INI--
+opcache.enable_cli=0
 --FILE--
 <?php
 declare(strict_types=1);
