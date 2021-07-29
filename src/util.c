@@ -303,7 +303,6 @@ void uopz_request_init(void) { /* {{{ */
 				ZEND_COMPILE_IGNORE_USER_FUNCTIONS | 
 				ZEND_COMPILE_GUARDS;
 
-	zend_hash_init(&UOPZ(functions), 8, NULL, uopz_table_dtor, 0);
 	zend_hash_init(&UOPZ(returns), 8, NULL, uopz_table_dtor, 0);
 	zend_hash_init(&UOPZ(mocks), 8, NULL, uopz_zval_dtor, 0);
 	zend_hash_init(&UOPZ(hooks), 8, NULL, uopz_table_dtor, 0);
@@ -324,7 +323,6 @@ void uopz_request_shutdown(void) { /* {{{ */
 	zend_hash_apply(CG(class_table),    uopz_clean_class);
 	zend_hash_apply(CG(function_table), uopz_clean_function);
 
-	zend_hash_destroy(&UOPZ(functions));
 	zend_hash_destroy(&UOPZ(mocks));
 	zend_hash_destroy(&UOPZ(returns));
 	zend_hash_destroy(&UOPZ(hooks));

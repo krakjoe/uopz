@@ -29,17 +29,16 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-static zend_function* uopz_copy_function(zend_class_entry *scope, zend_object *closure, zend_long flags) { /* {{{ */
-	zend_function  *copy = (zend_function*)
-		zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
+#define ZEND_ACC_UOPZ (1<<30)
+
+static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *name, zend_object *closure, zend_long flags) { /* {{{ */
+	zend_function  *copy = (zend_function*) emalloc(sizeof(zend_op_array));
 
 	memcpy(copy, zend_get_closure_method_def(closure), sizeof(zend_op_array));
 
-	copy->op_array.fn_flags |= ZEND_ACC_IMMUTABLE;
-	copy->op_array.fn_flags &= ~ZEND_ACC_CLOSURE;
+	copy->op_array.fn_flags &= ~ZEND_ACC_CLOSURE|ZEND_ACC_IMMUTABLE|ZEND_ACC_ARENA_ALLOCATED;
 
-	copy->op_array.function_name =
-		zend_string_copy(copy->op_array.function_name);
+	copy->op_array.function_name = zend_new_interned_string(name);
 
 	copy->op_array.scope = scope;
 
@@ -75,6 +74,7 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_object *c
 	}
 
 	copy->op_array.refcount = NULL;
+	copy->op_array.fn_flags |= ZEND_ACC_UOPZ;
 
 	return copy;
 } /* }}} */
@@ -102,17 +102,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 		return 0;
 	}
 
-	if (!(functions = zend_hash_index_find_ptr(&UOPZ(functions), (zend_long) table))) {
-		ALLOC_HASHTABLE(functions);
-		zend_hash_init(functions, 8, NULL, uopz_zval_dtor, 0);
-		zend_hash_index_update_ptr(
-			&UOPZ(functions), (zend_long) table, functions);
-	}
-
-	zend_hash_update(functions, key, closure);
-	zval_copy_ctor(closure);
-
-	function = uopz_copy_function(clazz, Z_OBJ_P(closure), flags);
+	function = uopz_copy_function(clazz, name, Z_OBJ_P(closure), flags);
 	zend_hash_update_ptr(table, key, (void*) function);
 
 	if (clazz) {
@@ -139,11 +129,25 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 
 zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_bool all) { /* {{{ */
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	HashTable *functions = (HashTable*) 
-		zend_hash_index_find_ptr(&UOPZ(functions), (zend_long) table);	
 	zend_string *key = zend_string_tolower(name);
-
-	if (!functions || !zend_hash_exists(functions, key)) {
+	zend_function *function = zend_hash_find_ptr(table, key);
+	
+	if (!function) {
+		if (clazz) {
+			uopz_exception(
+				"cannot delete method %s::%s, it does not exist",
+				ZSTR_VAL(clazz->name),
+				ZSTR_VAL(name));
+		} else {
+			uopz_exception(
+				"cannot delete function %s, it does not exist",
+				ZSTR_VAL(name));
+		}
+		zend_string_release(key);
+		return 0;
+	}
+	
+	if (!(function->common.fn_flags & ZEND_ACC_UOPZ)) {
 		if (clazz) {
 			uopz_exception(
 				"cannot delete method %s::%s, it was not added by uopz",
@@ -157,7 +161,7 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_boo
 		zend_string_release(key);
 		return 0;
 	}
-
+	
 	if (clazz) {
 		if (all) {
 			zend_class_entry *next;
@@ -174,9 +178,9 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_boo
 	}
 
 	zend_hash_del(table, key);
-	zend_hash_del(functions, key);
 	zend_string_release(key);
-	
+	efree(function);
+
 	return 1;
 } /* }}} */
 

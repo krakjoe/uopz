@@ -28,7 +28,6 @@ extern zend_module_entry uopz_module_entry;
 ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	zend_long	copts;
 
-	HashTable   functions;
 	HashTable	returns;
 	HashTable	mocks;
 	HashTable   hooks;
