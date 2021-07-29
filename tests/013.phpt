@@ -4,6 +4,7 @@ uopz_del_function
 uopz
 --INI--
 uopz.disable=0
+opcache.enable_cli=0
 --FILE--
 <?php
 class Foo {

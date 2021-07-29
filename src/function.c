@@ -72,9 +72,18 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *n
 
 zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool all) { /* {{{ */
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
-	zend_string *key = zend_string_tolower(name);
+	zend_string *key;
 	zend_function *function = NULL;
 
+	if (clazz && clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
+		uopz_exception(
+			"cannot add method %s::%s, it is immutable, use uopz_set_return instead",
+			ZSTR_VAL(clazz->name),
+			ZSTR_VAL(name));
+		return 0;
+	}
+
+	key = zend_string_tolower(name);
 	key = zend_new_interned_string(key);
 
 	if (zend_hash_exists(table, key)) {
