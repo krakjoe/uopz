@@ -45,6 +45,13 @@ try {
 } catch (Exception $ex) {
 	var_dump($ex->getMessage());
 }
+
+try {
+    uopz_flags("", ZEND_ACC_STATIC);
+} catch (Exception $ex) {
+	var_dump($ex->getMessage());
+}
+
 ?>
 --EXPECTF--
 bool(false)
@@ -55,3 +62,4 @@ string(%d) "attempt to set static on class entry %s, not allowed"
 bool(true)
 string(%d) "failed to set or get flags of method %s::%s, it does not exist"
 string(%d) "failed to set or get flags of function %s, it does not exist"
+string(%d) "failed to set or get flags of function , it does not exist"

@@ -187,7 +187,7 @@ void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zva
 	HashTable *table = clazz ? &clazz->function_table : CG(function_table);
 	zend_long current = 0;
 
-	if (!name || !ZSTR_LEN(name) || !ZSTR_VAL(name)) {
+	if (clazz && (!name || !ZSTR_LEN(name))) {
 		if (flags == ZEND_LONG_MAX) {
 			RETURN_LONG(clazz->ce_flags);
 		}
