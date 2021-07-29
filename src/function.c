@@ -32,7 +32,7 @@ ZEND_EXTERN_MODULE_GLOBALS(uopz);
 #define ZEND_ACC_UOPZ (1<<30)
 
 static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *name, zend_object *closure, zend_long flags) { /* {{{ */
-	zend_function  *copy = (zend_function*) emalloc(sizeof(zend_op_array));
+	zend_function  *copy = (zend_function*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
 
 	memcpy(copy, zend_get_closure_method_def(closure), sizeof(zend_op_array));
 
@@ -178,7 +178,7 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_boo
 
 	zend_hash_del(table, key);
 	zend_string_release(key);
-	efree(function);
+	zend_arena_release(&CG(arena), function);
 
 	return 1;
 } /* }}} */
