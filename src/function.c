@@ -77,7 +77,7 @@ zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *cl
 
 	if (clazz && clazz->ce_flags & ZEND_ACC_IMMUTABLE) {
 		uopz_exception(
-			"cannot add method %s::%s, it is immutable, use uopz_set_return instead",
+			"cannot add method %s::%s to immutable class, use uopz_set_return instead",
 			ZSTR_VAL(clazz->name),
 			ZSTR_VAL(name));
 		return 0;
