@@ -76,6 +76,11 @@ try {
 } catch (Exception $e) {
 	var_dump($e->getMessage());
 }
+
+$foo = "foo";
+uopz_add_function($foo . "bar", function() {});
+foobar();
+
 ?>
 --EXPECTF--
 string(%d) "__construct"

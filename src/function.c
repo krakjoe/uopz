@@ -38,7 +38,7 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *n
 
 	copy->op_array.fn_flags &= ~ZEND_ACC_CLOSURE|ZEND_ACC_IMMUTABLE|ZEND_ACC_ARENA_ALLOCATED;
 
-	copy->op_array.function_name = zend_new_interned_string(name);
+	copy->op_array.function_name = zend_string_copy(name);
 
 	copy->op_array.scope = scope;
 
