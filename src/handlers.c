@@ -279,10 +279,12 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 
 	if (opline->op1_type == IS_CONST) {
 		if (uopz_find_mock(Z_STR_P(EX_CONSTANT(opline->op1)), &obj, &ce) != SUCCESS) {
-			ce = zend_fetch_class_by_name(
-				Z_STR_P(EX_CONSTANT(opline->op1)),
-				Z_STR_P(EX_CONSTANT(opline->op1) + 1),
-				ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+			if (!EG(exception)) {
+				ce = zend_fetch_class_by_name(
+					Z_STR_P(EX_CONSTANT(opline->op1)),
+					Z_STR_P(EX_CONSTANT(opline->op1) + 1),
+					ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+			}
 
 			if (ce == NULL) {
 				ZVAL_UNDEF(EX_VAR(opline->result.var));

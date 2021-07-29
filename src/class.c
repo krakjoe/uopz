@@ -81,15 +81,15 @@ int uopz_find_mock(zend_string *clazz, zend_object **object, zend_class_entry **
 	}
 
 	if (Z_TYPE_P(found) == IS_STRING) {
-		*mock = zend_lookup_class(Z_STR_P(found));
+		*mock = zend_fetch_class_by_name(Z_STR_P(found), NULL, ZEND_FETCH_CLASS_EXCEPTION);
+		return *mock ? SUCCESS : FAILURE;
 	} else {
 		*mock = Z_OBJCE_P(found);
 		if (object) {
 			*object = Z_OBJ_P(found);
 		}
+		return SUCCESS;
 	}
-
-	return SUCCESS;
 } /* }}} */
 
 /* {{{ */
