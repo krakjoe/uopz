@@ -1,6 +1,5 @@
 name: Build and Test
 on: [push, pull_request]
-on:
   schedule:
     - cron: '18 3 * * *'
 jobs:
