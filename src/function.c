@@ -258,7 +258,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 	zend_function *entry;
 	zend_string *k = NULL;
 	zval *v = NULL;
-	
+
 	if (clazz) {
 		entry = uopz_find_function(&clazz->function_table, function);
 		if (!entry) {
@@ -290,7 +290,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 
 		return 0;
 	}
-	
+
 	if (!entry->op_array.static_variables) {
 		if (clazz) {
 			uopz_exception(
@@ -304,15 +304,13 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 
 		return 0;
 	}
-	
+
 	HashTable *variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
 
 	if (!variables) {
-		ZEND_MAP_PTR_INIT(
-			entry->op_array.static_variables_ptr, 
-			&entry->op_array.static_variables);
-		
-		variables = ZEND_MAP_PTR_GET(entry->op_array.static_variables_ptr);
+		variables = zend_array_dup(entry->op_array.static_variables);
+
+		ZEND_MAP_PTR_SET(entry->op_array.static_variables_ptr, variables);
 	}
 
 	ZEND_HASH_FOREACH_STR_KEY_VAL(variables, k, v) {
@@ -327,7 +325,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 			
 			continue;
 		}
-		
+
 		ZVAL_COPY(v, y);
 	} ZEND_HASH_FOREACH_END();
 
