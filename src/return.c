@@ -126,11 +126,9 @@ uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
 	uopz_return_t *ureturn;
 	HashTable *returns;
 
-	if (function->common.fn_flags & ZEND_ACC_CLOSURE) {
-		return NULL;
-	}
-
-	if (!function->common.function_name) {
+	if ((function == NULL) ||
+		(function->common.function_name == NULL) ||
+		(function->common.fn_flags & ZEND_ACC_CLOSURE)) {
 		return NULL;
 	}
 
