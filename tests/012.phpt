@@ -49,11 +49,39 @@ uopz_add_function(Foo::class, "__tostring", function(){
 	return "string";
 });
 
+uopz_add_function(Foo::class, "__set", function($property, $value){
+	var_dump($property, $value);
+});
+
+uopz_add_function(Foo::class, "__get", function($property) {
+	return $property;
+});
+
+uopz_add_function(Foo::class, "__isset", function($property) {
+	return false;
+});
+
+uopz_add_function(Foo::class, "__unset", function($property) {
+	throw new Error();
+});
+
 $foo = new Foo();
 
 var_dump((string) $foo);
 
 $x = clone $foo;
+
+var_dump($foo->property);
+
+$foo->property = "value";
+
+var_dump(isset($foo->property));
+
+try {
+	unset($foo->property);
+} catch (Error $ex) {
+	echo "unset\n";
+}
 
 var_dump($foo->method());
 
@@ -86,6 +114,11 @@ foobar();
 string(%d) "__construct"
 string(%d) "string"
 string(%d) "clone"
+string(%d) "property"
+string(%d) "property"
+string(%d) "value"
+bool(false)
+unset
 bool(true)
 bool(true)
 string(%d) "Call to private method Foo::priv() from %s"
