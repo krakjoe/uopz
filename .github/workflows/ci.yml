@@ -1,5 +1,7 @@
 name: Build and Test
 on: [push, pull_request]
+  schedule:
+    - cron: '18 3 * * *'
 jobs:
   ubuntu:
     strategy:
