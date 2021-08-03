@@ -1,9 +1,7 @@
 name: Build and Test
 on:
   push:
-    - branches: master
   pull_request:
-    - branches: master
   schedule:
     - cron: '18 3 * * *'
 jobs:
