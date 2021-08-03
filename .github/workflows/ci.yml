@@ -6,6 +6,7 @@ jobs:
       matrix:
         version: ["PHP-8.0", "master"]
         opcache: ["opcache.enable_cli=0", "opcache.enable_cli=1"]
+        debug: ["enable-debug", "disable-debug"]
     runs-on: ubuntu-latest
     steps:
       - name: Setup Ubuntu
@@ -23,7 +24,8 @@ jobs:
           			  --enable-opcache \
           			  --disable-opcache-jit \
           			  --prefix=/opt \
-          			  --with-config-file-path=/opt/etc
+          			  --with-config-file-path=/opt/etc \
+          			  --${{matrix.debug}}
           make -j$(nproc)
           sudo make install
       - name: Checkout
