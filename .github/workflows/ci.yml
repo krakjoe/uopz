@@ -47,7 +47,7 @@ jobs:
       - name: Run Tests
         run: /opt/bin/php run-tests.php -q -g FAIL,XFAIL,XLEAK,SKIP,BORK,WARN -P --show-diff
       - name: Generate Test Coverage
-        run: lcov -c --directory . --output-file coverage.info
+        run: lcov -c --directory ./src/.libs --output-file coverage.info
       - name: Coveralls
         uses: coverallsapp/github-action@master
         with:
