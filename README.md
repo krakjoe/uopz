@@ -237,20 +237,6 @@ function uopz_undefine(string class, string constant);
 function uopz_undefine(string constant);
 
 /**
-* Makes $class implement $interface
-* @param string class
-* @param string interface
-**/
-function uopz_implement(string class, string interface);
-
-/**
-* Makes $class extend $parent
-* @param string class
-* @param string parent
-**/
-function uopz_extend(string class, string parent);
-
-/**
  * Get or set flags on $class::$method()
  * @param string class
  * @param string method
