@@ -23,6 +23,7 @@
 #include "uopz.h"
 
 #include "class.h"
+#include "function.h"
 #include "hook.h"
 #include "return.h"
 #include "util.h"
@@ -136,8 +137,7 @@ zend_bool uopz_is_magic_method(zend_class_entry *clazz, zend_string *function) /
 int uopz_clean_function(zval *zv) { /* {{{ */
 	zend_function *fp = Z_PTR_P(zv);
 
-	if (fp->type == ZEND_USER_FUNCTION && (((zend_op_array*)fp)->refcount && *((zend_op_array*)fp)->refcount > 1)) {
-
+	if (fp->type == ZEND_USER_FUNCTION && fp->common.fn_flags & ZEND_ACC_UOPZ) {
 		return ZEND_HASH_APPLY_REMOVE;
 	}
 

@@ -29,8 +29,6 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#define ZEND_ACC_UOPZ (1<<30)
-
 static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *name, zend_object *closure, zend_long flags) { /* {{{ */
 	zend_function  *copy = (zend_function*) zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
 
