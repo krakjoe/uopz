@@ -29,10 +29,10 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2021-07-28</date>
+ <date>2021-08-06</date>
  <version>
-  <release>7.0.0</release>
-  <api>6.0.0</api>
+  <release>7.1.0</release>
+  <api>7.1.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -40,11 +40,8 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #145 uopz_find_hook segfault with PHP 8.0
-- Fix #140 segfault with PHPUnit 9.5 caused by uopz_del_function
-- Don't remove methods of immutable classes
-- PHP 8 support
-- Drop PHP 7 support
+- uopz_implement and uopz_extend have been dropped
+- internal rewrite to improve stability and simplify
  </notes>
  <contents>
   <dir name="/">
@@ -53,8 +50,6 @@ It supports the following activities:
      <file name="class.h" role="src" />
      <file name="constant.c" role="src" />
      <file name="constant.h" role="src" />
-     <file name="copy.c" role="src" />
-     <file name="copy.h" role="src" />
      <file name="executors.c" role="src" />
      <file name="executors.h" role="src" />
      <file name="function.c" role="src" />
@@ -98,7 +93,6 @@ It supports the following activities:
      <file name="038.phpt" role="test" />
      <file name="039.phpt" role="test" />
      <file name="040.phpt" role="test" />
-     <file name="skipif.inc" role="test" />
      <dir name="/bugs">
       <file name="0001-uopz_set_static.phpt" role="test" />
       <file name="0002-uopz_set_static_clear.phpt" role="test" />
@@ -111,7 +105,6 @@ It supports the following activities:
       <file name="gh64.phpt" role="test" />
       <file name="gh68.phpt" role="test" />
       <file name="gh73.phpt" role="test" />
-      <file name="gh76.phpt" role="test" />
       <file name="gh85.phpt" role="test" />
       <file name="gh86.phpt" role="test" />
       <file name="gh99.phpt" role="test" />
@@ -148,6 +141,25 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2021-07-28</date>
+   <version>
+    <release>7.0.0</release>
+    <api>6.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #145 uopz_find_hook segfault with PHP 8.0
+- Fix #140 segfault with PHPUnit 9.5 caused by uopz_del_function
+- Don't remove methods of immutable classes
+- PHP 8 support
+- Drop PHP 7 support
+   </notes>
+  </release>
   <release>
    <date>2020-06-30</date>
    <version>
