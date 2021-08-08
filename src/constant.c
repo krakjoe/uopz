@@ -105,7 +105,7 @@ zend_bool uopz_constant_undefine(zend_class_entry *clazz, zend_string *name) {
 			size_t nss;
 
 			if (ns) {
-				zend_string *heap = zend_string_tolower(name);	
+				heap = zend_string_tolower(name);
 
 				ns++;
 				nss =  (ZSTR_VAL(name) + ZSTR_LEN(name)) - ns;
