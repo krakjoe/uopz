@@ -130,6 +130,10 @@ uopz_hook_t* uopz_find_hook(zend_function *function) { /* {{{ */
 		return NULL;
 	}
 
+	if (EG(flags) & EG_FLAGS_IN_SHUTDOWN) {
+		return NULL;
+	}
+
 	if (function->common.scope) {
 		hooks = zend_hash_find_ptr(&UOPZ(hooks), function->common.scope->name);
 	} else {

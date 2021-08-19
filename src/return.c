@@ -132,6 +132,10 @@ uopz_return_t* uopz_find_return(zend_function *function) { /* {{{ */
 		return NULL;
 	}
 
+	if (EG(flags) & EG_FLAGS_IN_SHUTDOWN) {
+		return NULL;
+	}
+
 	if (function->common.scope) {
 		returns = zend_hash_find_ptr(&UOPZ(returns), function->common.scope->name);
 	} else {
