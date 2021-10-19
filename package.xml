@@ -29,9 +29,9 @@ It supports the following activities:
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2021-08-06</date>
+ <date>2021-10-19</date>
  <version>
-  <release>7.1.1dev</release>
+  <release>7.1.1</release>
   <api>7.1.0</api>
  </version>
  <stability>
@@ -40,7 +40,7 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
--
+- fix PHP 8.1 compatibility
  </notes>
  <contents>
   <dir name="/">
