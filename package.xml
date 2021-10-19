@@ -31,7 +31,7 @@ It supports the following activities:
  </lead>
  <date>2021-10-19</date>
  <version>
-  <release>7.1.1</release>
+  <release>7.1.2dev</release>
   <api>7.1.0</api>
  </version>
  <stability>
@@ -40,7 +40,7 @@ It supports the following activities:
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- fix PHP 8.1 compatibility
+-
  </notes>
  <contents>
   <dir name="/">
@@ -140,6 +140,21 @@ It supports the following activities:
  <providesextension>uopz</providesextension>
  <extsrcrelease />
  <changelog>
+  <release>
+   <date>2021-10-19</date>
+   <version>
+    <release>7.1.1</release>
+    <api>7.1.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- fix PHP 8.1 compatibility
+   </notes>
+  </release>
   <release>
    <date>2021-08-06</date>
    <version>
