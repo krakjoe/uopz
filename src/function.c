@@ -54,7 +54,7 @@ static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *n
 	if (copy->op_array.static_variables) {
 		copy->op_array.static_variables = zend_array_dup(copy->op_array.static_variables);
 
-#if PHP_VERSION_ID > 80100
+#if PHP_VERSION_ID >= 80200
 		ZEND_MAP_PTR_INIT(
 			copy->op_array.static_variables_ptr, copy->op_array.static_variables);
 #else
