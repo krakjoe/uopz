@@ -66,6 +66,7 @@ class Baz {
 	}
 }
 
+#[AllowDynamicProperties]
 class Bill extends Baz {}
 
 $bill = new Bill;
