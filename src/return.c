@@ -112,7 +112,9 @@ void uopz_get_return(zend_class_entry *clazz, zend_string *function, zval *retur
 		return;
 	}
 
-	ureturn = zend_hash_find_ptr(returns, function);
+	zend_string *key = zend_string_tolower(function);
+	ureturn = zend_hash_find_ptr(returns, key);
+	zend_string_release(key);
 
 	if (!ureturn) {
 		return;
