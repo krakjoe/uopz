@@ -101,6 +101,7 @@ zend_bool uopz_unset_return(zend_class_entry *clazz, zend_string *function) { /*
 } /* }}} */
 
 void uopz_get_return(zend_class_entry *clazz, zend_string *function, zval *return_value) { /* {{{ */
+	zend_string *key;
 	HashTable *returns;
 	uopz_return_t *ureturn;
 
@@ -112,7 +113,7 @@ void uopz_get_return(zend_class_entry *clazz, zend_string *function, zval *retur
 		return;
 	}
 
-	zend_string *key = zend_string_tolower(function);
+	key = zend_string_tolower(function);
 	ureturn = zend_hash_find_ptr(returns, key);
 	zend_string_release(key);
 
