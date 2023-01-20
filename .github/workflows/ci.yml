@@ -33,7 +33,7 @@ jobs:
           make -j$(nproc)
           sudo make install
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Generate Build Files
         run: /opt/bin/phpize
       - name: Configure Build
@@ -69,7 +69,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout uopz
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup PHP
         id: setup-php
         uses: cmb69/setup-php-sdk@v0.7
