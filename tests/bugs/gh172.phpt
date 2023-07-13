@@ -1,5 +1,10 @@
 --TEST--
 handle ZEND_VERIFY_NEVER_TYPE when uopz.exit disabled
+--SKIPIF--
+<?php
+if (version_compare(PHP_VERSION, '8.1.0', '<')) {
+  die("skip: PHP 8.1+ only");
+}
 --EXTENSIONS--
 uopz
 --INI--
