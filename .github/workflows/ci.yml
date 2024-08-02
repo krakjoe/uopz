@@ -85,4 +85,4 @@ jobs:
       - name: Build
         run: nmake
       - name: Run Tests
-        run: nmake test TESTS=tests
+        run: nmake test TESTS="--show-diff tests"
