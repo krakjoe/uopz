@@ -8,7 +8,7 @@ jobs:
   ubuntu:
     strategy:
       matrix:
-        version: ["PHP-8.1", "PHP-8.2", "master"]
+        version: ["PHP-8.1", "PHP-8.2", "PHP-8.3", "master"]
         opcache: ["opcache.enable_cli=0", "opcache.enable_cli=1"]
         debug: ["enable-debug", "disable-debug"]
     runs-on: ubuntu-latest
@@ -63,7 +63,7 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1"]
+          version: ["8.1", "8.2", "8.3"]
           arch: [x64, x86]
           ts: [nts, ts]
     runs-on: windows-latest
