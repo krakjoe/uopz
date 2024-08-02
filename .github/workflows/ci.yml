@@ -4,7 +4,7 @@ jobs:
   ubuntu:
     strategy:
       matrix:
-        version: ["PHP-8.0", "master"]
+        version: ["PHP-8.0", "PHP-8.1", "PHP-8.2", "PHP-8.3"]
         opcache: ["opcache.enable_cli=0", "opcache.enable_cli=1"]
         debug: ["enable-debug", "disable-debug"]
     runs-on: ubuntu-latest
@@ -49,7 +49,7 @@ jobs:
       - name: Generate Test Coverage
         run: lcov -c --directory ./src/.libs --exclude *Zend* --exclude */usr/include* --output-file coverage.info
       - name: Coveralls
-        uses: coverallsapp/github-action@master
+        uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.info
@@ -59,7 +59,7 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1"]
+          version: ["8.0", "8.1", "8.2", "8.3"]
           arch: [x64, x86]
           ts: [nts, ts]
     runs-on: windows-latest
