@@ -11,7 +11,7 @@ class Foo {
 	public function exists() {}
 }
 
-uopz_add_function(Foo::class, "METHOD", /** doc **/ function(Type $type = null, $with = null, $args = null, ... $vars) : bool {
+uopz_add_function(Foo::class, "METHOD", /** doc **/ function(Type|null $type = null, $with = null, $args = null, ... $vars) : bool {
 	return $this->priv(true);
 });
 
