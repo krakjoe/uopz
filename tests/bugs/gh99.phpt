@@ -23,9 +23,9 @@ var_dump(Stub());
 
 var_dump($a);
 ?>
---EXPECT--
+--EXPECTF--
 string(11) "hook called"
 int(123)
-object(Closure)#1 (0) {
+object(Closure)#1 (%d) {%A
 }
 

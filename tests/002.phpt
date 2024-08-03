@@ -34,15 +34,15 @@ var_dump(uopz_set_return(Foo::class, "bazQuux", function(){}));
 
 var_dump(uopz_get_return(Foo::class, "bazQuux"));
 ?>
---EXPECT--
+--EXPECTF--
 bool(true)
 bool(true)
 bool(true)
-object(Closure)#1 (0) {
+object(Closure)#1 (%d) {%A
 }
 NULL
 bool(true)
 bool(true)
 bool(true)
-object(Closure)#2 (0) {
+object(Closure)#2 (%d) {%A
 }
