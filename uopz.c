@@ -197,6 +197,7 @@ static PHP_FUNCTION(uopz_set_return)
 	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CSz|b", &clazz, &function, &variable, &execute) != SUCCESS &&
+		!((clazz = NULL)) &&
 		uopz_parse_parameters("Sz|b", &function, &variable, &execute) != SUCCESS) {
 		uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function, variable [, execute]) or (function, variable [, execute])");
