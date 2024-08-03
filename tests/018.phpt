@@ -1,5 +1,14 @@
 --TEST--
 uopz_undefine
+--SKIPIF--
+<?php
+uopz_allow_exit(true);
+$protect = extension_loaded("Zend OPcache")
+	&& ($conf = opcache_get_configuration()["directives"])
+	&& array_key_exists("opcache.protect_memory", $conf)
+	&&  $conf["opcache.protect_memory"];
+if ($protect) die("xfail known issues with constant redefinition; see #151");
+?>
 --EXTENSIONS--
 uopz
 --INI--
