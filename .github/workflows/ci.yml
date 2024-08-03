@@ -59,16 +59,16 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2", "8.3"]
+          version: ["8.0", "8.1", "8.2", "8.3", "8.4"]
           arch: [x64, x86]
           ts: [nts, ts]
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Checkout uopz
         uses: actions/checkout@v4
       - name: Setup PHP
         id: setup-php
-        uses: php/setup-php-sdk@v0.8
+        uses: php/setup-php-sdk@v0.9
         with:
           version: ${{matrix.version}}
           arch: ${{matrix.arch}}
