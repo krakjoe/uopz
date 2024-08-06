@@ -1,11 +1,21 @@
-PHP_ARG_ENABLE(uopz, whether to enable uopz support,
-[  --enable-uopz   Enable uopz support])
+PHP_ARG_ENABLE([uopz],
+  [whether to enable uopz support],
+  [AS_HELP_STRING([--enable-uopz],
+    [Enable uopz support])])
 
-PHP_ARG_ENABLE(uopz-coverage,      whether to enable uopz coverage support,
-[  --enable-uopz-coverage          Enable uopz coverage support], no, no)
+PHP_ARG_ENABLE([uopz-coverage],
+  [whether to enable uopz coverage support],
+  [AS_HELP_STRING([--enable-uopz-coverage],
+    [Enable uopz coverage support])],
+  [no],
+  [no])
 
-PHP_ARG_WITH(uopz-sanitize, whether to enable AddressSanitizer for uopz,
-[  --with-uopz-sanitize Build uopz with AddressSanitizer support], no, no)
+PHP_ARG_WITH([uopz-sanitize],
+  [whether to enable AddressSanitizer for uopz],
+  [AS_HELP_STRING([--with-uopz-sanitize],
+    [Build uopz with AddressSanitizer support])],
+  [no],
+  [no])
 
 if test "$PHP_UOPZ" != "no"; then
   if test "$PHP_UOPZ_SANITIZE" != "no"; then
