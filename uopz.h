@@ -51,10 +51,6 @@ ZEND_END_MODULE_GLOBALS(uopz)
 #define uopz_exception(message, ...) zend_throw_exception_ex\
 	(spl_ce_RuntimeException, 0, message, ##__VA_ARGS__)
 
-#if PHP_VERSION_ID < 80100
-#define ZEND_VERIFY_NEVER_TYPE         201
-#endif
-
 #endif	/* UOPZ_H */
 
 /*
