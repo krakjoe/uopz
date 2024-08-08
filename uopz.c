@@ -197,6 +197,7 @@ static PHP_FUNCTION(uopz_set_return)
 	uopz_disabled_guard();
 
 	if (uopz_parse_parameters("CSz|b", &clazz, &function, &variable, &execute) != SUCCESS &&
+		!((clazz = NULL)) &&
 		uopz_parse_parameters("Sz|b", &function, &variable, &execute) != SUCCESS) {
 		uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function, variable [, execute]) or (function, variable [, execute])");
@@ -334,8 +335,8 @@ static PHP_FUNCTION(uopz_set_static)
 
 	uopz_disabled_guard();
 
-	if (uopz_parse_parameters("CSz", &clazz, &function, &statics) != SUCCESS &&
-		uopz_parse_parameters("Sz", &function, &statics) != SUCCESS) {
+	if (uopz_parse_parameters("CSa", &clazz, &function, &statics) != SUCCESS &&
+		uopz_parse_parameters("Sa", &function, &statics) != SUCCESS) {
 		uopz_refuse_parameters(
 				"unexpected parameter combination, expected (class, function, statics) or (function, statics)");
 		return;

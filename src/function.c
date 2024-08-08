@@ -323,6 +323,7 @@ zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *
 			zval_ptr_dtor(v);
 		}
 
+		ZEND_ASSERT(Z_TYPE_P(statics) == IS_ARRAY);
 		if (!(y = zend_hash_find(Z_ARRVAL_P(statics), k))) {
 			ZVAL_NULL(v);
 			

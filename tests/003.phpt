@@ -39,15 +39,15 @@ var_dump(uopz_unset_return("bar"));
 
 var_dump(uopz_get_return(DateTime::class, "__construct"));
 ?>
---EXPECT--
+--EXPECTF--
 bool(true)
 bool(true)
 bool(true)
 bool(false)
 bool(false)
 bool(true)
-object(Closure)#2 (0) {
-}
+object(Closure)#2 (%d) {
+%A}
 bool(true)
 bool(true)
 NULL

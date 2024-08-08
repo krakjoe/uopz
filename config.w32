@@ -4,12 +4,12 @@
 ARG_ENABLE("uopz", "for uopz support", "no");
 
 if (PHP_UOPZ != "no") {
-	EXTENSION("uopz", "uopz.c");
+	EXTENSION("uopz", "uopz.c", null, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
 	ADD_SOURCES(
-    	configure_module_dirname + "/src",
-		"util.c return.c hook.c constant.c function.c class.c handlers.c executors.c", 
+		configure_module_dirname + "/src",
+		"util.c return.c hook.c constant.c function.c class.c handlers.c executors.c",
 		"uopz"
-    );
+	);
 	ADD_FLAG("CFLAGS_UOPZ", "/I" + configure_module_dirname + "");
 }
 

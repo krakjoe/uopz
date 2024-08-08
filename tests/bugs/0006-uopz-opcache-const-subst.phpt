@@ -7,6 +7,12 @@ uopz
 	uopz_allow_exit(true);
 	$opcache = ini_get("opcache.enable_cli");
 	if ($opcache === false || $opcache === "0") die("skip opcache required");
+
+    $protect = extension_loaded("Zend OPcache")
+        && ($conf = opcache_get_configuration()["directives"])
+        && array_key_exists("opcache.protect_memory", $conf)
+        &&  $conf["opcache.protect_memory"];
+    if ($protect) die("xfail known issues with constant redefinition; see #151");
 ?>
 --INI--
 uopz.disable=0

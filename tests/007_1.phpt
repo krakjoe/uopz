@@ -5,7 +5,7 @@ uopz
 --SKIPIF--
 <?php
 uopz_allow_exit(true);
-if (version_compare(PHP_VERSION, "8.3.0") >= 0) die("skip only for PHP < 8.3.0");
+if (version_compare(PHP_VERSION, "8.3.0") < 0) die("skip only for PHP >= 8.3.0");
 ?>
 --INI--
 uopz.disable=0
@@ -85,7 +85,7 @@ array(2) {
     int(5)
   }
   ["bar"]=>
-  string(3) "bar"
+  NULL
 }
 array(2) {
   ["vars"]=>
