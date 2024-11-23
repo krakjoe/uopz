@@ -3,6 +3,7 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   ubuntu:
     strategy:
+      fail-fast: false
       matrix:
         version: ["PHP-8.0", "PHP-8.1", "PHP-8.2", "PHP-8.3", "master"]
         opcache: ["opcache.enable_cli=0", "opcache.enable_cli=1"]
@@ -58,6 +59,7 @@ jobs:
       run:
         shell: cmd
     strategy:
+      fail-fast: false
       matrix:
           version: ["8.0", "8.1", "8.2", "8.3", "8.4"]
           arch: [x64, x86]
