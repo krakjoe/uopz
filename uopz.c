@@ -218,6 +218,15 @@ static PHP_RSHUTDOWN_FUNCTION(uopz)
 		return SUCCESS;
 	}
 
+#ifndef ZEND_EXIT
+	zend_string *name = ZSTR_INIT_LITERAL("exit", 0);
+	uopz_unset_return(NULL, name);
+	zend_string_release_ex(name, 0);
+	name = ZSTR_INIT_LITERAL("die", 0);
+	uopz_unset_return(NULL, name);
+	zend_string_release_ex(name, 0);
+#endif
+
 	uopz_request_shutdown();
 
 	return SUCCESS;
