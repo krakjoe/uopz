@@ -16,7 +16,7 @@ uopz_set_mock(Foo::class, new Bar);
 
 var_dump(uopz_get_mock(Foo::class));
 ?>
---EXPECT--
+--EXPECTF--
 string(3) "Bar"
-object(Bar)#1 (0) {
+object(Bar)#%d (0) {
 }
