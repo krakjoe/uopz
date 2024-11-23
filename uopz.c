@@ -120,6 +120,8 @@ void ZEND_FASTCALL uopz_exit(INTERNAL_FUNCTION_PARAMETERS) { /* {{{ */
 
 	if (UOPZ(exit)) {
 		zend_call_known_function(UOPZ(zif_exit), NULL, NULL, NULL, 1, &UOPZ(estatus), NULL);
+	} else if (str == NULL) {
+		EG(exit_status) = status;
 	}
 } /* }}} */
 #endif
