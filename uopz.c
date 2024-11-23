@@ -81,14 +81,6 @@ static PHP_MINIT_FUNCTION(uopz)
 	uopz_executors_init();
 	uopz_handlers_init();
 
-#ifndef ZEND_EXIT
-    do {
-        zend_function *php_function_entry = zend_hash_str_find_ptr(CG(function_table), "exit", sizeof("exit") - 1);
-        ZEND_ASSERT(php_function_entry);
-        php_function_entry->internal_function.handler = uopz_exit_function;
-    } while (0);
-#endif
-
 	return SUCCESS;
 }
 /* }}} */
@@ -105,6 +97,32 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 
 	return SUCCESS;
 } /* }}} */
+
+#ifndef ZEND_EXIT
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_uopz_exit, 0, 0, IS_VOID, 0)
+	ZEND_ARG_TYPE_MASK(0, status, MAY_BE_STRING|MAY_BE_LONG, "0")
+ZEND_END_ARG_INFO()
+
+void ZEND_FASTCALL uopz_exit(INTERNAL_FUNCTION_PARAMETERS) { /* {{{ */
+	zend_string *str = NULL;
+	zend_long status = 0;
+
+	ZEND_PARSE_PARAMETERS_START(0, 1)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_STR_OR_LONG(str, status)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (str != NULL) {
+		ZVAL_STR(&UOPZ(estatus), str);
+	} else {
+		ZVAL_LONG(&UOPZ(estatus), status);
+	}
+
+	if (UOPZ(exit)) {
+		zend_call_known_function(UOPZ(zif_exit), NULL, NULL, NULL, 1, &UOPZ(estatus), NULL);
+	}
+} /* }}} */
+#endif
 
 /* {{{ PHP_RINIT_FUNCTION
  */
@@ -162,6 +180,30 @@ static PHP_RINIT_FUNCTION(uopz)
 	zend_string_release(spl);
 
 	uopz_request_init();
+
+#ifndef ZEND_EXIT
+	do {
+		zend_function *zif_exit = zend_hash_str_find_ptr(EG(function_table), "exit", sizeof("exit") - 1);
+		ZEND_ASSERT(zif_exit);
+		UOPZ(zif_exit) = zif_exit;
+		zval closure;
+		zend_internal_function uopz_exit_function;
+		memset(&uopz_exit_function, 0, sizeof uopz_exit_function);
+		uopz_exit_function.type = ZEND_INTERNAL_FUNCTION;
+		uopz_exit_function.function_name = zend_empty_string;
+		uopz_exit_function.num_args = 1;
+		uopz_exit_function.arg_info = (zend_internal_arg_info *) arginfo_uopz_exit;
+		uopz_exit_function.handler = uopz_exit;
+		zend_create_closure(&closure, (zend_function *) &uopz_exit_function, NULL, NULL, NULL);
+		zend_string *name = ZSTR_INIT_LITERAL("exit", 0);
+		uopz_set_return(NULL, name, &closure, 1);
+		zend_string_release_ex(name, 0);
+		name = ZSTR_INIT_LITERAL("die", 0);
+		uopz_set_return(NULL, name, &closure, 1);
+		zend_string_release_ex(name, 0);
+		zval_ptr_dtor(&closure);
+	} while (0);
+#endif
 
 	return SUCCESS;
 } /* }}} */

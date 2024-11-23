@@ -27,12 +27,6 @@
 
 #include <Zend/zend_closures.h>
 
-#ifndef ZEND_EXIT
-#include "zend.h"
-#include <Zend/zend_attributes.h>
-#include <Zend/zend_builtin_functions_arginfo.h>
-#endif	/* ZEND_EXIT */
-
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
 static zend_function* uopz_copy_function(zend_class_entry *scope, zend_string *name, zend_object *closure, zend_long flags) { /* {{{ */
@@ -408,22 +402,6 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 	ZVAL_ARR(return_value, zend_array_dup(variables));
 	return 1;
 } /* }}} */
-
-#ifndef ZEND_EXIT
-void ZEND_FASTCALL uopz_exit_function(INTERNAL_FUNCTION_PARAMETERS) { /* {{{ */
-	zend_string *str = NULL;
-	zend_long code = 0;
-
-	ZEND_PARSE_PARAMETERS_START(0, 1)
-		Z_PARAM_OPTIONAL
-		Z_PARAM_STR_OR_LONG(str, code)
-	ZEND_PARSE_PARAMETERS_END();
-
-    if (UOPZ(exit)) {
-        zif_exit(INTERNAL_FUNCTION_PARAM_PASSTHRU);
-    }
-} /* }}} */
-#endif
 
 #endif	/* UOPZ_FUNCTION */
 
