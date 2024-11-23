@@ -29,7 +29,9 @@ zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_boo
 void uopz_flags(zend_class_entry *clazz, zend_string *name, zend_long flags, zval *return_value);
 zend_bool uopz_set_static(zend_class_entry *clazz, zend_string *function, zval *statics);
 zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *return_value);
+#ifndef ZEND_EXIT
 void ZEND_FASTCALL uopz_exit_function(INTERNAL_FUNCTION_PARAMETERS);
+#endif
 
 #endif	/* UOPZ_FUNCTION_H */
 

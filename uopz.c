@@ -81,13 +81,13 @@ static PHP_MINIT_FUNCTION(uopz)
 	uopz_executors_init();
 	uopz_handlers_init();
 
-/* #ifndef ZEND_EXIT */
+#ifndef ZEND_EXIT
     do {
         zend_function *php_function_entry = zend_hash_str_find_ptr(CG(function_table), "exit", sizeof("exit") - 1);
         ZEND_ASSERT(php_function_entry);
         php_function_entry->internal_function.handler = uopz_exit_function;
     } while (0);
-/* #endif */
+#endif
 
 	return SUCCESS;
 }
