@@ -409,7 +409,7 @@ zend_bool uopz_get_static(zend_class_entry *clazz, zend_string *function, zval *
 	return 1;
 } /* }}} */
 
-void uopz_exit_function(INTERNAL_FUNCTION_PARAMETERS) { /* {{{ */
+void ZEND_FASTCALL uopz_exit_function(INTERNAL_FUNCTION_PARAMETERS) { /* {{{ */
 	zend_string *str = NULL;
 	zend_long code = 0;
 
