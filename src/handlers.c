@@ -124,7 +124,9 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 
 UOPZ_HANDLERS_DECL_BEGIN()
+#ifdef ZEND_EXIT
 	UOPZ_HANDLER_DECL(ZEND_EXIT,					exit)
+#endif
 	UOPZ_HANDLER_DECL(ZEND_NEW,					 	new)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CONSTANT,		  	fetch_constant)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CLASS_CONSTANT,	fetch_class_constant)
@@ -169,9 +171,11 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 	zend_vm_handler_t zend = NULL;
 
 	switch (EX(opline)->opcode) {
+#ifdef ZEND_EXIT
 		case ZEND_EXIT:
 			zend = zend_vm_exit;
 		break;
+#endif
 
 		case ZEND_NEW:
 			zend = zend_vm_new;
