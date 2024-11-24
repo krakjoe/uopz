@@ -36,6 +36,10 @@ static zend_internal_function *zend_call_user_func_ptr;
 static zend_internal_function *zend_call_user_func_array_ptr;
 static zend_internal_function *uopz_call_user_func_ptr;
 static zend_internal_function *uopz_call_user_func_array_ptr;
+#ifndef ZEND_EXIT
+static zend_internal_function *zend_exit_func_ptr;
+static zend_internal_function *uopz_exit_func_ptr;
+#endif
 
 static inline void uopz_table_dtor(zval *zv) { /* {{{ */
 	zend_hash_destroy(Z_PTR_P(zv));
@@ -177,11 +181,26 @@ static void uopz_callers_init(void) { /* {{{ */
 
 	uopz_caller_switch(&zend_call_user_func_ptr->handler, &uopz_call_user_func_ptr->handler);
 	uopz_caller_switch(&zend_call_user_func_array_ptr->handler, &uopz_call_user_func_array_ptr->handler);
+
+#ifndef ZEND_EXIT
+	uopz_exit_func_ptr = zend_hash_str_find_ptr(
+			CG(function_table), "uopz_exit", sizeof("uopz_exit")-1);
+	zend_exit_func_ptr = zend_hash_str_find_ptr(
+			CG(function_table), "exit", sizeof("exit")-1);
+
+	uopz_caller_switch(&zend_exit_func_ptr->handler, &uopz_exit_func_ptr->handler);
+	zend_exit_func_ptr->fn_flags &= ~ZEND_ACC_HAS_RETURN_TYPE;
+#endif
 } /* }}} */
 
 static void uopz_callers_shutdown(void) { /* {{{ */
 	uopz_caller_switch(&uopz_call_user_func_ptr->handler, &zend_call_user_func_ptr->handler);
 	uopz_caller_switch(&uopz_call_user_func_array_ptr->handler, &zend_call_user_func_array_ptr->handler);
+
+#ifndef ZEND_EXIT
+	uopz_caller_switch(&uopz_exit_func_ptr->handler, &zend_exit_func_ptr->handler);
+	zend_exit_func_ptr->fn_flags |= ZEND_ACC_HAS_RETURN_TYPE;
+#endif
 } /* }}} */
 
 #define UOPZ_CALL_HOOKS(variadic) do { \
@@ -262,6 +281,43 @@ PHP_FUNCTION(uopz_call_user_func_array) {
 		ZVAL_COPY_VALUE(return_value, &retval);
 	}
 } /* }}} */
+
+#ifndef ZEND_EXIT
+PHP_FUNCTION(uopz_exit) {
+	zend_string *str = NULL;
+	zend_long status = 0;
+
+	ZEND_PARSE_PARAMETERS_START(0, 1)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_STR_OR_LONG(str, status)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (!UOPZ(exit)) {
+		if (str != NULL) {
+			ZVAL_STR(&UOPZ(estatus), str);
+		} else {
+			ZVAL_LONG(&UOPZ(estatus), status);
+		}
+		EG(exit_status) = status;
+	} else {
+		if (str) {
+			size_t len = ZSTR_LEN(str);
+			if (len != 0) {
+				/* An exception might be emitted by an output handler */
+				zend_write(ZSTR_VAL(str), len);
+				if (EG(exception)) {
+					RETURN_THROWS();
+				}
+			}
+		} else {
+			EG(exit_status) = status;
+		}
+
+		ZEND_ASSERT(!EG(exception));
+		zend_throw_unwind_exit();
+	}
+}
+#endif
 
 void uopz_request_init(void) { /* {{{ */
 	UOPZ(copts) = CG(compiler_options);

@@ -35,9 +35,6 @@ ZEND_BEGIN_MODULE_GLOBALS(uopz)
 	zend_bool	exit;
 	zval 		estatus;
 	zend_bool   disable;
-#ifndef ZEND_EXIT
-	zend_function *zif_exit;
-#endif
 ZEND_END_MODULE_GLOBALS(uopz)
 
 #ifdef ZTS
