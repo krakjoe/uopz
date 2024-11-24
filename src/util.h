@@ -21,6 +21,9 @@
 
 extern PHP_FUNCTION(uopz_call_user_func);
 extern PHP_FUNCTION(uopz_call_user_func_array);
+#ifndef ZEND_EXIT
+extern PHP_FUNCTION(uopz_exit);
+#endif
 
 void uopz_handle_magic(zend_class_entry *clazz, zend_string *name, zend_function *function);
 zend_function *uopz_find_function(HashTable *table, zend_string *name);

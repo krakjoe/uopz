@@ -38,11 +38,11 @@ var_dump(uopz_get_return(Foo::class, "bazQuux"));
 bool(true)
 bool(true)
 bool(true)
-object(Closure)#1 (%d) {%A
+object(Closure)#%d (%d) {%A
 }
 NULL
 bool(true)
 bool(true)
 bool(true)
-object(Closure)#2 (%d) {%A
+object(Closure)#%d (%d) {%A
 }
