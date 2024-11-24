@@ -214,12 +214,6 @@ static PHP_FUNCTION(uopz_set_return)
 		return;
 	}
 
-#ifndef ZEND_EXIT
-	if (clazz == NULL && zend_string_equals_literal_ci(function, "exit")) {
-		RETURN_TRUE;
-	}
-#endif
-
 	RETURN_BOOL(uopz_set_return(clazz, function, variable, execute));
 } /* }}} */
 
@@ -238,12 +232,6 @@ static PHP_FUNCTION(uopz_unset_return)
 				"unexpected parameter combination, expected (class, function) or (function)");
 		return;
 	}
-
-#ifndef ZEND_EXIT
-	if (clazz == NULL && zend_string_equals_literal_ci(function, "exit")) {
-		RETURN_FALSE;
-	}
-#endif
 
 	RETURN_BOOL(uopz_unset_return(clazz, function));
 } /* }}} */
