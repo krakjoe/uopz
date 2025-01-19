@@ -29,7 +29,11 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
+#if PHP_VERSION_ID >= 80100
+#define UOPZ_HANDLERS_COUNT 13
+#else
 #define UOPZ_HANDLERS_COUNT 12
+#endif
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
@@ -99,6 +103,9 @@ typedef struct _uopz_vm_handler_t {
 } uopz_vm_handler_t;
 
 zend_vm_handler_t zend_vm_exit;
+#if PHP_VERSION_ID >= 80100
+zend_vm_handler_t zend_vm_verify_never_type;
+#endif
 zend_vm_handler_t zend_vm_new;
 zend_vm_handler_t zend_vm_fetch_constant;
 zend_vm_handler_t zend_vm_do_fcall;
@@ -112,6 +119,9 @@ zend_vm_handler_t zend_vm_init_method_call;
 zend_vm_handler_t zend_vm_init_static_method_call;
 
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS);
+#if PHP_VERSION_ID >= 80100
+int uopz_vm_verify_never_type(UOPZ_OPCODE_HANDLER_ARGS);
+#endif
 int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS);
@@ -125,6 +135,9 @@ int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 
 UOPZ_HANDLERS_DECL_BEGIN()
 	UOPZ_HANDLER_DECL(ZEND_EXIT,					exit)
+#if PHP_VERSION_ID >= 80100
+	UOPZ_HANDLER_DECL(ZEND_VERIFY_NEVER_TYPE,		verify_never_type)
+#endif
 	UOPZ_HANDLER_DECL(ZEND_NEW,					 	new)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CONSTANT,		  	fetch_constant)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CLASS_CONSTANT,	fetch_class_constant)
@@ -155,7 +168,7 @@ void uopz_handlers_init(void) {
 
 void uopz_handlers_shutdown(void) {
 	uopz_vm_handler_t *handler = uopz_vm_handlers;
-	
+
 	while (handler) {
 		if (!handler->opcode) {
 			break;
@@ -172,6 +185,12 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 		case ZEND_EXIT:
 			zend = zend_vm_exit;
 		break;
+
+#if PHP_VERSION_ID >= 80100
+		case ZEND_VERIFY_NEVER_TYPE:
+			zend = zend_vm_verify_never_type;
+		break;
+#endif
 
 		case ZEND_NEW:
 			zend = zend_vm_new;
@@ -195,7 +214,7 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 
 		case ZEND_INIT_STATIC_METHOD_CALL:
 			zend = zend_vm_init_static_method_call;
-		break;		
+		break;
 
 		case ZEND_FETCH_CONSTANT:
 			zend = zend_vm_fetch_constant;
@@ -267,6 +286,14 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	}
 } /* }}} */
 
+#if PHP_VERSION_ID >= 80100
+int uopz_vm_verify_never_type(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
+	if (UOPZ(exit)) {
+		UOPZ_VM_DISPATCH();
+	} else UOPZ_VM_RETURN();
+} /* }}} */
+#endif
+
 int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_USE_OPLINE;
 	zval *result;
@@ -274,7 +301,7 @@ int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	zend_class_entry *ce;
 	zend_execute_data *call;
 	zend_object *obj = NULL;
-	
+
 	UOPZ_SAVE_OPLINE();
 
 	if (opline->op1_type == IS_CONST) {
