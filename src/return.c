@@ -184,7 +184,7 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 		fci.params = ZEND_CALL_ARG(execute_data, 2);
 		fci.param_count = ZEND_CALL_NUM_ARGS(execute_data) - 1;
 	} else if (uopz_is_cufa(execute_data)) {
-		zend_fcall_info_args(&fci, ZEND_CALL_ARG(execute_data, 2));
+		fci.named_params = Z_ARRVAL_P(ZEND_CALL_ARG(execute_data, 2));
 	} else {
 		fci.params = ZEND_CALL_ARG(execute_data, 1);
 		fci.param_count = ZEND_CALL_NUM_ARGS(execute_data);
@@ -201,10 +201,6 @@ void uopz_execute_return(uopz_return_t *ureturn, zend_execute_data *execute_data
 	}
 
 	zval_ptr_dtor(&closure);
-	
-	if (uopz_is_cufa(execute_data)) {
-		zend_fcall_info_args_clear(&fci, 1);
-	}
 
 	ureturn->flags ^= UOPZ_RETURN_BUSY;
 } /* }}} */

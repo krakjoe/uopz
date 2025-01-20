@@ -177,10 +177,7 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data, zend
 		fci.params = ZEND_CALL_ARG(execute_data, 1);
 	} else {
 		if (variadic) {
-			zend_fcall_info_args_ex(
-				&fci,
-				fcc.function_handler,
-				ZEND_CALL_ARG(execute_data, 2));
+			fci.named_params = Z_ARRVAL_P(ZEND_CALL_ARG(execute_data, 2));
 		} else {
 			fci.param_count = ZEND_CALL_NUM_ARGS(execute_data) - 1;
 			fci.params = ZEND_CALL_ARG(execute_data, 2);
@@ -193,10 +190,6 @@ void uopz_execute_hook(uopz_hook_t *uhook, zend_execute_data *execute_data, zend
 		if (!Z_ISUNDEF(rv)) {
 			zval_ptr_dtor(&rv);
 		}
-	}
-
-	if (variadic) {
-		zend_fcall_info_args_clear(&fci, 1);
 	}
 
 	zval_ptr_dtor(&closure);
