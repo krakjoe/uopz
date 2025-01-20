@@ -46,7 +46,7 @@ bool(true)
 bool(false)
 bool(false)
 bool(true)
-object(Closure)#2 (%d) {
+object(Closure)#%d (%d) {
 %A}
 bool(true)
 bool(true)

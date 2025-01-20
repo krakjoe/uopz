@@ -29,7 +29,11 @@
 
 ZEND_EXTERN_MODULE_GLOBALS(uopz);
 
-#define UOPZ_HANDLERS_COUNT 12
+#ifdef ZEND_EXIT
+# define UOPZ_HANDLERS_COUNT 12
+#else
+# define UOPZ_HANDLERS_COUNT 11
+#endif
 
 #ifdef ZEND_VM_FP_GLOBAL_REG
 #	define UOPZ_OPCODE_HANDLER_ARGS
@@ -111,7 +115,9 @@ zend_vm_handler_t zend_vm_init_ns_fcall_by_name;
 zend_vm_handler_t zend_vm_init_method_call;
 zend_vm_handler_t zend_vm_init_static_method_call;
 
+#ifdef ZEND_EXIT
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS);
+#endif
 int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_fetch_constant(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_do_fcall(UOPZ_OPCODE_HANDLER_ARGS);
@@ -124,7 +130,9 @@ int uopz_vm_init_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 int uopz_vm_init_static_method_call(UOPZ_OPCODE_HANDLER_ARGS);
 
 UOPZ_HANDLERS_DECL_BEGIN()
+#ifdef ZEND_EXIT
 	UOPZ_HANDLER_DECL(ZEND_EXIT,					exit)
+#endif
 	UOPZ_HANDLER_DECL(ZEND_NEW,					 	new)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CONSTANT,		  	fetch_constant)
 	UOPZ_HANDLER_DECL(ZEND_FETCH_CLASS_CONSTANT,	fetch_class_constant)
@@ -169,9 +177,11 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 	zend_vm_handler_t zend = NULL;
 
 	switch (EX(opline)->opcode) {
+#ifdef ZEND_EXIT
 		case ZEND_EXIT:
 			zend = zend_vm_exit;
 		break;
+#endif
 
 		case ZEND_NEW:
 			zend = zend_vm_new;
@@ -221,6 +231,7 @@ static zend_always_inline int _uopz_vm_dispatch(UOPZ_OPCODE_HANDLER_ARGS) {
 	return ZEND_USER_OPCODE_DISPATCH;
 }
 
+#ifdef ZEND_EXIT
 int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_USE_OPLINE;
 	zval *estatus;
@@ -266,6 +277,7 @@ int uopz_vm_exit(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 		UOPZ_VM_RETURN();
 	}
 } /* }}} */
+#endif
 
 int uopz_vm_new(UOPZ_OPCODE_HANDLER_ARGS) { /* {{{ */
 	UOPZ_USE_OPLINE;
