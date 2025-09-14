@@ -31,14 +31,14 @@ var_dump(uopz_get_hook(DateTime::class, "__construct"));
 ?>
 --EXPECTF--
 bool(true)
-object(Closure)#1 (%d) {%A
+object(Closure)#%d (%d) {%A
   ["parameter"]=>
   array(1) {
     ["$arg"]=>
     string(10) "<required>"
   }
 }
-object(Closure)#2 (%d) {%A
+object(Closure)#%d (%d) {%A
 }
 NULL
 NULL

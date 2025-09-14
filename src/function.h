@@ -21,6 +21,8 @@
 
 #define ZEND_ACC_UOPZ (1<<30)
 
+#include "zend.h"
+
 zend_bool uopz_add_function(zend_class_entry *clazz, zend_string *name, zval *closure, zend_long flags, zend_bool all);
 zend_bool uopz_del_function(zend_class_entry *clazz, zend_string *name, zend_bool all);
 

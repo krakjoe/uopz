@@ -62,7 +62,7 @@ try {
 --EXPECTF--
 bool(true)
 bool(true)
-object(Foo)#2 (0) {
+object(Foo)#%d (0) {
 }
 string(%d) "failed to set hook for %s::%s, the method is defined in %s"
 string(%d) "failed to set hook for %s::%s, the method does not exist"

@@ -98,8 +98,6 @@ static PHP_MSHUTDOWN_FUNCTION(uopz)
 	return SUCCESS;
 } /* }}} */
 
-/* {{{ PHP_RINIT_FUNCTION
- */
 static PHP_RINIT_FUNCTION(uopz)
 {
 	zend_class_entry *ce = NULL;
@@ -652,6 +650,9 @@ static const zend_function_entry uopz_functions[] = {
 
 	UOPZ_FE(uopz_call_user_func)
 	UOPZ_FE(uopz_call_user_func_array)
+#ifndef ZEND_EXIT
+	UOPZ_FE(uopz_exit)
+#endif
 	ZEND_FE_END
 };
 #undef UOPZ_FE
