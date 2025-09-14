@@ -142,13 +142,23 @@ static PHP_RINIT_FUNCTION(uopz)
 	spl = zend_string_init(ZEND_STRL("RuntimeException"), 0);
 	spl_ce_RuntimeException =
 			(ce = zend_lookup_class(spl)) ?
-				ce : zend_exception_get_default();
+				ce :
+#if PHP_VERSION_ID >= 80500
+				zend_ce_exception;
+#else
+				zend_exception_get_default();
+#endif
 	zend_string_release(spl);
 
 	spl = zend_string_init(ZEND_STRL("InvalidArgumentException"), 0);
 	spl_ce_InvalidArgumentException =
 			(ce = zend_lookup_class(spl)) ?
-				ce : zend_exception_get_default();
+				ce :
+#if PHP_VERSION_ID >= 80500
+				zend_ce_exception;
+#else
+				zend_exception_get_default();
+#endif
 	zend_string_release(spl);
 
 	uopz_request_init();
