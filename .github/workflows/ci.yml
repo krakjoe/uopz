@@ -43,7 +43,11 @@ jobs:
         run: |
           sudo mkdir /opt/etc
           sudo chmod 777 /opt/etc
-          echo "zend_extension=opcache.so" >  /opt/etc/php.ini
+          if [ "${{matrix.version}}" != "master" ]; then
+            echo "zend_extension=opcache.so" >  /opt/etc/php.ini
+          else
+            touch /opt/etc/php.ini
+          fi
           echo ${{matrix.opcache}}         >> /opt/etc/php.ini
       - name: Run Tests
         run: /opt/bin/php run-tests.php -q -g FAIL,XFAIL,XLEAK,SKIP,BORK,WARN -P --show-diff
