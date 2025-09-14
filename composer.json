@@ -1,0 +1,27 @@
+{
+    "name": "krakjoe/uopz",
+    "type": "php-ext",
+    "license": "MIT",
+    "description": "User Operations for Zend",
+    "require": {
+        "php": "^8.0"
+    },
+    "php-ext": {
+        "extension-name": "uopz",
+        "configure-options": [
+            {
+                "name": "enable-uopz",
+                "description": "whether to enable uopz support"
+            },
+            {
+                "name": "enable-uopz-coverage",
+                "description": "whether to enable uopz coverage support"
+            },
+            {
+                "name": "with-uopz-sanitize",
+                "needs-value": true,
+                "description": "whether to enable AddressSanitizer for uopz"
+            }
+        ]
+    }
+}
