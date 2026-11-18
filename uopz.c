@@ -111,11 +111,11 @@ static PHP_RINIT_FUNCTION(uopz)
 		return SUCCESS;
 	}
 
-	if (INI_INT("opcache.optimization_level")) {
+	if (zend_ini_long(ZEND_STRL("opcache.optimization_level"), 0)) {
 
 		zend_string *optimizer = zend_string_init(
 			ZEND_STRL("opcache.optimization_level"), 1);
-		zend_long level = INI_INT("opcache.optimization_level");
+		zend_long level = zend_ini_long(ZEND_STRL("opcache.optimization_level"), 0);
 		zend_string *value;
 
 		/* must disable block pass 1 constant substitution */
