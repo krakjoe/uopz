@@ -27,8 +27,10 @@ uopz_add_function(Foo::class, "STATICFUNCTION", /** doc **/ function(){
 	} catch (Throwable $t) {
 
 	} finally {
-		return count($a) == 4;
+		$result = count($a) == 4;
 	}
+
+	return $result;
 }, ZEND_ACC_STATIC);
 
 uopz_add_function(Foo::class, "__construct", function() {

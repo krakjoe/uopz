@@ -72,7 +72,7 @@ zend_bool uopz_constant_redefine(zend_class_entry *clazz, zend_string *name, zva
 
 	if (!clazz) {
 		if (ZEND_CONSTANT_MODULE_NUMBER(zconstant) == PHP_USER_CONSTANT) {
-			zval_dtor(&zconstant->value);
+			zval_ptr_dtor_nogc(&zconstant->value);
 			ZVAL_COPY(&zconstant->value, variable);
 		} else {
 			uopz_exception(
